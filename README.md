@@ -72,8 +72,9 @@ Release preparation documents:
   historical inputs.
 - [`release/KERNEL_MAP.md`](release/KERNEL_MAP.md) maps each reader-facing
   method to the exact forward, backward, projection, and validation sources.
-- [`release/audits/remote_clone_f04ed49b_20260902.json`](release/audits/remote_clone_f04ed49b_20260902.json)
-  records the credential-free clean-clone and offline-paper audit.
+- [`release/audits/public_source_closure_5926d201_20260903.json`](release/audits/public_source_closure_5926d201_20260903.json)
+  records the unauthenticated public clean-clone, source-closure, test, and
+  offline-paper audit.
 - [`docs/fa4_measurement_reproduction.md`](docs/fa4_measurement_reproduction.md)
   documents the fail-closed command planner for fresh measurements.
 - [`docs/fa4_build_environment.md`](docs/fa4_build_environment.md) records the

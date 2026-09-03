@@ -244,6 +244,7 @@ REQUIRED_PATHS = (
     "release/NEXT_EXPERIMENTS.md",
     "release/PUBLIC_EXPORT_POLICY.md",
     "release/PUBLIC_SANITIZATION.md",
+    "release/audits/public_source_closure_5926d201_20260903.json",
     "release/routes.json",
     "release/routes.schema.json",
     "benchmarks/bench_nvfp4_gemm.cu",
@@ -305,6 +306,7 @@ REQUIRED_PATHS = (
     "torchtitan/experiments/fa4/validator.py",
 )
 EXPECTED_FILE_HASHES = {
+    "release/audits/public_source_closure_5926d201_20260903.json": "6ecaa478319b919c82f0cd920b3613c98f349e88f1e806980a7acc5b2b3f0618",
     "reproduction/snapshots/forward_cfc06dad/tk_fa4/fp4_fa4_fwd/hao_comprehensive_suite.py": "70f15536ce20e2ccac1151827cf7a0b8ae89a9651a3b4e46c9c5899135a0b43a",
     "reproduction/snapshots/forward_cfc06dad/tk_fa4/fp4_fa4_bwd/fp4_fa4_bwd.cu": "cdc926fdf359ae7790eb662cb5f67efef9f4a5416089487ba51d7b696555de5b",
     "reproduction/snapshots/forward_cfc06dad/tk_fa4/fp4_fa4_bwd/bwd_host_dispatch.inc": "dc32667a20627212bfcce0dce5f819710ae8d3a7fb0778232c4a2c27a9a86be8",
@@ -347,18 +349,29 @@ EXPECTED_DEVELOPMENT_ROUTES = {
     "direct_cute_fp4_qk_backward_d128": "disabled_fail_closed",
 }
 EXPECTED_CLONE_AUDIT = {
-    "status": "passed_for_audited_commit",
-    "scope": "historical_private_candidate",
-    "audited_commit": "f04ed49bfbe9820c09f34a5f622d18998e873467",
-    "receipt": "release/audits/remote_clone_f04ed49b_20260902.json",
+    "status": "passed_for_public_commit",
+    "scope": "public_source_closure_and_offline_reproduction",
+    "audited_commit": "5926d20188ec7a8a033e4efc7075f4c40325e3e8",
+    "receipt": "release/audits/public_source_closure_5926d201_20260903.json",
+    "receipt_sha256": "6ecaa478319b919c82f0cd920b3613c98f349e88f1e806980a7acc5b2b3f0618",
 }
 EXPECTED_CLONE_AUDIT_TREES = {
-    "tk_fa4": "6aafb4201ad6ae618d3724b851680a3c0ec13eb3",
-    "results": "d7e3a0bbf95a261b02ddeb8a86b07324089727d5",
+    "tk_fa4": "edf60a5703e298fd7e7f8c49e8b1541bf68e7a89",
+    "TK_quantisation": "e26f1b83d85f9805dcbe726afe2b464450cac84c",
+    "baseline_kernels": "5242c6d77a09cbd415b6d11e100657e0810aa4dd",
+    "fused_ops": "efb0668033a9eeee8a95b21759664d6d49f5decc",
+    "qutlass_binding": "32332ed7b0d26971bb0873647d154eb8fdc6aa65",
+    "results": "38f0afdb92b8726db42902eefa7927281f415acc",
 }
 EXPECTED_CLONE_AUDIT_PDF = (
-    "6997c94204241b45a13f11877f473f09e6f595655c208969f473da380c31f640"
+    "4dc4a8db31b184150c3e5613da1de4c9e87c776c4772334b9f0a9996c55d53e0"
 )
+EXPECTED_CLONE_AUDIT_INVENTORY_COUNT = 4138
+EXPECTED_CLONE_AUDIT_INVENTORY_SHA256 = (
+    "e502c42e700819b07b10c7d00bc561ae035640e331a64c474a4769e3d01fe7ec"
+)
+EXPECTED_CLONE_AUDIT_COMMIT_TREE = "2e6958e6c20e96108fb3682b4abc9ae71e3e7ebe"
+EXPECTED_CLONE_AUDIT_PARENT = "30625961fa0ee9e35bd31591f2bfc32bef8d22f9"
 
 SECRET_PATTERNS = {
     "private key": re.compile(rb"-----BEGIN [A-Z ]*PRIVATE KEY-----"),
@@ -810,9 +823,20 @@ def _verify_history_boundary(manifest: dict[str, Any]) -> str:
         "public history must have exactly the pinned parentless root",
     )
     _require(
-        not _is_ancestor(base) and not _is_ancestor(audited_commit),
+        not _is_ancestor(base),
         "public export must not retain private project ancestry",
     )
+    audit_scope = project["offline_clone_audit"].get("scope")
+    if audit_scope == "public_source_closure_and_offline_reproduction":
+        _require(
+            _is_ancestor(audited_commit),
+            "public clone-audited commit is not an ancestor of HEAD",
+        )
+    else:
+        _require(
+            not _is_ancestor(audited_commit),
+            "public export unexpectedly retains a private clone-audited commit",
+        )
     unreachable = _run_git("fsck", "--full", "--no-reflogs", "--unreachable")
     _require(
         not unreachable,
@@ -830,7 +854,7 @@ def _verify_git_state(manifest: dict[str, Any]) -> None:
     )
     _require(not worktree_state, "release worktree or a submodule is not clean")
 
-    history_mode = _verify_history_boundary(manifest)
+    _verify_history_boundary(manifest)
 
     for path, expected_tree in EXPECTED_MATERIALIZED_TREES.items():
         actual_tree = _run_git("rev-parse", f"HEAD:{path}")
@@ -905,26 +929,53 @@ def _verify_git_state(manifest: dict[str, Any]) -> None:
         raise VerificationError(f"cannot read clone audit receipt: {exc}") from exc
     _require(isinstance(audit, dict), "clone audit receipt must be an object")
     _require(
-        audit.get("schema") == "fa4_release_clone_audit_v1",
+        audit.get("schema") == "fa4_public_source_closure_audit_v1",
         "clone audit schema changed",
     )
     _require(
         audit.get("audited_commit") == EXPECTED_CLONE_AUDIT["audited_commit"],
         "clone audit commit does not match its manifest declaration",
     )
+    _require(audit.get("visibility_at_audit") == "public", "clone audit was not public")
     _require(
-        audit.get("visibility_at_audit") == "private", "clone audit was not private"
+        audit.get("repository") == "https://github.com/MrHuff/fp4-fa4",
+        "clone audit repository changed",
+    )
+    _require(
+        audit.get("public_root") == EXPECTED_PUBLIC_ROOT,
+        "clone audit public root changed",
+    )
+    _require(
+        audit.get("audited_commit_tree") == EXPECTED_CLONE_AUDIT_COMMIT_TREE,
+        "clone audit commit tree changed",
+    )
+    _require(
+        audit.get("audited_parent") == EXPECTED_CLONE_AUDIT_PARENT,
+        "clone audit parent changed",
+    )
+    _require(
+        audit.get("dependency_pins") == EXPECTED_DEPENDENCIES,
+        "clone audit dependency pins changed",
+    )
+    _require(
+        audit.get("materialized_trees") == EXPECTED_CLONE_AUDIT_TREES,
+        "clone audit materialized trees changed",
     )
     audited_commit = EXPECTED_CLONE_AUDIT["audited_commit"]
     checks = audit.get("checks")
     _require(isinstance(checks, dict), "clone audit checks must be an object")
     for check in (
         "remote_head_matches",
+        "only_reachable_root_matches",
+        "root_fsck_no_unreachable_objects",
         "root_and_nested_gitlinks_match",
         "source_inventory_passed",
         "release_verifier_passed",
         "offline_paper_reproduction_passed",
         "offline_reproduction_left_clean_tree",
+        "all_fonts_embedded",
+        "arxiv_archive_clean_build_passed",
+        "overleaf_archive_clean_build_passed",
     ):
         _require(checks.get(check) is True, f"clone audit check did not pass: {check}")
     paper_path = "results/fp4_fa4_technical_report_v2_20260819/main.pdf"
@@ -933,30 +984,118 @@ def _verify_git_state(manifest: dict[str, Any]) -> None:
         "clone audit PDF digest changed",
     )
     _require(
-        checks.get("source_inventory_records") == 3729,
+        checks.get("source_inventory_records") == EXPECTED_CLONE_AUDIT_INVENTORY_COUNT,
         "clone audit inventory count changed",
     )
+    _require(
+        checks.get("source_inventory_sha256") == EXPECTED_CLONE_AUDIT_INVENTORY_SHA256,
+        "clone audit inventory digest changed",
+    )
+    expected_counts = {
+        "development_routes": 21,
+        "route_path_references": 362,
+        "unique_route_paths": 181,
+        "missing_route_paths": 0,
+        "build_specs_d128": 11,
+        "build_specs_d64": 4,
+        "missing_build_paths": 0,
+        "measurement_plan_steps": 90,
+        "missing_measurement_paths": 0,
+        "offline_artifact_nodes": 13,
+        "offline_artifact_nodes_ready": 13,
+        "full_cpu_tests_passed": 1669,
+        "full_cpu_tests_skipped": 4,
+        "paper_pages": 56,
+        "type3_font_rows": 0,
+        "standalone_nvfp4_gemm_controls_compiled": 2,
+    }
+    for field, expected in expected_counts.items():
+        _require(
+            checks.get(field) == expected,
+            f"clone audit count changed: {field}",
+        )
+    _require(checks.get("javascript") is False, "clone audit PDF JavaScript changed")
 
-    if history_mode == "private_history":
-        for path, expected_tree in EXPECTED_CLONE_AUDIT_TREES.items():
-            _require(
-                _run_git("rev-parse", f"{audited_commit}:{path}") == expected_tree,
-                f"clone-audited historical tree changed: {path}",
-            )
-        audited_pdf_sha256 = hashlib.sha256(
-            _git_bytes(f"{audited_commit}:{paper_path}")
-        ).hexdigest()
+    source_closure = audit.get("source_closure")
+    _require(isinstance(source_closure, dict), "clone audit source closure is absent")
+    for field, expected in {
+        "recovered_kernel_build_inputs_compared": 646,
+        "missing_kernel_build_inputs": 0,
+        "changed_kernel_build_inputs": 0,
+        "tk_fa4_tracked_paths": 617,
+        "tk_fa4_python_paths": 152,
+        "intentional_generated_binary_omissions": 5,
+        "torchtitan_internal_import_references": 42,
+        "unresolved_torchtitan_internal_imports": 0,
+        "verifier_inventoried_legacy_native_backward_makefiles": 80,
+    }.items():
         _require(
-            audited_pdf_sha256 == EXPECTED_CLONE_AUDIT_PDF,
-            "clone-audited historical PDF bytes changed",
+            source_closure.get(field) == expected,
+            f"clone audit source-closure count changed: {field}",
         )
-        audited_inventory = _git_bytes(
-            f"{audited_commit}:release/source_files.sha256"
-        ).splitlines()
+
+    cute = audit.get("cute_overlay")
+    _require(isinstance(cute, dict), "clone audit CuTe overlay record is absent")
+    _require(
+        cute.get("base_commit") == EXPECTED_CUTE_OVERLAY["base_commit"],
+        "clone audit CuTe base changed",
+    )
+    _require(
+        cute.get("head_commit") == EXPECTED_DEPENDENCIES["flash-attention"],
+        "clone audit CuTe head changed",
+    )
+    _require(
+        cute.get("patch_sha256") == EXPECTED_CUTE_OVERLAY["patch"]["sha256"],
+        "clone audit CuTe patch changed",
+    )
+    _require(
+        cute.get("base_is_ancestor") is True
+        and cute.get("exact_file_hashes_and_numstat_match") is True,
+        "clone audit CuTe source checks did not pass",
+    )
+    _require(
+        cute.get("files")
+        == {
+            record["path"]: record["sha256"]
+            for record in EXPECTED_CUTE_OVERLAY["files"]
+        },
+        "clone audit CuTe file hashes changed",
+    )
+
+    _require(
+        _run_git("rev-parse", f"{audited_commit}^{{tree}}")
+        == EXPECTED_CLONE_AUDIT_COMMIT_TREE,
+        "clone-audited public commit tree changed",
+    )
+    _require(
+        _run_git("rev-parse", f"{audited_commit}^") == EXPECTED_CLONE_AUDIT_PARENT,
+        "clone-audited public commit parent changed",
+    )
+    for path, expected_tree in EXPECTED_CLONE_AUDIT_TREES.items():
         _require(
-            checks.get("source_inventory_records") == len(audited_inventory),
-            "clone audit inventory count does not match its audited commit",
+            _run_git("rev-parse", f"{audited_commit}:{path}") == expected_tree,
+            f"clone-audited public tree changed: {path}",
         )
+    audited_pdf_sha256 = hashlib.sha256(
+        _git_bytes(f"{audited_commit}:{paper_path}")
+    ).hexdigest()
+    _require(
+        audited_pdf_sha256 == EXPECTED_CLONE_AUDIT_PDF,
+        "clone-audited public PDF bytes changed",
+    )
+    audited_inventory_bytes = _git_bytes(
+        f"{audited_commit}:release/source_files.sha256"
+    )
+    _require(
+        hashlib.sha256(audited_inventory_bytes).hexdigest()
+        == EXPECTED_CLONE_AUDIT_INVENTORY_SHA256,
+        "clone-audited public inventory bytes changed",
+    )
+    _require(
+        len(audited_inventory_bytes.splitlines())
+        == EXPECTED_CLONE_AUDIT_INVENTORY_COUNT,
+        "clone audit inventory count does not match its audited commit",
+    )
 
 
 def _verify_sources() -> None:

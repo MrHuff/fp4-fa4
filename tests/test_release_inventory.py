@@ -37,6 +37,7 @@ def _history_manifest(
     base: str,
     audited: str,
     public_root: str | None = None,
+    audit_scope: str | None = None,
 ) -> dict:
     manifest = {
         "project": {
@@ -50,6 +51,8 @@ def _history_manifest(
             "root_commit": public_root,
             "policy": "parentless_root_with_ordinary_descendants",
         }
+    if audit_scope is not None:
+        manifest["project"]["offline_clone_audit"]["scope"] = audit_scope
     return manifest
 
 
@@ -94,6 +97,26 @@ def test_public_history_accepts_parentless_root_and_ordinary_descendant(
     assert verifier._verify_history_boundary(manifest) == "public_export"
 
     _commit(tmp_path, "ordinary public update")
+    assert verifier._verify_history_boundary(manifest) == "public_export"
+
+
+def test_public_history_accepts_audited_public_ancestor(
+    monkeypatch, tmp_path: Path
+) -> None:
+    _init_history_repo(tmp_path)
+    public_root = _commit(tmp_path, "public root")
+    audited = _commit(tmp_path, "audited public source")
+    _commit(tmp_path, "audit receipt child")
+    monkeypatch.setattr(verifier, "ROOT", tmp_path)
+    monkeypatch.setattr(verifier, "EXPECTED_PUBLIC_ROOT", public_root)
+    manifest = _history_manifest(
+        visibility="public",
+        base="1" * 40,
+        audited=audited,
+        public_root=public_root,
+        audit_scope="public_source_closure_and_offline_reproduction",
+    )
+
     assert verifier._verify_history_boundary(manifest) == "public_export"
 
 

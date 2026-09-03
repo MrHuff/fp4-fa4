@@ -15,8 +15,8 @@ configuration and artifact receipts, exact dataset and tokenizer identities,
 checkpoint-aligned prefetch, the recovered SFU-B1 converter chain, and the
 fused optimizer state.
 
-The source was written as a single parentless root commit and audited from a
-second clone created without local object sharing. Inherited
+The source was written from a single parentless root and audited from a public,
+unauthenticated clone created without local object sharing. Inherited
 continuous-integration workflows are absent from the exported tree.
 On 2026-09-03, the authorized owner confirmed consent to publish the project
 source and the paper's fonts and logos. Public identifier and asset hygiene is
@@ -24,23 +24,23 @@ complete and documented in `release/PUBLIC_SANITIZATION.md`. Project-specific
 source is licensed under Apache-2.0, with
 `Copyright (c) 2026 Graphcore Ltd.` recorded in `NOTICE`.
 
-The retained independent fresh-clone receipt covers private source commit
-`f04ed49bfbe9820c09f34a5f622d18998e873467`. That full-history clone passed
-the checked source inventory, release verifier, pinned gitlink audit, and
-complete offline paper reproduction; it remained clean and produced its
-authenticated 57-page PDF. This is historical evidence for that exact commit,
-not an audit of the public export.
+The retained public fresh-clone receipt covers source commit
+`5926d20188ec7a8a033e4efc7075f4c40325e3e8`. That clone passed the checked
+source inventory, strengthened release verifier, pinned root and nested
+gitlink audit, all CPU tests, and complete offline paper reproduction; it
+remained clean and reproduced the authenticated 56-page PDF. Both standalone
+CUTLASS projection controls also compiled from the clone for `sm_100a`.
 
-The candidate is **recovered-kernel-source-complete but not fully
+The release is **recovered-kernel-source-complete but not fully
 GPU-validated**. No claim is made that a fresh clone builds every extension,
 launches every historical model profile, or reproduces every GPU number. The
-distinction matters: source and offline artifact reproduction were verified
-for the audited historical candidate; the current adapter and Blackwell
-measurements still require clean-checkout validation on target hardware.
+distinction matters: source and offline artifact reproduction are verified for
+the audited public commit; the full adapter and Blackwell route matrix still
+require clean-checkout validation on target hardware.
 These scientific gaps limit validation claims, but they do not block
 publication of the source when they remain clearly labelled. The
-credential-free historical audit receipt is
-`release/audits/remote_clone_f04ed49b_20260902.json`.
+machine-readable public audit receipt is
+`release/audits/public_source_closure_5926d201_20260903.json`.
 
 “Source-complete” here means that the recovered FA4 kernel and experiment
 lineages are retained. It does not mean every historical private service can
@@ -50,9 +50,10 @@ captures remain unavailable. `CONTINUATION.md` and
 
 ## Current release checks
 
-The final parentless export passed 1,667 CPU tests with four optional or
-hardware-dependent skips. Its focused release verifier passed and its checked
-source inventory contains 4,135 records. A no-local clean clone rebuilds the
+The audited public source commit passed 1,669 CPU tests with four optional or
+hardware-dependent skips. Its release verifier passed and its checked source
+inventory contains 4,138 records. The audit-record child adds one receipt, so
+its inventory contains 4,139 records. A no-local clean clone rebuilds the
 56-page paper and both the arXiv and Overleaf source packages. The LaTeX log
 has no undefined references, undefined citations, or overfull boxes; all
 embedded fonts are non-Type-3. These CPU and document checks do not replace

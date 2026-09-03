@@ -215,13 +215,17 @@ development history remains in a separate recovery repository.
 
 ## Clean-clone audit
 
-A full-history clone of private commit
-`f04ed49bfbe9820c09f34a5f622d18998e873467` was audited independently. The
-root and nested dependency pins matched, all 3,729 inventoried files verified,
-the release verifier passed, and the complete offline paper graph regenerated
-the authenticated 57-page PDF without changing the clone. The machine-readable
-receipt is `release/audits/remote_clone_f04ed49b_20260902.json`.
+Public commit `5926d20188ec7a8a033e4efc7075f4c40325e3e8` was retrieved through
+unauthenticated HTTPS without local object sharing and audited independently.
+The repository had only the declared parentless public root and no unreachable
+objects. All root and nested dependency pins matched, all 4,138 inventoried
+files verified, 1,669 CPU tests passed with four skips, and the complete offline
+paper graph regenerated the authenticated 56-page PDF without changing the
+clone. The arXiv and Overleaf packages also passed isolated clean builds. The
+machine-readable receipt is
+`release/audits/public_source_closure_5926d201_20260903.json`. The older private
+candidate receipt remains only as historical release-preparation provenance.
 
 This audit authenticates source and deterministic offline artifacts. It does
-not replace the pending clean-clone GB200 build, numerical gates, performance
-measurements, or distributed checkpoint-resume test.
+not replace the pending complete GB200 route-matrix build, numerical gates,
+performance measurements, or distributed checkpoint-resume test.
