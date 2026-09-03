@@ -1,0 +1,49 @@
+{
+  "benchmark": {
+    "correctness": {
+      "hao_fp8_vs_bf16_lse": {
+        "cosine": 0.9999988079071045,
+        "max_abs": 0.11084461212158203,
+        "mean_abs": 0.013222563080489635,
+        "rmse": 0.016785219311714172
+      },
+      "hao_fp8_vs_bf16_output": {
+        "cosine": 0.9891407489776611,
+        "max_abs": 0.021728515625,
+        "mean_abs": 0.0010535286273807287,
+        "rmse": 0.001344663673080504
+      }
+    },
+    "protocol": {
+      "factory": "HAO create_nvfp4_attention_tensors",
+      "rep_ms": 25,
+      "seed": 0,
+      "timer": "triton.testing.do_bench median",
+      "warmup_ms": 10
+    },
+    "shape": {
+      "batch": 1,
+      "dim": 64,
+      "heads": 24,
+      "seqlen": 32768
+    },
+    "tflops": {
+      "hao_native_bf16": 1025.6995453046782,
+      "hao_native_nvfp4_fp8pv": 810.8556830214134
+    },
+    "timing_ms": {
+      "hao_native_bf16": 6.43177604675293,
+      "hao_native_nvfp4_fp8pv": 8.13593578338623
+    }
+  },
+  "label": "b1_s32768_h24_d64",
+  "reason": "TK comprehensive kernels are specialized for D128",
+  "shape": {
+    "batch": 1,
+    "dim": 64,
+    "heads": 24,
+    "seqlen": 32768
+  },
+  "status": "reference-only",
+  "variant": "fp8"
+}

@@ -1,0 +1,1007 @@
+{
+  "causal_leakage": {
+    "all_passed": true,
+    "bf16_cute": {
+      "cutoff": 256,
+      "future_v_prefix_bitwise_equal": true,
+      "passed": true,
+      "prefix": {
+        "cosine": 0.9999999999999999,
+        "finite": true,
+        "max_abs": 0.0,
+        "mean_abs": 0.0,
+        "norm_ratio": 1.0,
+        "relative_l2": 0.0
+      },
+      "suffix": {
+        "cosine": 0.8465890431004978,
+        "finite": true,
+        "max_abs": 0.28912353515625,
+        "mean_abs": 0.027026133611798286,
+        "norm_ratio": 0.8479835961726129,
+        "relative_l2": 0.5322489925425857
+      },
+      "suffix_bitwise_equal": false
+    },
+    "contract": "future V is zeroed at an S128-aligned midpoint; output rows before that point must remain bitwise unchanged",
+    "lse_invariance": {
+      "bf16_cute": true,
+      "nvfp4_qk_fp8_pv_exact": true,
+      "nvfp4_qk_mxfp4_pv": true
+    },
+    "nvfp4_qk_fp8_pv_exact": {
+      "cutoff": 256,
+      "future_v_prefix_bitwise_equal": true,
+      "passed": true,
+      "prefix": {
+        "cosine": 1.0,
+        "finite": true,
+        "max_abs": 0.0,
+        "mean_abs": 0.0,
+        "norm_ratio": 1.0,
+        "relative_l2": 0.0
+      },
+      "suffix": {
+        "cosine": 0.8452228170594555,
+        "finite": true,
+        "max_abs": 0.2410736083984375,
+        "mean_abs": 0.026814138516783714,
+        "norm_ratio": 0.8479199378983897,
+        "relative_l2": 0.5344209188313264
+      },
+      "suffix_bitwise_equal": false
+    },
+    "nvfp4_qk_mxfp4_pv": {
+      "cutoff": 256,
+      "future_v_prefix_bitwise_equal": true,
+      "passed": true,
+      "prefix": {
+        "cosine": 1.0,
+        "finite": true,
+        "max_abs": 0.0,
+        "mean_abs": 0.0,
+        "norm_ratio": 1.0,
+        "relative_l2": 0.0
+      },
+      "suffix": {
+        "cosine": 0.8453858649177955,
+        "finite": true,
+        "max_abs": 0.27032470703125,
+        "mean_abs": 0.02614286169409752,
+        "norm_ratio": 0.8488338120397373,
+        "relative_l2": 0.5341672816784173
+      },
+      "suffix_bitwise_equal": false
+    }
+  },
+  "correctness": {
+    "mxfp4_pv_vs_exact_fp8_pv": {
+      "lse": {
+        "cosine": 0.9999874795606016,
+        "finite": true,
+        "max_abs": 0.3862929344177246,
+        "mean_abs": 0.03020472452044487,
+        "norm_ratio": 0.9952523654479952,
+        "relative_l2": 0.0068959178141445405
+      },
+      "output": {
+        "cosine": 0.9855027855022293,
+        "finite": true,
+        "max_abs": 0.46875,
+        "mean_abs": 0.014726649038493633,
+        "norm_ratio": 0.9831597073309469,
+        "relative_l2": 0.16967599529658922
+      }
+    },
+    "nvfp4_qk_fp8_pv_exact_vs_bf16": {
+      "lse": {
+        "cosine": 0.9999894964707876,
+        "finite": true,
+        "max_abs": 0.31034886837005615,
+        "mean_abs": 0.019971732050180435,
+        "norm_ratio": 0.9983627142296434,
+        "relative_l2": 0.004870434019730998
+      },
+      "output": {
+        "cosine": 0.9916344968453766,
+        "finite": true,
+        "max_abs": 0.326171875,
+        "mean_abs": 0.011584554798901081,
+        "norm_ratio": 0.9917225231178508,
+        "relative_l2": 0.12907792686328215
+      }
+    },
+    "nvfp4_qk_mxfp4_pv_vs_bf16": {
+      "lse": {
+        "cosine": 0.999976801744584,
+        "finite": true,
+        "max_abs": 0.5119013786315918,
+        "mean_abs": 0.04118158668279648,
+        "norm_ratio": 0.9936228529121336,
+        "relative_l2": 0.009318721295128424
+      },
+      "output": {
+        "cosine": 0.9782369862526827,
+        "finite": true,
+        "max_abs": 0.546875,
+        "mean_abs": 0.018400192260742188,
+        "norm_ratio": 0.9750216255820545,
+        "relative_l2": 0.20751609016412856
+      }
+    }
+  },
+  "projection": {
+    "exact_v_materialized_transpose": false,
+    "format": "e4m3",
+    "k_quant_scale": 2.0,
+    "matched_input_audit": {
+      "expected_k_layout_difference": true,
+      "k_payload_direct_bitwise_equal": false,
+      "k_scale_pages_direct_bitwise_equal": true,
+      "q_payload_bitwise_equal": true,
+      "q_scale_pages_bitwise_equal": true,
+      "same_prepared_input_operand": true,
+      "same_prepared_weight_operand": true,
+      "same_source_rows_and_weights": true
+    },
+    "q_quant_scale": 2.25,
+    "source_summary": {
+      "k_weight": {
+        "dtype": "torch.bfloat16",
+        "max_abs": 0.1025390625,
+        "mean": 3.235248732380569e-05,
+        "rms": 0.019994406029582024,
+        "shape": [
+          512,
+          2048
+        ]
+      },
+      "q_weight": {
+        "dtype": "torch.bfloat16",
+        "max_abs": 0.1005859375,
+        "mean": -5.389764737628866e-06,
+        "rms": 0.01999484933912754,
+        "shape": [
+          2048,
+          2048
+        ]
+      },
+      "rows": {
+        "dtype": "torch.bfloat16",
+        "max_abs": 4.96875,
+        "mean": -0.00036129914224147797,
+        "rms": 1.0008790493011475,
+        "shape": [
+          512,
+          2048
+        ]
+      },
+      "v_weight": {
+        "dtype": "torch.bfloat16",
+        "max_abs": 0.115234375,
+        "mean": -2.354320531594567e-05,
+        "rms": 0.0200010035187006,
+        "shape": [
+          512,
+          2048
+        ]
+      }
+    }
+  },
+  "provenance": {
+    "argv": [
+      "/workspace/codebases/pv/fp4_matmul_worktrees/causal_matrix_20260820/tk_fa4/lowp_fa4_bwd/benchmark_causal_forward_matrix.py",
+      "--mx-extension",
+      "/tmp/codex-causal-forward-matrix-d4q01-full-20260820/_C_cfwd_mx_d4q01_i1_s512h32kv8d64_d4q01_full_20260820.cpython-312-aarch64-linux-gnu.so",
+      "--mx-module",
+      "_C_cfwd_mx_d4q01_i1_s512h32kv8d64_d4q01_full_20260820",
+      "--fp8-extension",
+      "/tmp/codex-causal-forward-matrix-d4q01-full-20260820/_C_cfwd_fp8exact0_for_d4q01_s512h32kv8d64_d4q01_full_20260820.cpython-312-aarch64-linux-gnu.so",
+      "--fp8-module",
+      "_C_cfwd_fp8exact0_for_d4q01_s512h32kv8d64_d4q01_full_20260820",
+      "--sequence",
+      "512",
+      "--q-heads",
+      "32",
+      "--kv-heads",
+      "8",
+      "--head-dim",
+      "64",
+      "--hidden",
+      "2048",
+      "--projection-format",
+      "auto",
+      "--seed",
+      "20260820",
+      "--warmups",
+      "9",
+      "--samples",
+      "41",
+      "--gpu",
+      "0",
+      "--minimum-free-gib",
+      "16.0",
+      "--causal-leakage-check",
+      "--output",
+      "/workspace/codebases/pv/fp4_matmul_worktrees/causal_matrix_20260820/results/causal_isolated_matrix_20260820/forward_matrix_d4q01_full/shapes/s512_h32_kv8_d64/result.json",
+      "--projection-extension",
+      "/workspace/codebases/pv/fp4_matmul_worktrees/causal_matrix_20260820/tk_fa4/_C_b300_lowp_bwd.cpython-312-aarch64-linux-gnu.so",
+      "--projection-module",
+      "_C_b300_lowp_bwd"
+    ],
+    "flash_attention": {
+      "repository": {
+        "branch": "",
+        "head": "9743edaf3227a25f6afc4fa7be8b5e8498610553",
+        "root": "/workspace/codebases/pv/fp4_matmul_worktrees/causal_matrix_20260820/flash-attention",
+        "tracked_dirty": false,
+        "tracked_status": ""
+      },
+      "source": {
+        "mtime_ns": 1787191104250662453,
+        "path": "/workspace/codebases/pv/fp4_matmul_worktrees/causal_matrix_20260820/flash-attention/flash_attn/cute/interface.py",
+        "sha256": "f62d3cc9ba70534fa36cb3300bcf87432c957289e53ef165ad79d247820016ca",
+        "size_bytes": 150840
+      }
+    },
+    "fp8_extension": {
+      "module": "_C_cfwd_fp8exact0_for_d4q01_s512h32kv8d64_d4q01_full_20260820",
+      "mtime_ns": 1787194149682227863,
+      "path": "/tmp/codex-causal-forward-matrix-d4q01-full-20260820/_C_cfwd_fp8exact0_for_d4q01_s512h32kv8d64_d4q01_full_20260820.cpython-312-aarch64-linux-gnu.so",
+      "sha256": "c4656e1302322abcf22cd65883164aa672ba8d240a39e06d996a511c975aa5eb",
+      "size_bytes": 1813528
+    },
+    "mx_extension": {
+      "module": "_C_cfwd_mx_d4q01_i1_s512h32kv8d64_d4q01_full_20260820",
+      "mtime_ns": 1787194123452213203,
+      "path": "/tmp/codex-causal-forward-matrix-d4q01-full-20260820/_C_cfwd_mx_d4q01_i1_s512h32kv8d64_d4q01_full_20260820.cpython-312-aarch64-linux-gnu.so",
+      "sha256": "3fded88372a368239bef2b730a949da5b0e6f5bc9e3b0a44c41150b2372b4b72",
+      "size_bytes": 1950896
+    },
+    "projection_extension": {
+      "explicitly_loaded": true,
+      "module": "_C_b300_lowp_bwd",
+      "mtime_ns": 1787192106791104737,
+      "path": "/workspace/codebases/pv/fp4_matmul_worktrees/causal_matrix_20260820/tk_fa4/_C_b300_lowp_bwd.cpython-312-aarch64-linux-gnu.so",
+      "sha256": "6c7c232534f1579ee3bc30efc3d4b553c0680b3caefb4a3b0d33bd5fea51c30a",
+      "size_bytes": 17220528
+    },
+    "repository": {
+      "branch": "codex/causal-isolated-matrix-20260820",
+      "head": "6333929c444af537bbc44913cf8c68936bd4be2f",
+      "root": "/workspace/codebases/pv/fp4_matmul_worktrees/causal_matrix_20260820",
+      "tracked_dirty": false,
+      "tracked_status": ""
+    },
+    "runtime": {
+      "cuda_capability": [
+        10,
+        0
+      ],
+      "cuda_device": 0,
+      "cuda_device_name": "NVIDIA GB200",
+      "cuda_free_memory_bytes_at_start": 197171675136,
+      "cuda_runtime": "13.0",
+      "cuda_total_memory_bytes": 197897617408,
+      "hostname": "benchmark-host-redacted",
+      "platform": "Linux-6.12.68-92.122.amzn2023.aarch64-aarch64-with-glibc2.39",
+      "python": "3.12.3 (main, Aug 14 2025, 17:47:21) [GCC 13.3.0]",
+      "torch": "2.9.0a0+145a3a7bda.nv25.10"
+    },
+    "seed": 20260820,
+    "worker": {
+      "mtime_ns": 1787191806150984747,
+      "path": "/workspace/codebases/pv/fp4_matmul_worktrees/causal_matrix_20260820/tk_fa4/lowp_fa4_bwd/benchmark_causal_forward_matrix.py",
+      "sha256": "31e1e98b6bb219ca425f56c6a25229ff0d8fa01a6949694d8109629e944e0bce",
+      "size_bytes": 39033
+    }
+  },
+  "schema": "matched_causal_forward_matrix_v1",
+  "scope": {
+    "accuracy_inputs": "all providers derive from one BF16 activation/weight draw; BF16 uses dense projected Q/K/V while low-precision routes use their fused projection publications",
+    "excluded": [
+      "dense QKV projection",
+      "projection-input and projection-weight quantization",
+      "RoPE",
+      "Q/K/V publication",
+      "FP8 V feature-major transpose fallback",
+      "allocation"
+    ],
+    "included": [
+      "causal attention kernel",
+      "output store"
+    ],
+    "store_lse_during_timing": false,
+    "timed": "prepared attention forward only"
+  },
+  "shape": {
+    "batch": 1,
+    "causal": true,
+    "head_dim": 64,
+    "hidden": 2048,
+    "kv_heads": 8,
+    "q_heads": 32,
+    "sequence": 512
+  },
+  "speedup": {
+    "exact_fp8_pv_over_bf16": 2.6068477912254044,
+    "mxfp4_pv_over_bf16": 2.5467127879004874,
+    "mxfp4_pv_over_exact_fp8_pv": 0.9769319085190434
+  },
+  "timing": {
+    "method": "rotating-provider CUDA-event samples",
+    "providers": {
+      "bf16_cute": {
+        "maximum_us": 90.36800265312195,
+        "mean_us": 74.15961001704379,
+        "median_us": 70.65600156784058,
+        "minimum_us": 65.37599861621857,
+        "p10_us": 67.1359971165657,
+        "p90_us": 86.40000224113464,
+        "samples_us": [
+          86.59200370311737,
+          81.34400099515915,
+          73.5040009021759,
+          70.17599791288376,
+          86.36800199747086,
+          70.8480030298233,
+          76.31999999284744,
+          75.42400062084198,
+          67.1359971165657,
+          82.8159973025322,
+          76.09599828720093,
+          85.4720026254654,
+          73.37599992752075,
+          74.14399832487106,
+          90.36800265312195,
+          70.65600156784058,
+          76.28799974918365,
+          69.40799951553345,
+          66.75200164318085,
+          65.37599861621857,
+          66.14399701356888,
+          68.89600306749344,
+          70.49600034952164,
+          68.41599941253662,
+          67.1359971165657,
+          67.84000247716904,
+          67.71200150251389,
+          70.20799815654755,
+          90.04800021648407,
+          69.88800317049026,
+          70.62400132417679,
+          77.37600058317184,
+          69.2799985408783,
+          70.04799693822861,
+          86.40000224113464,
+          68.60800087451935,
+          65.92000275850296,
+          72.28799909353256,
+          87.20000088214874,
+          70.592001080513,
+          76.9599974155426
+        ],
+        "unit": "microseconds"
+      },
+      "nvfp4_qk_fp8_pv_exact": {
+        "maximum_us": 34.33600068092346,
+        "mean_us": 27.246829122304916,
+        "median_us": 27.103999629616737,
+        "minimum_us": 22.175999358296394,
+        "p10_us": 24.25600029528141,
+        "p90_us": 29.983999207615852,
+        "samples_us": [
+          29.983999207615852,
+          24.25600029528141,
+          28.00000086426735,
+          29.311999678611755,
+          26.559999212622643,
+          32.32000023126602,
+          27.103999629616737,
+          24.351999163627625,
+          28.960000723600388,
+          26.91200003027916,
+          24.351999163627625,
+          34.33600068092346,
+          26.87999978661537,
+          23.32800067961216,
+          29.983999207615852,
+          26.335999369621277,
+          25.37599951028824,
+          29.69600073993206,
+          27.327999472618103,
+          22.175999358296394,
+          29.24799919128418,
+          25.631999596953392,
+          24.351999163627625,
+          27.35999971628189,
+          28.511999174952507,
+          25.02400055527687,
+          29.37600016593933,
+          27.583999559283257,
+          26.240000501275063,
+          29.120000079274178,
+          27.07199938595295,
+          24.000000208616257,
+          28.031999245285988,
+          26.944000273942947,
+          25.248000398278236,
+          29.40800040960312,
+          28.9280004799366,
+          23.48800003528595,
+          32.607998698949814,
+          27.135999873280525,
+          24.25600029528141
+        ],
+        "unit": "microseconds"
+      },
+      "nvfp4_qk_mxfp4_pv": {
+        "maximum_us": 31.5839983522892,
+        "mean_us": 27.241365756930374,
+        "median_us": 27.744000777602196,
+        "minimum_us": 22.23999984562397,
+        "p10_us": 23.93599972128868,
+        "p90_us": 29.600000008940697,
+        "samples_us": [
+          29.184000566601753,
+          25.472000241279602,
+          28.416000306606293,
+          26.87999978661537,
+          29.503999277949333,
+          29.600000008940697,
+          29.055999591946602,
+          24.70399998128414,
+          29.152000322937965,
+          29.983999207615852,
+          23.16799946129322,
+          28.76799926161766,
+          26.623999699950218,
+          26.784000918269157,
+          29.152000322937965,
+          27.583999559283257,
+          26.59199945628643,
+          27.83999964594841,
+          26.976000517606735,
+          22.23999984562397,
+          28.16000021994114,
+          27.871999889612198,
+          23.19999970495701,
+          28.64000014960766,
+          28.12799997627735,
+          23.93599972128868,
+          27.744000777602196,
+          27.583999559283257,
+          30.559999868273735,
+          28.60799990594387,
+          27.488000690937042,
+          22.592000663280487,
+          26.079999282956123,
+          27.008000761270523,
+          31.5839983522892,
+          27.96800062060356,
+          26.079999282956123,
+          23.93599972128868,
+          29.791999608278275,
+          27.904000133275986,
+          24.351999163627625
+        ],
+        "unit": "microseconds"
+      }
+    },
+    "sample_orders": [
+      [
+        "bf16_cute",
+        "nvfp4_qk_mxfp4_pv",
+        "nvfp4_qk_fp8_pv_exact"
+      ],
+      [
+        "nvfp4_qk_mxfp4_pv",
+        "nvfp4_qk_fp8_pv_exact",
+        "bf16_cute"
+      ],
+      [
+        "nvfp4_qk_fp8_pv_exact",
+        "bf16_cute",
+        "nvfp4_qk_mxfp4_pv"
+      ],
+      [
+        "bf16_cute",
+        "nvfp4_qk_mxfp4_pv",
+        "nvfp4_qk_fp8_pv_exact"
+      ],
+      [
+        "nvfp4_qk_mxfp4_pv",
+        "nvfp4_qk_fp8_pv_exact",
+        "bf16_cute"
+      ],
+      [
+        "nvfp4_qk_fp8_pv_exact",
+        "bf16_cute",
+        "nvfp4_qk_mxfp4_pv"
+      ],
+      [
+        "bf16_cute",
+        "nvfp4_qk_mxfp4_pv",
+        "nvfp4_qk_fp8_pv_exact"
+      ],
+      [
+        "nvfp4_qk_mxfp4_pv",
+        "nvfp4_qk_fp8_pv_exact",
+        "bf16_cute"
+      ],
+      [
+        "nvfp4_qk_fp8_pv_exact",
+        "bf16_cute",
+        "nvfp4_qk_mxfp4_pv"
+      ],
+      [
+        "bf16_cute",
+        "nvfp4_qk_mxfp4_pv",
+        "nvfp4_qk_fp8_pv_exact"
+      ],
+      [
+        "nvfp4_qk_mxfp4_pv",
+        "nvfp4_qk_fp8_pv_exact",
+        "bf16_cute"
+      ],
+      [
+        "nvfp4_qk_fp8_pv_exact",
+        "bf16_cute",
+        "nvfp4_qk_mxfp4_pv"
+      ],
+      [
+        "bf16_cute",
+        "nvfp4_qk_mxfp4_pv",
+        "nvfp4_qk_fp8_pv_exact"
+      ],
+      [
+        "nvfp4_qk_mxfp4_pv",
+        "nvfp4_qk_fp8_pv_exact",
+        "bf16_cute"
+      ],
+      [
+        "nvfp4_qk_fp8_pv_exact",
+        "bf16_cute",
+        "nvfp4_qk_mxfp4_pv"
+      ],
+      [
+        "bf16_cute",
+        "nvfp4_qk_mxfp4_pv",
+        "nvfp4_qk_fp8_pv_exact"
+      ],
+      [
+        "nvfp4_qk_mxfp4_pv",
+        "nvfp4_qk_fp8_pv_exact",
+        "bf16_cute"
+      ],
+      [
+        "nvfp4_qk_fp8_pv_exact",
+        "bf16_cute",
+        "nvfp4_qk_mxfp4_pv"
+      ],
+      [
+        "bf16_cute",
+        "nvfp4_qk_mxfp4_pv",
+        "nvfp4_qk_fp8_pv_exact"
+      ],
+      [
+        "nvfp4_qk_mxfp4_pv",
+        "nvfp4_qk_fp8_pv_exact",
+        "bf16_cute"
+      ],
+      [
+        "nvfp4_qk_fp8_pv_exact",
+        "bf16_cute",
+        "nvfp4_qk_mxfp4_pv"
+      ],
+      [
+        "bf16_cute",
+        "nvfp4_qk_mxfp4_pv",
+        "nvfp4_qk_fp8_pv_exact"
+      ],
+      [
+        "nvfp4_qk_mxfp4_pv",
+        "nvfp4_qk_fp8_pv_exact",
+        "bf16_cute"
+      ],
+      [
+        "nvfp4_qk_fp8_pv_exact",
+        "bf16_cute",
+        "nvfp4_qk_mxfp4_pv"
+      ],
+      [
+        "bf16_cute",
+        "nvfp4_qk_mxfp4_pv",
+        "nvfp4_qk_fp8_pv_exact"
+      ],
+      [
+        "nvfp4_qk_mxfp4_pv",
+        "nvfp4_qk_fp8_pv_exact",
+        "bf16_cute"
+      ],
+      [
+        "nvfp4_qk_fp8_pv_exact",
+        "bf16_cute",
+        "nvfp4_qk_mxfp4_pv"
+      ],
+      [
+        "bf16_cute",
+        "nvfp4_qk_mxfp4_pv",
+        "nvfp4_qk_fp8_pv_exact"
+      ],
+      [
+        "nvfp4_qk_mxfp4_pv",
+        "nvfp4_qk_fp8_pv_exact",
+        "bf16_cute"
+      ],
+      [
+        "nvfp4_qk_fp8_pv_exact",
+        "bf16_cute",
+        "nvfp4_qk_mxfp4_pv"
+      ],
+      [
+        "bf16_cute",
+        "nvfp4_qk_mxfp4_pv",
+        "nvfp4_qk_fp8_pv_exact"
+      ],
+      [
+        "nvfp4_qk_mxfp4_pv",
+        "nvfp4_qk_fp8_pv_exact",
+        "bf16_cute"
+      ],
+      [
+        "nvfp4_qk_fp8_pv_exact",
+        "bf16_cute",
+        "nvfp4_qk_mxfp4_pv"
+      ],
+      [
+        "bf16_cute",
+        "nvfp4_qk_mxfp4_pv",
+        "nvfp4_qk_fp8_pv_exact"
+      ],
+      [
+        "nvfp4_qk_mxfp4_pv",
+        "nvfp4_qk_fp8_pv_exact",
+        "bf16_cute"
+      ],
+      [
+        "nvfp4_qk_fp8_pv_exact",
+        "bf16_cute",
+        "nvfp4_qk_mxfp4_pv"
+      ],
+      [
+        "bf16_cute",
+        "nvfp4_qk_mxfp4_pv",
+        "nvfp4_qk_fp8_pv_exact"
+      ],
+      [
+        "nvfp4_qk_mxfp4_pv",
+        "nvfp4_qk_fp8_pv_exact",
+        "bf16_cute"
+      ],
+      [
+        "nvfp4_qk_fp8_pv_exact",
+        "bf16_cute",
+        "nvfp4_qk_mxfp4_pv"
+      ],
+      [
+        "bf16_cute",
+        "nvfp4_qk_mxfp4_pv",
+        "nvfp4_qk_fp8_pv_exact"
+      ],
+      [
+        "nvfp4_qk_mxfp4_pv",
+        "nvfp4_qk_fp8_pv_exact",
+        "bf16_cute"
+      ]
+    ],
+    "samples_per_provider": 41,
+    "warmups_per_provider": 9
+  },
+  "topology": {
+    "bf16_cute": {
+      "arch": 100,
+      "causal": true,
+      "num_splits": 1,
+      "pack_gqa": false,
+      "provider": "flash_attn.cute.interface._flash_attn_fwd"
+    },
+    "nvfp4_qk_fp8_pv_exact": {
+      "affine_a": 1.623300313949585,
+      "affine_b": 0.9208354353904724,
+      "batch": 1,
+      "causal": true,
+      "correction_regs": 80,
+      "cubic_quarter_mask": 15,
+      "dqk": 64,
+      "dvo": 64,
+      "dynamic_smem_bytes": 0,
+      "early_q3": false,
+      "ex2_emu_mask": 12696,
+      "fixed_p_ceiling": false,
+      "heads": 32,
+      "kv_heads": 8,
+      "kv_stages": 0,
+      "logical_jobs": 0,
+      "p_first_chunks": 2,
+      "p_ilp_pipeline": false,
+      "persistent": true,
+      "physical_grid_ctas": 0,
+      "producer_regs": 48,
+      "pv_format": "e4m3_fp8",
+      "qk_format": "nvfp4_e4m3_block16",
+      "query_stages": 2,
+      "retain_q0": 1,
+      "retain_q1": 1,
+      "retain_q2_mode": 1,
+      "retain_q3": 1,
+      "route": "real_fwd_tk_hao_direct_causal_gqa_nvfp4_fp8pv",
+      "schema": "tk_hao_direct_pipeline_v1",
+      "score_pack_ceiling": false,
+      "seqlen": 512,
+      "shiftless_fp8_mode": 0,
+      "softmax_regs": 192,
+      "threads_per_cta": 0,
+      "tmem_columns": 0,
+      "two_chunk_pipeline": false,
+      "valid": 0,
+      "wait_hint_cycles": 10000000
+    },
+    "nvfp4_qk_mxfp4_pv": {
+      "batch": 1,
+      "causal": true,
+      "causal_diagonal_mask": true,
+      "causal_interleaved_kv": true,
+      "causal_stage0_tail_skip": true,
+      "cluster_size": 1,
+      "compiled_num_sm": 152,
+      "d64_detached_p": true,
+      "d64_p_buffer_mode": 0,
+      "debug_lse_stat": 0,
+      "dqk": 64,
+      "dvo": 64,
+      "dynamic_smem_bytes": 0,
+      "early_p_k64": true,
+      "ex2_alu_degree": 3,
+      "ex2_emu_mask": 34952,
+      "fake_denom_ceiling": false,
+      "fixed_p_ceiling": false,
+      "fused_pv_issue": false,
+      "heads": 32,
+      "key_tile": 128,
+      "key_tiles": 4,
+      "kv_heads": 8,
+      "kv_reuse_ceiling": false,
+      "kv_stages": 0,
+      "log2_p_quant": false,
+      "logical_jobs": 0,
+      "mx_affine_a": 1.5,
+      "mx_affine_b": 1.2000000476837158,
+      "mx_anchor_affine_hoist": false,
+      "mx_async_scale_handoff": true,
+      "mx_bit_exp2_mask": 0,
+      "mx_causal_q3_lookahead": 0,
+      "mx_causal_q3_progressive_reuse": false,
+      "mx_cubic_a": 0.07430709153413773,
+      "mx_cubic_b": 0.28611862659454346,
+      "mx_cubic_c": 0.6467000246047974,
+      "mx_cubic_d": 0.9901078343391418,
+      "mx_defer_denom_finalize": 0,
+      "mx_defer_job_stats_wait": false,
+      "mx_delayed_early_q3": true,
+      "mx_delayed_half_q2": true,
+      "mx_denom_corr_wg": false,
+      "mx_denom_decode_mode": 1,
+      "mx_denom_early_smem": false,
+      "mx_denom_early_split": false,
+      "mx_denom_factor_hoist": false,
+      "mx_denom_int_scale_fusion": false,
+      "mx_denom_known_max": false,
+      "mx_denom_load_width": 4,
+      "mx_denom_magic_i2f": false,
+      "mx_denom_pair_overlap": false,
+      "mx_denom_payload_smem": false,
+      "mx_denom_pipelined_sum": false,
+      "mx_denom_sample_layout": 0,
+      "mx_denom_sample_stride": 1,
+      "mx_denom_scale_smem": false,
+      "mx_denom_split_prefetch": false,
+      "mx_denom_sum_lanes": 1,
+      "mx_denom_words": 4,
+      "mx_direct_log_code": false,
+      "mx_direct_log_code_mode": 0,
+      "mx_direct_scale_handoff": true,
+      "mx_direct_scale_scratch": false,
+      "mx_disjoint_scale_handoff": true,
+      "mx_dual_issuer": false,
+      "mx_dual_q3_corr_wg": false,
+      "mx_dual_q3_smem_wg": false,
+      "mx_dual_q3_tmem_wg": false,
+      "mx_early_q2_reduce": true,
+      "mx_ex2_q1_mask": 34952,
+      "mx_ex2_q2_mask": 34952,
+      "mx_ex2_q3_mask": 0,
+      "mx_fixed_anchor_log2": 0,
+      "mx_full_approx_denom": false,
+      "mx_full_approx_denom_mode": 0,
+      "mx_global_anchor128": false,
+      "mx_global_anchor32": false,
+      "mx_global_anchor_bias": 0.0,
+      "mx_global_anchor_margin_log2": 0,
+      "mx_half_prefetch_q0": false,
+      "mx_half_prefetch_q1": false,
+      "mx_half_prefetch_q3": false,
+      "mx_lagged_q1_scale": false,
+      "mx_local_denom_pipeline": 2,
+      "mx_local_native_deferred_scale": false,
+      "mx_log2_p_quant": true,
+      "mx_log_lut_bit_code_mode": 0,
+      "mx_log_lut_bits": 0,
+      "mx_max3_reduce": true,
+      "mx_max3_wide_reduce": true,
+      "mx_max_sample_bias_x2": 0,
+      "mx_max_sample_stride": 1,
+      "mx_mode23_early_native": false,
+      "mx_mode23_early_native_lookahead": 4,
+      "mx_mode23_early_native_order": 0,
+      "mx_mode23_early_native_quarter_mask": 15,
+      "mx_mode23_early_native_stage_mask": 3,
+      "mx_mode23_native_density": 4,
+      "mx_mode23_native_density2_quarter_mask": 3,
+      "mx_mode23_native_density3_quarter_mask": 1,
+      "mx_mode23_native_density3_stage_mask": 3,
+      "mx_mode23_native_quarter_mask": 3,
+      "mx_mode23_native_stage_mask": 3,
+      "mx_mode23_self_stage0_native": true,
+      "mx_p_effective_max": 6,
+      "mx_pair_load_scan": true,
+      "mx_pair_scale_delta": 0,
+      "mx_pair_scale_period": 1,
+      "mx_pair_scale_reuse": 1,
+      "mx_pair_scale_scratch": false,
+      "mx_pair_scale_stage_mask": 1,
+      "mx_pwl_exp2": true,
+      "mx_pwl_exp2_mode": 23,
+      "mx_pwl_four_sample_denom": false,
+      "mx_q1_max_interleave": false,
+      "mx_q1_max_sample_stride": 1,
+      "mx_q1_pair_probe": 0,
+      "mx_q1_pair_probe_bias": 0.0,
+      "mx_q1_scale_offload": false,
+      "mx_q1_self_max": 3,
+      "mx_q2_max_interleave": false,
+      "mx_q3_corr_wg": false,
+      "mx_q3_max_interleave": false,
+      "mx_q3_scale_reuse_stage_mask": 0,
+      "mx_qk_scale_offload": false,
+      "mx_qk_scale_preload": false,
+      "mx_qk_scale_preload_before_p": false,
+      "mx_qk_scale_preload_mask": 1,
+      "mx_quantized_denom": true,
+      "mx_register_scale_handoff": false,
+      "mx_retain_q0": false,
+      "mx_sampled_stabilizer": false,
+      "mx_scale_select": 1,
+      "mx_scan_fused_p": false,
+      "mx_shiftless_corr_bypass": true,
+      "mx_shiftless_softmax": true,
+      "mx_softmax_v_scale_prefetch_mask": 0,
+      "mx_split_stage_pv": false,
+      "mx_stage0_affine_mask": 0,
+      "mx_stage0_q1_max_interleave": false,
+      "mx_stage1_affine_mask": 0,
+      "mx_stage1_early_q1": false,
+      "mx_stored_scale_shift_log2": 16,
+      "mx_tree_max": true,
+      "nv_affine_a": 1.6113160848617554,
+      "nv_affine_b": 0.9357470273971558,
+      "nv_cubic_a": 0.07839805632829666,
+      "nv_cubic_b": 0.286250501871109,
+      "nv_cubic_c": 0.6314520239830017,
+      "nv_cubic_d": 0.9920233488082886,
+      "nv_debug_lse_rowmax": false,
+      "nv_denom_corr_wg": false,
+      "nv_denom_exact_max_tiles": 0,
+      "nv_denom_known_max": false,
+      "nv_denom_short_exact": false,
+      "nv_denom_smem_handoff": false,
+      "nv_denom_source": 0,
+      "nv_denom_words": 4,
+      "nv_direct_scale_handoff": false,
+      "nv_fast_approx_mode": 0,
+      "nv_full_row_stabilizer": false,
+      "nv_global_anchor32": false,
+      "nv_global_anchor64": false,
+      "nv_global_anchor_bias": 0.0,
+      "nv_global_anchor_samples": 0,
+      "nv_global_anchor_scale": 1.0,
+      "nv_hinge_b": 0.2806391716003418,
+      "nv_hinge_d": 0.9073908925056458,
+      "nv_hinge_m": 1.3763010501861572,
+      "nv_hinge_t": 0.8456308245658875,
+      "nv_hybrid_denom": false,
+      "nv_issuer_v_scale_prefetch_mask": 0,
+      "nv_max3_reduce": false,
+      "nv_max_sample_bias_x2": 0,
+      "nv_max_sample_stride": 1,
+      "nv_native6_quarter_mask": 0,
+      "nv_native_pairs": 4,
+      "nv_p_global_log2": 0.0,
+      "nv_policy_id": 0,
+      "nv_preload_v_tail_mode": 0,
+      "nv_preview_bias_x8": 0,
+      "nv_preview_stabilizer": false,
+      "nv_preview_width": 0,
+      "nv_pwl_exp2_mode": 0,
+      "nv_q01_corr_wg": false,
+      "nv_q0_stabilizer": false,
+      "nv_qk_compact_folded_scales": false,
+      "nv_qk_folded_k64_scale_mask": 0,
+      "nv_qk_folded_k64_scales": false,
+      "nv_qk_preload_page_mask": 3,
+      "nv_quantized_denom": false,
+      "nv_quarter_scale": false,
+      "nv_quarter_schedule_mode": 0,
+      "nv_refit_cubic_a": 0.07430709153413773,
+      "nv_refit_cubic_b": 0.28611862659454346,
+      "nv_refit_cubic_c": 0.6467000246047974,
+      "nv_refit_cubic_d": 0.9901078343391418,
+      "nv_register_scale_handoff": false,
+      "nv_relu_pack": false,
+      "nv_reuse_v_scale": false,
+      "nv_sampled_denom": false,
+      "nv_scale_encode_mode": 0,
+      "nv_scale_satfinite": false,
+      "nv_shiftless_scale_lift": false,
+      "nv_shiftless_softmax": false,
+      "nv_softmax_v_scale_prefetch": false,
+      "nv_stage0_affine_mask": 0,
+      "nv_stage1_affine_mask": 0,
+      "nv_tail_q3_hook_word": 0,
+      "nv_tree_max": false,
+      "nv_v_global_decode": false,
+      "p_first_chunks": 1,
+      "p_ilp_pipeline": false,
+      "persistent": true,
+      "physical_grid_ctas": 0,
+      "pv_format": "mxfp4_e8m0_block32",
+      "qk_format": "nvfp4_e4m3_block16",
+      "query_stages": 2,
+      "query_tile": 128,
+      "route": "real_fwd_tk_hao_direct_nvfp4_mxfp4pv",
+      "rowmax_pack_ceiling": false,
+      "scale_copy_ceiling_mask": 0,
+      "schema": "tk_hao_direct_pipeline_v1",
+      "score_pack_ceiling": false,
+      "seqlen": 512,
+      "sm103_ldred": false,
+      "sm103_ldred_mask": 15,
+      "sm103_ldred_stage0_mask": 15,
+      "sm103_ldred_stage1_mask": 15,
+      "sm103_n192_dedicated_p0": false,
+      "sm103_n192_early_k96": false,
+      "sm103_n256": false,
+      "sm103_n256_async_prefix_restore": false,
+      "sm103_n256_chain_qk1": false,
+      "sm103_n256_compact_v": false,
+      "sm103_n256_direct_pv_handoff": false,
+      "sm103_n256_dual_query": false,
+      "sm103_n256_prefix_regs": false,
+      "sm103_n256_split_output_scales": false,
+      "sparse_early_half": false,
+      "sparse_fixed_selector": 0,
+      "sparse_issue_count": 0,
+      "sparse_logical_k_per_issue": 0,
+      "sparse_pattern": "dense",
+      "sparse_pv": false,
+      "sparse_selector_mode": 0,
+      "sparse_split_k128": false,
+      "tail_keys": 128,
+      "task_order": 0,
+      "threads_per_cta": 0,
+      "tmem_columns": 0,
+      "valid": 0,
+      "wait_hint_cycles": 10000000
+    }
+  }
+}

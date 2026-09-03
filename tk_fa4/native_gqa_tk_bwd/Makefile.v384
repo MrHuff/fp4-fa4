@@ -1,0 +1,26 @@
+GPU := B200
+.DEFAULT_GOAL := all
+SRC := v384_d64_gqa_e4m3_two_wg.cu
+BUILD_DIR ?= /tmp/tkfa4_v384_d64_gqa_two_wg_build
+EXT_SUFFIX := $(shell python3 -c "import sysconfig; print(sysconfig.get_config_var('EXT_SUFFIX'))")
+MODULE := _C_b300_gqa_tk_bwd_v384
+OUT := $(BUILD_DIR)/$(MODULE)$(EXT_SUFFIX)
+CMD := python3 -c "import importlib.util; p='$(OUT)'; s=importlib.util.spec_from_file_location('$(MODULE)', p); m=importlib.util.module_from_spec(s); s.loader.exec_module(m); print(m.native_tk_d64_backward_metadata())"
+CONFIG := pytorch
+NVCCFLAGS += -DTORCH_COMPILE
+NVCCFLAGS += -I$(CURDIR)
+
+HEADERS := \
+	v384_d64_gqa_e4m3_two_wg.cuh \
+	native_gqa_tk_bwd_pipelined.cuh \
+	../deprecated/fa4_common.cuh
+
+$(BUILD_DIR):
+	mkdir -p $(BUILD_DIR)
+
+$(OUT): $(HEADERS) | $(BUILD_DIR)
+
+include ../../ThunderKittens/kernels/common.mk
+
+NVCCFLAGS += -UTORCH_EXTENSION_NAME
+NVCCFLAGS += -DTORCH_EXTENSION_NAME=$(MODULE)

@@ -1,0 +1,158 @@
+\section{Blackwell Ownership and Memory Architecture}
+
+\subsection{The copied V382 schedule is the control}
+
+The low-precision tree is a namespace-isolated copy of the optimized
+ThunderKittens BF16 V382 backward \cite{thunderkittens}.  The BF16 source is
+kept as the invariant control: low precision changes representations and
+selected producer/consumer handoffs inside the same causal scheduler rather
+than replacing it with a small standalone matrix benchmark.
+
+The retained specialization uses one two-CTA cluster.  Each CTA has 512
+threads divided into loader, tensor-issue, statistics, compute, and reducer
+roles.  A K/V owner keeps its $dK$ and $dV$ accumulators resident while it
+visits the legal query tiles.  The two CTAs exchange the fragments needed to
+form full dQ and dK operands.  This owner topology is the reason $dK$ and
+$dV$ are single-writer outputs while dQ is a cross-owner reduction.
+
+\begin{table}[htbp]
+\centering
+\caption{Inherited schedule versus the active low-precision changes.}
+\label{tab:inherited-vs-lowp}
+\small
+\begin{tabularx}{\textwidth}{p{.23\textwidth}X X}
+\toprule
+Component & Inherited from BF16 V382 & Active low-precision change \\
+\midrule
+Ownership & two-CTA K/V owner; persistent causal query loop &
+unchanged \\
+Tile geometry & M128$\times$N128, $D_{QK}=192$, $D_V=128$ &
+unchanged \\
+Score & three K64 reductions into FP32 TMEM &
+NVFP4 Q/K operands and one adaptive scale page \\
+P and dS & recompute P from saved LSE; produce both dS orientations &
+P is E4M3 and reused; dS is emitted directly as E4M3 \\
+$dP,dV$ & BF16 tensor operands, FP32 accumulation &
+E4M3 tensor operands with exact power-of-two corrections \\
+$dQ,dK$ & BF16 tensor operands, FP32 accumulation &
+mixed E4M3$\times$E2M1 tensor instructions \\
+Publication & cross-owner dQ reduction; single stores for dK/dV &
+dQ reduction payload becomes BF16; dK/dV ownership unchanged \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{TMEM is full and heavily aliased}
+
+The active kernel uses all 512 logical TMEM columns.  Long-lived dK and dV
+occupy columns 0--319.  Score, P, dP, dS, scale pages, and dQ time-share
+columns 320--511.  Figure~\ref{fig:bwd-tmem-map} shows logical bases and the
+dominant lifetimes; the lower rows are temporal overlays, not simultaneous
+independent allocations.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[x=0.0195cm,y=.70cm,font=\scriptsize]
+  \draw[thick] (0,0) rectangle (512,1);
+  \fill[gradientpurple!24] (0,0) rectangle (192,1);
+  \fill[outputgreen!28] (192,0) rectangle (320,1);
+  \fill[lightgray] (320,0) rectangle (512,1);
+  \draw (192,0)--(192,1);
+  \draw (320,0)--(320,1);
+  \node at (96,.53) {persistent $dK$ [0,192)};
+  \node at (256,.53) {persistent $dV$ [192,320)};
+  \node at (416,.53) {recycled workspace [320,512)};
+
+  \draw[thick] (320,-1.35) rectangle (512,-.35);
+  \fill[scoreblue!30] (320,-1.35) rectangle (448,-.35);
+  \fill[scaleyellow!42] (448,-1.35) rectangle (464,-.35);
+  \fill[lightgray] (464,-1.35) rectangle (512,-.35);
+  \draw (448,-1.35)--(448,-.35);
+  \draw (464,-1.35)--(464,-.35);
+  \node at (384,-.82) {score [320,448)};
+  \node[rotate=90] at (456,-.82) {scale};
+  \node at (488,-.82) {scratch};
+
+  \draw[thick] (320,-2.70) rectangle (512,-1.70);
+  \fill[probred!28] (320,-2.70) rectangle (352,-1.70);
+  \fill[gradientpurple!20] (384,-2.70) rectangle (512,-1.70);
+  \draw (352,-2.70)--(352,-1.70);
+  \draw (384,-2.70)--(384,-1.70);
+  \node at (336,-2.17) {P};
+  \node at (368,-2.17) {meta};
+  \node at (448,-2.17) {$dP/dS$ base 384};
+
+  \draw[thick] (320,-4.05) rectangle (512,-3.05);
+  \fill[lightgray] (320,-4.05) rectangle (416,-3.05);
+  \fill[gradientpurple!38] (416,-4.05) rectangle (512,-3.05);
+  \draw (416,-4.05)--(416,-3.05);
+  \node at (368,-3.52) {released prefix};
+  \node at (464,-3.52) {$dQ$ [416,512)};
+
+  \foreach \x in {0,192,320,384,416,448,464,512}
+    \node[below] at (\x,-4.12) {\x};
+  \node[anchor=east] at (315,.5) {persistent};
+  \node[anchor=east] at (315,-.85) {score phase};
+  \node[anchor=east] at (315,-2.20) {P/$dP$ phase};
+  \node[anchor=east] at (315,-3.55) {$dQ$ phase};
+\end{tikzpicture}
+\caption{Retained logical TMEM map.  dK spans a 128-column main tile and a
+64-column tail; dV spans 128 columns.  The score uses [320,448), its scale page
+starts at 448, and the compact dQ accumulator uses [416,512).  P, dP, and dS
+reuse retired score/dQ addresses according to phase.}
+\label{fig:bwd-tmem-map}
+\end{figure}
+
+The most important consequence is negative: another complete M128$\times$N128
+FP32 score bank needs 128 columns, but no such bank exists.  Splitting a score
+or dQ issue can expose an earlier prefix, yet barriers cannot manufacture
+storage.  Experiments that drain half of persistent dV to buy columns lose
+more to scratch traffic than they gain from score lookahead.
+
+\subsection{The alias boundary defines legal issue order}
+
+The transient region follows the ownership chain
+\begin{equation}
+  \text{score}\rightarrow
+  \text{P publication}\rightarrow
+  dP/dV\ \text{consume}\rightarrow
+  dS\rightarrow dQ\ \text{consume}\rightarrow
+  \text{next score}.
+  \label{eq:bwd-alias-chain}
+\end{equation}
+The next score cannot overwrite columns 416--447 until the current dQ
+consumer has captured that prefix.  Conversely, delaying score issue until
+all dQ publication completes exposes unnecessary latency.  The retained
+schedule uses issue markers: score and dQ consumers may enqueue their TMEM
+loads after the producer instruction has been issued, then let the native
+TMEM fence cover completion.  Full completion barriers remain for final
+drain and lifetime proof.
+
+\subsection{Shared memory and register boundary}
+
+The profiled hot specialization uses 231,484 bytes of dynamic shared memory,
+128 registers per thread, and no local stack or spills.  Shared memory carries
+the TMA-fed Q/K/V/$G$ views, Q/dS peer exchange, statistics, and instruction
+descriptors.  The kernel is already at the practical register boundary:
+an additional score buffer is ruled out by TMEM capacity.  The original
+adaptive mixed-dP attempt also aliased its fixed dP scale word with the live
+adaptive score scale page, causing repeatable tile-local corruption.  Giving
+those values distinct lifetime-safe pages produces a stable 128-register,
+zero-spill specialization.  Useful further pipelining still needs a different
+ownership topology or an upstream/downstream fusion, not another local barrier
+stage.
+
+\subsection{Only dQ is a global reduction}
+
+For an owner $o$, the kernel forms a partial
+\begin{equation}
+  dQ^{(o)}=\alpha\,dS^{(o)}K^{(o)},\qquad
+  dQ=\sum_o dQ^{(o)}.
+  \label{eq:dq-owner-reduction}
+\end{equation}
+The retained implementation publishes these partials with
+\code{cp.reduce.async.bulk.tensor} addition.  It is not a scalar atomic loop.
+At S8192/H8 the FP32 version moved 830.5 MB into the reduction path, 16.5
+times the final 50.3 MB FP32 dQ tensor.  The retained BF16 reduction halves
+that payload.  dK and dV stay in TMEM for their complete owner lifetime and
+are stored once, so there is no dK/dV atomic mechanism to replace.

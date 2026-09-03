@@ -1,0 +1,128 @@
+{
+  "created_at_utc": "2026-06-11T02:20:00Z",
+  "device": "NVIDIA GB200",
+  "notes": [
+    "Synthetic compact MXFP4 P/V consumer bound with separate chunk launches.",
+    "pv_chunked_accum_ms includes BF16 accumulation of chunk outputs in PyTorch and is intentionally a pessimistic fallback.",
+    "The gap between chunked_accum and full PV is the target for a persistent single-launch consumer that keeps output accumulation in-kernel.",
+    "The first combined helper run completed through H16/S16384, then H16/S32768 failed from allocation/launch pressure while full-P and chunk-P buffers were simultaneously resident. H16/S32768 below was rerun one Kc at a time."
+  ],
+  "rows": [
+    {
+      "heads": 4,
+      "seqlen": 16384,
+      "pv_hbm_full_ms": 0.1252,
+      "chunk_records": [
+        {
+          "chunk_cols": 8192,
+          "ring_payload_mib": 272.0,
+          "pv_chunked_ms": 0.1307,
+          "overhead_vs_full_pv": 1.04,
+          "pv_chunked_accum_ms": 0.1434,
+          "accum_overhead_vs_full_pv": 1.15
+        },
+        {
+          "chunk_cols": 4096,
+          "ring_payload_mib": 136.0,
+          "pv_chunked_ms": 0.1477,
+          "overhead_vs_full_pv": 1.18,
+          "pv_chunked_accum_ms": 0.1768,
+          "accum_overhead_vs_full_pv": 1.41
+        }
+      ]
+    },
+    {
+      "heads": 4,
+      "seqlen": 32768,
+      "pv_hbm_full_ms": 0.4195,
+      "chunk_records": [
+        {
+          "chunk_cols": 16384,
+          "ring_payload_mib": 1088.0,
+          "pv_chunked_ms": 0.4300,
+          "overhead_vs_full_pv": 1.03,
+          "pv_chunked_accum_ms": 0.4449,
+          "accum_overhead_vs_full_pv": 1.06
+        },
+        {
+          "chunk_cols": 8192,
+          "ring_payload_mib": 544.0,
+          "pv_chunked_ms": 0.4636,
+          "overhead_vs_full_pv": 1.11,
+          "pv_chunked_accum_ms": 0.5123,
+          "accum_overhead_vs_full_pv": 1.22
+        },
+        {
+          "chunk_cols": 4096,
+          "ring_payload_mib": 272.0,
+          "pv_chunked_ms": 0.5237,
+          "overhead_vs_full_pv": 1.25,
+          "pv_chunked_accum_ms": 0.6372,
+          "accum_overhead_vs_full_pv": 1.52
+        }
+      ]
+    },
+    {
+      "heads": 16,
+      "seqlen": 16384,
+      "pv_hbm_full_ms": 0.4016,
+      "chunk_records": [
+        {
+          "chunk_cols": 8192,
+          "ring_payload_mib": 1088.0,
+          "pv_chunked_ms": 0.4216,
+          "overhead_vs_full_pv": 1.05,
+          "pv_chunked_accum_ms": 0.4482,
+          "accum_overhead_vs_full_pv": 1.12
+        },
+        {
+          "chunk_cols": 4096,
+          "ring_payload_mib": 544.0,
+          "pv_chunked_ms": 0.4684,
+          "overhead_vs_full_pv": 1.17,
+          "pv_chunked_accum_ms": 0.5608,
+          "accum_overhead_vs_full_pv": 1.40
+        }
+      ]
+    },
+    {
+      "heads": 16,
+      "seqlen": 32768,
+      "pv_hbm_full_ms": 1.5135,
+      "chunk_records": [
+        {
+          "chunk_cols": 32768,
+          "ring_payload_mib": 8704.0,
+          "pv_chunked_ms": 1.5135,
+          "overhead_vs_full_pv": 1.00,
+          "pv_chunked_accum_ms": 1.5135,
+          "accum_overhead_vs_full_pv": 1.00
+        },
+        {
+          "chunk_cols": 16384,
+          "ring_payload_mib": 4352.0,
+          "pv_chunked_ms": 1.5378,
+          "overhead_vs_full_pv": 1.02,
+          "pv_chunked_accum_ms": 1.6054,
+          "accum_overhead_vs_full_pv": 1.06
+        },
+        {
+          "chunk_cols": 8192,
+          "ring_payload_mib": 2176.0,
+          "pv_chunked_ms": 1.5980,
+          "overhead_vs_full_pv": 1.06,
+          "pv_chunked_accum_ms": 1.7803,
+          "accum_overhead_vs_full_pv": 1.18
+        },
+        {
+          "chunk_cols": 4096,
+          "ring_payload_mib": 1088.0,
+          "pv_chunked_ms": 1.7398,
+          "overhead_vs_full_pv": 1.15,
+          "pv_chunked_accum_ms": 2.1594,
+          "accum_overhead_vs_full_pv": 1.43
+        }
+      ]
+    }
+  ]
+}

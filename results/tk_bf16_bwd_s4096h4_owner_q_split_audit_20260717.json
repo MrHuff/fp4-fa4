@@ -1,0 +1,193 @@
+{
+  "complete": true,
+  "shape": {
+    "batch": 1,
+    "seqlen": 4096,
+    "heads": 4,
+    "dqk": 192,
+    "dv": 128,
+    "causal": true,
+    "layout": "BSHD",
+    "dtype": "BF16"
+  },
+  "artifact": {
+    "path": "results/.artifacts/tk_bf16_bwd_s4096h4_owner_q_split_20260717/_C.cpython-312-aarch64-linux-gnu.so",
+    "sha256": "f798c9b2da6084f45f8ecb839efe9e16ebf0a4d015fa251b90f0008d1c5ece28",
+    "size_bytes": 10798808
+  },
+  "harness": {
+    "path": "results/tk_bf16_bwd_s4096h4_owner_q_split_harness.py",
+    "sha256": "6737d9e48b327992be5280d55cef61f24ccc7cc01291f1e8b46e4dde7333aee8"
+  },
+  "static_gate": {
+    "parent_machine_words_match_frozen_bitwise_parent": true,
+    "parent_machine_words_sha256": "7393b30673d2a86a89d43029c48def933877d93969b7bce0df0ee85e66754a75",
+    "extracted_sass_sha256": {
+      "parent": "3a42469a8e219e11eb56380953990f38e8afec1b511e8a06d324cef1ab96d901",
+      "split0": "80c08acc8e93d1ffd9bfbf0d881f9d54940bcaa4c9f3bf5f6837aff1338abd9e",
+      "split1": "6487ce975c5d9fadc81ac29dd7578413e414d160badb956d692486bc88bb3104"
+    },
+    "resources_all_three": {
+      "registers": 128,
+      "stack_bytes": 0,
+      "local_bytes": 0,
+      "shared_bytes": 231276,
+      "spill_loads": 0,
+      "spill_stores": 0,
+      "utchmma_2cta_sites": 52
+    },
+    "decoded_instructions": {
+      "parent": 4688,
+      "split0": 3544,
+      "split1": 3536
+    },
+    "retained_h2_parent_split0_split1_function_blocks_byte_identical": true,
+    "public_dispatch_unchanged": true
+  },
+  "correctness": {
+    "onecall": {
+      "seed": 20269819,
+      "manifest": "results/tk_bf16_bwd_s4096h4_owner_q_split_onecall_seed20269819.json",
+      "sha256": "f469c14aa4184ed0fe3c980dd7c65bc5f041e241f35aee161c16ebe0c39e99e7",
+      "gate_pass": true,
+      "rel_l2_dq_dk_dv": [0.0032535537611693144, 0.003492732299491763, 0.00012104144843760878],
+      "max_abs_dq_dk_dv": [0.009601593017578125, 0.0078125, 0.00390625]
+    },
+    "stress50": {
+      "seed": 20269919,
+      "manifest": "results/tk_bf16_bwd_s4096h4_owner_q_split_stress50_seed20269919.json",
+      "sha256": "22e1c1f5c06250633d3275e66a32d35c109c84abd874349cffdb5fdf858eb46c",
+      "calls_completed": 50,
+      "finite_dq_dk_dv": [true, true, true],
+      "max_drift_dq_dk_dv": [2.9802322387695312e-8, 0.0, 0.0],
+      "gate_pass": true
+    },
+    "stress2000": {
+      "seed": 20260768,
+      "manifest": "results/tk_bf16_bwd_s4096h4_owner_q_split_stress2000_seed20260768.json",
+      "sha256": "00f6224b5fc16cace96b7336070ebd45e0226c59f55f09ec9d5fbc94bff5d26f",
+      "calls_completed": 2000,
+      "finite_dq_dk_dv": [true, true, true],
+      "max_drift_dq_dk_dv": [2.2351741790771484e-8, 0.0, 0.0],
+      "gate_pass": true
+    }
+  },
+  "timing": {
+    "protocol": "12 warmups, 201 samples, three-route six-permutation rotation, host perf_counter_ns with full device synchronization around every route",
+    "rotations": [
+      {
+        "seed": 20270019,
+        "manifest": "results/tk_bf16_bwd_s4096h4_owner_q_split_timing_r1_seed20270019.json",
+        "sha256": "eab357913a4290883e5abed50fe36ad0e9fd32d74a517140690c1ec52207929d",
+        "child_median_us": 151.2,
+        "parent_median_us": 214.976,
+        "cute_median_us": 209.344,
+        "child_over_parent": 0.7033343256921702,
+        "child_over_cute": 0.7222561907673494,
+        "objective_beats_cute": true
+      },
+      {
+        "seed": 20270119,
+        "manifest": "results/tk_bf16_bwd_s4096h4_owner_q_split_timing_r2_seed20270119.json",
+        "sha256": "3c7afe0775c499c7759569c8ee2307a57e754c7905fdd0b13962e130e457d73f",
+        "child_median_us": 151.648,
+        "parent_median_us": 216.704,
+        "cute_median_us": 211.232,
+        "child_over_parent": 0.6997932663910218,
+        "child_over_cute": 0.7179215270413574,
+        "objective_beats_cute": true
+      }
+    ]
+  },
+  "nsight_systems": {
+    "version": "2025.5.1.121-255136380782v0",
+    "same_seed_correctness_manifest": "results/tk_bf16_bwd_s4096h4_owner_q_split_profile_onecall_seed20270219.json",
+    "same_seed_correctness_sha256": "5775fd6a85faafb48553e5961e8dddd37f6225552d3dc493f84691f356db4d7f",
+    "seed": 20270219,
+    "reports": {
+      "child": {
+        "path": "results/.artifacts/tk_bf16_bwd_s4096h4_owner_q_split_seed20270219.nsys-rep",
+        "sha256": "3c474d547caa9812ed43f6e0c3f45113583480d3214d570dd43f07e48853f659",
+        "size_bytes": 200991
+      },
+      "parent": {
+        "path": "results/.artifacts/tk_bf16_bwd_s4096h4_owner_q_split_parent_seed20270219.nsys-rep",
+        "sha256": "bb1fee0134aba633ef24006299b1e3459a33004c81e61876f027d4fb1cafcf79",
+        "size_bytes": 198670
+      },
+      "cute": {
+        "path": "results/.artifacts/tk_bf16_bwd_s4096h4_owner_q_split_cute_seed20270219.nsys-rep",
+        "sha256": "3e162449229122048279f11a4aa8e56faa5bd335f1961637aa6524833b511153",
+        "size_bytes": 185661
+      }
+    },
+    "median_kernel_us": {
+      "split0": 99.776,
+      "split1": 98.72,
+      "bf16_merge": 5.184,
+      "parent_main": 172.32,
+      "cute_preprocess": 4.32,
+      "cute_main": 108.672,
+      "cute_postprocess": 6.944
+    }
+  },
+  "nsight_compute": {
+    "version": "2025.3.1.0",
+    "child_split0_report": {
+      "path": "results/.artifacts/tk_bf16_bwd_s4096h4_owner_q_split_split0_seed20270219_ncu.ncu-rep",
+      "sha256": "4b041343dbfd7c35d0cd48a1a572e0a677d0e4c62d150feeae95722caaa97fc0",
+      "size_bytes": 80378232
+    },
+    "child_profile_manifest": {
+      "path": "results/tk_bf16_bwd_s4096h4_owner_q_split_profile_ncu_child_seed20270219.json",
+      "sha256": "691ff40dfad7979b594d2907dd9abe43d6cf95b48eab358a67ddb97c092a8d42"
+    },
+    "parent_and_cute_reference_reports": "frozen exact-H4 seed20261735 captures; parent machine words match this artifact",
+    "reduced_counters": {
+      "child_split0": {
+        "replay_duration_us": 172.256,
+        "warp_instructions": 10236415,
+        "issue_active_pct": 17.716054,
+        "active_warps": 3.502464,
+        "eligible_warps": 0.228621,
+        "barrier_not_issued_samples": 1033,
+        "long_scoreboard_not_issued_samples": 721,
+        "wait_not_issued_samples": 202,
+        "waves_per_sm": 0.42
+      },
+      "parent": {
+        "replay_duration_us": 302.56,
+        "warp_instructions": 19781487,
+        "issue_active_pct": 19.181071,
+        "active_warps": 3.571856,
+        "eligible_warps": 0.236373,
+        "barrier_not_issued_samples": 1890,
+        "long_scoreboard_not_issued_samples": 1384,
+        "wait_not_issued_samples": 366,
+        "waves_per_sm": 0.42
+      },
+      "cute": {
+        "replay_duration_us": 188.224,
+        "warp_instructions": 17560317,
+        "issue_active_pct": 19.567458,
+        "active_warps": 3.72829,
+        "eligible_warps": 0.26192,
+        "barrier_not_issued_samples": 385,
+        "long_scoreboard_not_issued_samples": 1971,
+        "wait_not_issued_samples": 210,
+        "waves_per_sm": 0.84
+      }
+    }
+  },
+  "verdict": {
+    "retain_private": true,
+    "objective_win_both_rotations": true,
+    "mechanism": "two concurrent 0.42-wave half-work grids replace one underfilled 0.42-wave full-work grid; aggregate instructions are slightly higher, so the gain is occupancy and overlap rather than math reduction",
+    "public_dispatch_unchanged": true,
+    "strict_35_cell_matrix_after_h2_and_h4_owner_split": {
+      "wins": 4,
+      "losses": 13,
+      "unknown": 18
+    }
+  }
+}

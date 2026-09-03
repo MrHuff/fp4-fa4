@@ -1,0 +1,92 @@
+{
+  "date": "2026-08-15",
+  "device": "GB200 GPU 0",
+  "shape": {
+    "batch": 1,
+    "sequence": 4096,
+    "q_heads": 32,
+    "kv_heads": 8,
+    "head_dim": 128,
+    "hidden": 4096,
+    "causal": true
+  },
+  "protocol": {
+    "warmups": 3,
+    "samples": 9
+  },
+  "policy": {
+    "owner": "diagonal",
+    "query_traversal": "reverse",
+    "physical_grid": "head_major",
+    "local_owner_tile": "shared_bf16_128x128",
+    "prior_lane_load": "coalesced_bf16_pairs_via_alternating_shared_stages",
+    "owner_release": "after_diagonal_capture_before_later_q_publication",
+    "causal_mask": "trip_bounds_plus_exact_diagonal_element_mask",
+    "nvfp4_reciprocal": "rcp_approx",
+    "inverse_rope": "packed_bf16_pair_inline_ptx",
+    "publication": "shared_pack_tma_payload_and_scales",
+    "global_partial_reads": 1,
+    "completed_bf16_global_writes": 0,
+    "completed_bf16_global_reads": 0
+  },
+  "timing_us": {
+    "attention_materialized_dq": 502.4319887161255,
+    "attention_owner_dq": 623.3279705047607,
+    "chain_materialized_dq": 678.0160069465637,
+    "chain_owner_dq": 789.7599935531616,
+    "owner_kv_pack": 29.24799919128418,
+    "owner_projection_prepacked": 79.68000322580338
+  },
+  "comparison": {
+    "materialized_over_owner": 0.8585089299043153,
+    "owner_slowdown_fraction": 0.16481024852176507,
+    "repeat_owner_slowdown_fraction": [
+      0.16272205544589746,
+      0.16481024852176507
+    ],
+    "repeat_owner_minus_materialized_us": [
+      112.86401748657227,
+      111.7439866065979
+    ],
+    "initial_owner_slowdown_fraction": 0.22860878679516894
+  },
+  "quality": {
+    "projection_vs_materialized": {
+      "cosine": 0.9997499585151672,
+      "relative_l2": 0.022358566522598267,
+      "norm_ratio": 0.9999822974205017,
+      "finite": true
+    },
+    "dk_relative_l2": 0.0,
+    "dv_relative_l2": 0.0,
+    "q_scale_finite_fraction": 1.0,
+    "q_scale_max_abs": 3.0,
+    "q_scale_saturated_count": 0,
+    "projection_nonfinite_count": 0
+  },
+  "bf16_control": {
+    "protocol": {
+      "warmups": 1,
+      "samples": 3
+    },
+    "attention_backward_with_clear_us": {
+      "bf16": 737.472,
+      "lowp": 501.12,
+      "speedup": 1.4716475894206507
+    },
+    "quality": {
+      "dq_cosine": 0.9777697324752808,
+      "dq_relative_l2": 0.20986203849315643,
+      "dk_cosine": 0.9768790602684021,
+      "dk_relative_l2": 0.21405640244483948,
+      "dv_cosine": 0.8624038696289062,
+      "dv_relative_l2": 0.510732114315033,
+      "materialized_projection_cosine": 0.8562688231468201,
+      "materialized_projection_relative_l2": 0.5212856531143188,
+      "owner_projection_cosine": 0.8560378551483154,
+      "owner_projection_relative_l2": 0.5216936469078064
+    }
+  },
+  "retained": true,
+  "default": false
+}

@@ -1,0 +1,51 @@
+\begin{abstract}
+This report documents a low-precision FlashAttention-4 backward for NVIDIA
+Blackwell, derived from the optimized ThunderKittens BF16 V382 schedule.  The
+retained route is deliberately mixed precision: Q and K are adaptive E2M1
+(FP4), score reconstruction uses three full-rank NVFP4 tensor instructions,
+$dP$ and $dV$ use E4M3 operands, $dS$ is produced directly in E4M3, and
+$dQ/dK$ use mixed E4M3$\times$E2M1 tensor instructions.  Tensor accumulators
+remain FP32.  The best deployable endpoint reduces cross-owner $dQ$ in BF16
+and returns it directly to an adjacent projection-backward consumer.
+
+Across causal B1, $D_{QK}=192$, $D_V=128$ shapes from S4096 to S16384, the
+direct-BF16 endpoint is 11.3--16.4\% faster than the copied BF16 control.
+Calibrated cosine is 0.9914--0.9916 for $dQ/dK$ and 0.99935--0.99938 for
+$dV$.  Robust per-head Q/K scaling keeps sparse-outlier $dQ/dK$ cosine near
+0.962 instead of approximately 0.75 for the earlier global-amax rule.
+
+The report also separates two often-confused operations.  \emph{Projection}
+means the learned linear maps $[Q\mid K\mid V]=XW_{QKV}^\mathsf{T}$;
+$QK^\mathsf{T}$ is the attention score contraction.  A persistent NVFP4
+projection now emits forward-native Q/K, transposed MXFP4 V, all backward Q/K
+views, and optional BF16 Q/K/V from the same output fragments.  The compact
+Q/K payload is allocated once and shared by forward and backward.  Relative
+to three BF16 GEMMs plus Q/K packing, unified publication is
+1.41--1.68$\times$ faster with BF16 stores and 1.60--1.93$\times$ faster when
+they are suppressed on the two measured shapes.  Pair-native full-head RoPE
+is now applied in the projection epilogue before all BF16 and FP4 Q/K
+publication.  On a five-shape RoPE-aware boundary that keeps the FP4 FA4
+forward in every low-precision row, the selected route is
+1.096--1.469$\times$ faster than BF16 when projection weight gradients are
+charged and 1.118--1.720$\times$ faster for activation gradients.  Useful
+algorithmic MFU rises on every row; at S4096/H24/K3072 it increases from
+26.94\% to 32.38\% for the full training boundary.  An unsignaled stacked
+NVFP4 QKV-gradient handoff raises the activation-only result from
+1.257$\times$ to 1.266$\times$, whereas a signaled two-lane hierarchy is
+slower.  A fused
+upstream dO producer also replaces separate row, column, and softmax-delta
+passes, reducing setup from 0.132352 to 0.068416 ms at S8192/H8.  A compact
+delayed-scale NVFP4 dQ projection reaches approximately 0.991 cosine and
+improves the composed H24 chain by 3.7\%, although it loses 1.9\% at H8 and
+still follows a private BF16 dQ reduction.  Pure-FP4 NVFP4/MXFP4 combinations
+do not displace the hybrid:
+the accurate NVFP4-dS rung is slower than BF16 and the combined NV/NV
+diagnostic is non-finite.  The report states the represented equations,
+ownership and TMEM lifetimes, accuracy boundary, rejected alternatives, and
+the remaining cross-kernel optimization ceiling.  In a three-seed,
+500-step teacher/student proxy the mixed route retains 93.2\% of BF16's
+absolute validation-loss improvement on average, but its raw native loss
+remains higher because the FP4 forward contributes a measured quantization
+floor.  This is block-level optimization evidence, not a stock-Llama
+perplexity or language-model convergence result.
+\end{abstract}

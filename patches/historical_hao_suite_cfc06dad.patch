@@ -1,0 +1,36 @@
+diff --git a/tk_fa4/fp4_fa4_fwd/hao_comprehensive_suite.py b/tk_fa4/fp4_fa4_fwd/hao_comprehensive_suite.py
+index ca61b21..f2eda00 100644
+--- a/tk_fa4/fp4_fa4_fwd/hao_comprehensive_suite.py
++++ b/tk_fa4/fp4_fa4_fwd/hao_comprehensive_suite.py
+@@ -500,10 +500,16 @@ def main() -> None:
+     args.build_root.mkdir(parents=True, exist_ok=True)
+ 
+     env = dict(os.environ)
++    python_paths = [
++        str(REPO_ROOT / "TK_quantisation/mxfp4_v3"),
++        str(HAO_ROOT),
++    ]
++    if env.get("PYTHONPATH"):
++        python_paths.append(env["PYTHONPATH"])
+     env.update(
+         {
+             "CUDA_VISIBLE_DEVICES": args.gpu,
+-            "PYTHONPATH": str(HAO_ROOT),
++            "PYTHONPATH": os.pathsep.join(python_paths),
+             "PYTHONDONTWRITEBYTECODE": "1",
+         }
+     )
+@@ -627,6 +633,13 @@ def main() -> None:
+                 ]
+                 completed_keys.discard(key)
+                 atomic_json(manifest_path, manifest)
++            else:
++                manifest["failures"] = [
++                    item
++                    for item in manifest["failures"]
++                    if (item["label"], item["variant"]) != key
++                ]
++                atomic_json(manifest_path, manifest)
+             batch, seqlen, heads, dim = shape
+             fp4_variant = "nv-nv" if variant == "pure-fp4" else variant
+             if dim != 128 and (

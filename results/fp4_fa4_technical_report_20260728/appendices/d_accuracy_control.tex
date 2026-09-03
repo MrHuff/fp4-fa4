@@ -1,0 +1,35 @@
+\section{Accuracy-Matched FP8 Control}
+\label{app:accuracy-matched-control}
+
+The principal NV/MX result is a speed--accuracy trade-off, so a separate
+control asks what happens when the TK route is required to match HAO's
+reported NV/FP8 cosine. Table~\ref{tab:accuracy-matched-control} uses the
+B1/S32768/H24/D128 B300 record. The HAO rows are reconstructed from published
+TFLOP/s and are cross-run context \cite{hao2026fp4flashattention}; HAO does
+not publish relative-$L_2$.
+
+\begin{table}[ht]
+\centering
+\caption{Accuracy-matched B300 control. Superscript p marks HAO-published
+cross-run values.}
+\label{tab:accuracy-matched-control}
+\scriptsize
+\begin{adjustbox}{max width=\columnwidth}
+\begin{tabular}{lrrrr}
+\toprule
+Provider & Time (ms) & TFLOP/s & Cosine & Relative-$L_2$ \\
+\midrule
+\input{../fp4_fa4_b300_tuning_20260802/tables/accuracy_matched_rows.tex}%
+\end{tabular}
+\end{adjustbox}
+\end{table}
+
+The exact TK NV/FP8 route reaches 0.9897 cosine, effectively matching HAO's
+published 0.9899 at the displayed precision. It takes 8.854 ms and reaches
+1490 TFLOP/s, compared with HAO's 4.929 ms and 2677 TFLOP/s. It also slightly
+trails HAO's published BF16 throughput. The intermediate optimized TK NV/FP8
+route improves speed but reaches only 0.9573 cosine. This experiment separates
+two conclusions: the HAO-derived pipeline is structurally viable, while the
+large speed of our retained NV/MX mode comes from making the exposed P path
+cheaper and accepting lower operator fidelity. Matching HAO's accuracy with
+the current exact TK FP8 path gives back that advantage.

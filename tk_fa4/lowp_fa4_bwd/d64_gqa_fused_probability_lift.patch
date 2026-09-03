@@ -1,0 +1,83 @@
+--- a/fmha_bwd.py
++++ b/fmha_bwd.py
+@@ -397,6 +397,8 @@
+             BFloat16 if element_dtype == Float8E4M3FN else element_dtype
+         )
+         self.reuse_quantized_p = False
++        self.fuse_probability_lift = False
++        self.prelift_probability_lse = False
+         self.exp2_alu_period = 0
+         self.exp2_alu_degree = 1
+         self.compact_dq_acc = False
+@@ -1340,5 +1340,12 @@
+                 if tidx == 0:
+                     lse_bhq = lse[idx_q + offset, (bidy, bidz)]
+                     sum_OdO[idx_q, (bidy, bidz)] = sum_OdO_scale * acc
+-                    scaled_lse[idx_q, (bidy, bidz)] = lse_scale * lse_bhq
++                    lse_lift = Float32(0.0)
++                    if cutlass.const_expr(
++                        self.element_dtype == Float8E4M3FN
++                        and self.fuse_probability_lift
++                        and self.prelift_probability_lse
++                    ):
++                        lse_lift = Float32(8.0)
++                    scaled_lse[idx_q, (bidy, bidz)] = lse_scale * lse_bhq + lse_lift
+
+@@ -3034,6 +3043,32 @@
+                     (softmax_scale_log2_e, softmax_scale_log2_e),
+                     lse,
+                 )
++                if cutlass.const_expr(
++                    self.element_dtype == Float8E4M3FN
++                    and self.fuse_probability_lift
++                    and not self.prelift_probability_lse
++                ):
++                    tTR_rST[i], tTR_rST[i + 1] = cute.arch.add_packed_f32x2(
++                        (tTR_rST[i], tTR_rST[i + 1]), (Float32(8.0), Float32(8.0))
++                    )
++                if cutlass.const_expr(
++                    self.element_dtype == Float8E4M3FN
++                ):
++                    # Forward LSE bounds the forward quantized score, not
++                    # the independently published backward FP8 Q/K score.
++                    # Enforce P <= 1 before either the native or polynomial
++                    # exp2 path, accounting for the D64 fused 2**8 lift.
++                    probability_log2_ceiling = (
++                        Float32(8.0)
++                        if self.fuse_probability_lift
++                        else Float32(0.0)
++                    )
++                    tTR_rST[i] = -cute.arch.fmax(
++                        -tTR_rST[i], -probability_log2_ceiling
++                    )
++                    tTR_rST[i + 1] = -cute.arch.fmax(
++                        -tTR_rST[i + 1], -probability_log2_ceiling
++                    )
+                 if cutlass.const_expr(
+                     self.element_dtype == Float8E4M3FN
+                     and self.exp2_alu_period > 0
+@@ -3060,7 +3077,10 @@
+             # the FP32 probability fragment below remains unscaled for dS.
+             p_dv_lift = Float32(1.0)
+             if cutlass.const_expr(self.element_dtype == Float8E4M3FN):
+-                p_dv_lift = Float32(256.0)
++                p_dv_lift = (
++                    Float32(1.0) if self.fuse_probability_lift
++                    else Float32(256.0)
++                )
+             tRT_rST = self.quantize(tTR_rST, 4, p_dv_lift)
+
+             cute.arch.fence_view_async_tmem_load()
+@@ -3152,7 +3172,11 @@
+                 self.element_dtype == Float8E4M3FN
+                 and not self.reuse_quantized_p
+             ):
+-                ds_operand_lift = Float32(self.fp8_ds_lift)
++                ds_operand_lift = (
++                    Float32(self.fp8_ds_lift / 256.0)
++                    if self.fuse_probability_lift
++                    else Float32(self.fp8_ds_lift)
++                )
+             tTR_rdST = self.quantize(tTR_rdPT, 4, ds_operand_lift)
+
+             # Release dP

@@ -1,0 +1,25 @@
+GPU ?= B200
+SRC := raw_fp4_throughput_candidate.cu
+EXT_SUFFIX := $(shell python3 -c "import sysconfig; print(sysconfig.get_config_var('EXT_SUFFIX'))")
+OUT ?= /tmp/_C_tk_raw_fp4_throughput$(EXT_SUFFIX)
+MODULE ?= _C_tk_raw_fp4_throughput
+CONFIG := pytorch
+CMD := true
+NVCC_THREADS ?= 2
+NVCC_SPLIT_COMPILE ?= 1
+MMA_THROUGHPUT_PRAGMA ?= 0
+
+include ../../ThunderKittens/kernels/common.mk
+
+NVCCFLAGS += \
+	-DTK_FA4_FORWARD_ONLY_BUILD=1 \
+	-DTK_FA4_RAW_FP4_THROUGHPUT_PROBE_BUILD=1 \
+	-DTK_FA4_RAW_FP4_MMA_THROUGHPUT_PRAGMA=$(MMA_THROUGHPUT_PRAGMA) \
+	--threads $(NVCC_THREADS) \
+	--split-compile=$(NVCC_SPLIT_COMPILE) \
+	-UTORCH_EXTENSION_NAME \
+	-DTORCH_EXTENSION_NAME=$(MODULE)
+
+$(OUT): $(SRC) \
+	fwd_raw_fp4_throughput_helpers.inc \
+	fwd_raw_fp4_throughput_probe.inc

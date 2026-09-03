@@ -1,0 +1,253 @@
+{
+  "schema": "fa4_saturated_perblock_e2e_results_v1",
+  "source": {
+    "branch": "codex/d128-output-shared-mx-20260826",
+    "benchmark_commit": "e4f83793d2b9d33c67d1415e49098c47b6c1a45f",
+    "public_guard_commit": "0f622498388097e8daeb654527458df6eaf121e8",
+    "public_guard_commit_is_recipe_neutral": true,
+    "harness_sha256": "792dea2aa2f3ae6de24e50d5c073ea47c28b83d72dd4762cb9430adc2ccb29a3",
+    "runtime_sha256": "093a0f75baf279c798c9d7b6d89b2195311115f202d15018a3984f65404e0fe7",
+    "packed_bf16_helper_sha256": "a4f39a5e578766996c42d6625d800932e3efb242bca64d1784bbd9fb16bbb795"
+  },
+  "protocol": {
+    "hardware": {
+      "name": "NVIDIA GB200",
+      "compute_capability": [10, 0],
+      "sm_count": 152,
+      "gpu_uuid": "61ebc9a2-4efb-2335-6ded-8591f9acef8c"
+    },
+    "dataset": "Dolma",
+    "corpus_sha256": "860b33924dffd53f4c20b80abbcee96e1bf09c3c313290c15ea3a6ee418269ce",
+    "tokenizer_sha256": "76e48799b099d43365bd24ccd8ecc5aedac831718da780552f03b0a6eb4412aa",
+    "warmup_updates": 3,
+    "measured_updates": 20,
+    "optimizer": {
+      "name": "AdamW",
+      "implementation": "torch_fused",
+      "learning_rate": 0.00048828125,
+      "betas": [0.9, 0.95],
+      "weight_decay": 0.1,
+      "gradient_clip_norm": 1.0
+    },
+    "loss": {
+      "implementation": "torch_compile",
+      "package": "cut-cross-entropy",
+      "version": "25.9.3",
+      "inductor_logit_buffer_elision_proven": false
+    },
+    "paired_statistic": "arithmetic midpoint of A/B per-run p50s or throughputs",
+    "eight_b_order": ["bf16_a", "fp8_a", "mx_a", "mx_b", "fp8_b", "bf16_b"]
+  },
+  "results": {
+    "llama_8b_d128_b1_s4096": {
+      "checkpoint_sha256": "a635f06aab6ecb8b28cab759e05961a702cd715c02be5fbcb21703f9494fa907",
+      "checkpoint_bytes": 16060632135,
+      "all_record_count": 138,
+      "all_records_finite": true,
+      "routes": {
+        "bf16_fa4": {
+          "step_p50_ms_ab": [275.48138427734375, 277.10595703125],
+          "paired_step_p50_ms": 276.2936706542969,
+          "paired_sustained_tokens_per_second": 14738.203027119468,
+          "paired_decoder_forward_p50_ms": 67.4203929901123,
+          "paired_backward_p50_ms": 138.47520446777344,
+          "initial_heldout_loss": 12.571371078491211,
+          "final_heldout_loss_ab": [10.091789245605469, 9.663280487060547],
+          "descriptive_final_loss_midpoint": 9.877534866333008,
+          "maximum_preclip_gradient_norm_ab": [157.0, 157.0],
+          "event_speedup_vs_bf16": 1.0,
+          "throughput_speedup_vs_bf16": 1.0
+        },
+        "nvfp4_qk_fp8_pv": {
+          "step_p50_ms_ab": [258.5599822998047, 258.51214599609375],
+          "paired_step_p50_ms": 258.5360641479492,
+          "paired_sustained_tokens_per_second": 15723.099411439686,
+          "paired_decoder_forward_p50_ms": 64.18149757385254,
+          "paired_backward_p50_ms": 123.91732978820801,
+          "initial_heldout_loss": 12.585826873779297,
+          "final_heldout_loss_ab": [9.569537162780762, 9.155010223388672],
+          "descriptive_final_loss_midpoint": 9.362273693084717,
+          "maximum_preclip_gradient_norm_ab": [161.0, 161.0],
+          "event_speedup_vs_bf16": 1.068685220241,
+          "throughput_speedup_vs_bf16": 1.066826083377
+        },
+        "nvfp4_qk_mxfp4_pv": {
+          "step_p50_ms_ab": [257.4285583496094, 257.94602966308594],
+          "paired_step_p50_ms": 257.68729400634766,
+          "paired_sustained_tokens_per_second": 15794.051219388092,
+          "paired_decoder_forward_p50_ms": 63.32380771636963,
+          "paired_backward_p50_ms": 124.10271072387695,
+          "initial_heldout_loss": 12.586737632751465,
+          "final_heldout_loss_ab": [9.035722732543945, 9.526565551757812],
+          "descriptive_final_loss_midpoint": 9.281144142150879,
+          "maximum_preclip_gradient_norm_ab": [184.0, 183.0],
+          "event_speedup_vs_bf16": 1.072205254511,
+          "throughput_speedup_vs_bf16": 1.071640225767,
+          "event_speedup_vs_fp8": 1.003293798962,
+          "throughput_speedup_vs_fp8": 1.004512584071
+        }
+      },
+      "numerical_verdict": "pass_immediate_short_horizon_stability_only",
+      "long_run_convergence_proven": false,
+      "hbm_maximized": false
+    },
+    "llama_1p2b_d64_b16_s4096": {
+      "benchmark_commit": "a9d713012cf618342025514cbad2eded4835e45e",
+      "checkpoint_sha256": "473b140616d28f35b80ce106c847dbe386be7c5e3f0dc1e254a97ef5e193216a",
+      "routes": {
+        "bf16_fa4": {
+          "paired_step_p50_ms": 678.30423,
+          "paired_sustained_tokens_per_second": 96314.231,
+          "descriptive_final_loss_midpoint": 8.049704,
+          "event_speedup_vs_bf16": 1.0,
+          "throughput_speedup_vs_bf16": 1.0
+        },
+        "nvfp4_qk_fp8_pv": {
+          "paired_step_p50_ms": 558.953308,
+          "paired_sustained_tokens_per_second": 117056.913,
+          "descriptive_final_loss_midpoint": 8.126912,
+          "event_speedup_vs_bf16": 1.213526,
+          "throughput_speedup_vs_bf16": 1.215365
+        },
+        "nvfp4_qk_mxfp4_pv": {
+          "paired_step_p50_ms": 558.834351,
+          "paired_sustained_tokens_per_second": 117056.95,
+          "descriptive_final_loss_midpoint": 7.962223,
+          "event_speedup_vs_bf16": 1.213784,
+          "throughput_speedup_vs_bf16": 1.215365
+        }
+      },
+      "numerical_verdict": "pass_short_horizon_sanity_only",
+      "long_run_convergence_proven": false
+    }
+  },
+  "d128_causal_diagnosis": {
+    "old_fixed_head": {
+      "fp8_final_loss_midpoint": 16.665405,
+      "mx_final_loss_midpoint": 12.905418,
+      "fp8_maximum_preclip_gradient_norm": 19968.0,
+      "mx_maximum_preclip_gradient_norm": 19840.0
+    },
+    "perblock_boundary_metrics": {
+      "fixed_q_relative_l2": 0.13557346165180206,
+      "fixed_k_relative_l2": 0.12076425552368164,
+      "perblock_q_relative_l2": 0.0951346755027771,
+      "perblock_k_relative_l2": 0.09513924270868301,
+      "backward_qkv_publications_bitwise_equal": true
+    },
+    "bf16_qkv_dgrad_diagnostic": {
+      "initial_heldout_loss": 12.583065032958984,
+      "final_heldout_loss": 14.962454795837402,
+      "maximum_preclip_gradient_norm": 42752.0,
+      "nvfp4_qkv_dgrad_alone_is_root_cause": false
+    },
+    "causal_conclusion": "changing D128 forward QK scale geometry from fixed-head to row-by-K16 removed the observed immediate failure in this short gate while shared backward semantics remained unchanged"
+  },
+  "route_contracts": {
+    "d128_qk_format": "nvfp4_e4m3_block16",
+    "d128_qk_scale_geometry": "row_by_k16",
+    "fp8_pv_format": "e4m3_fp8",
+    "mx_pv_format": "mxfp4_e8m0_block32",
+    "shared_backward_qkv": "projection_accumulator_e4m3",
+    "projection_dgrad": "nvfp4",
+    "canonical_backward_contract_sha256": "02ddde7f4d9505ab934050ad4113affa402c7bfa39bc5187a06206a9c6924011",
+    "all_lowp_contracts_equal": true,
+    "qkv_dual_preparation_authenticated_layers": 32,
+    "output_dual_preparation_authenticated_layers": 32,
+    "in_flight_layers_after_run": 0
+  },
+  "profiler": {
+    "eight_b_prior_fixed_head_pair": {
+      "backward_kernel_count_per_route": 2122,
+      "backward_ordered_signatures_equal": true,
+      "backward_signature_sha256": "919c21c319c6ccd2951e8400a88fb236667966f3e5af2a7e7504ef464ed04de4",
+      "mx_minus_fp8_attention_forward_kernel_sum_ms": -0.736896,
+      "mx_minus_fp8_qkv_projection_rope_publication_ms": 0.975968,
+      "mx_minus_fp8_decoder_kernel_sum_ms": 0.263843,
+      "fp8_kernel_union_busy_percent": 94.292,
+      "new_perblock_profile_available": false
+    },
+    "one_p2b_pair": {
+      "kernel_count_per_route": 1698,
+      "backward_kernel_count_per_route": 907,
+      "backward_ordered_signatures_equal": true,
+      "backward_signature_sha256": "c2d85336889747a4ac5c2ea387c551d7c8187fadeb51b877467dcbad5b408dac",
+      "fp8_kernel_union_busy_percent": 98.4122385891734,
+      "mx_kernel_union_busy_percent": 98.41724401260089,
+      "fp8_mean_gr_active_percent": 99.30860995850622,
+      "mx_mean_gr_active_percent": 99.31602866631708,
+      "fp8_mean_sm_active_percent": 93.38035961272476,
+      "mx_mean_sm_active_percent": 93.49746547806328
+    }
+  },
+  "isolated_safe_d128_mx": {
+    "shape": "B1_S4096_H32_KV8_D128_causal",
+    "safe_payload": {
+      "round": 768,
+      "layer": 11,
+      "sha256": "2c5bfc7ddda732621e039b3ddf3a301b9bd8df4c8d66b544b29ab7401d57a10b"
+    },
+    "unsafe_shift16_payload": {
+      "round": 768,
+      "layer": 11,
+      "sha256": "6d7c31c4ad1627bc8147b28f1daab841ab1fde5ab5d0927780d9eab0341efbfd"
+    },
+    "policy": {
+      "scale_selector": 4,
+      "anchor32": true,
+      "margin_log2": 64,
+      "stored_scale_shift_log2": 32,
+      "folded_k64": false,
+      "preload_mask": 3
+    },
+    "safe_mx_median_ms": 0.12169648170471191,
+    "fp8_median_ms": 0.15477439880371094,
+    "isolated_speedup_vs_fp8": 1.271806684,
+    "output_nonfinite": 0,
+    "lse_nonfinite": 0,
+    "output_relative_l2_vs_exact_rowmax_mx_oracle": 0.018270233301455153,
+    "lse_relative_l2_vs_exact_logsumexp": 0.07394116649290214,
+    "unsafe_shift16_median_ms": 0.11827168464660645,
+    "unsafe_shift16_output_nonfinite": 370900,
+    "unsafe_shift16_total_output_values": 16777216,
+    "safe_minus_unsafe_shift16_cross_payload_percent": 2.8957,
+    "safe_vs_unsafe_shift16_timing_comparison_paired": false,
+    "production_binary_bitwise_equal_to_audited_candidate": true
+  },
+  "evidence_sha256": {
+    "eight_b_perblock_json": {
+      "bf16_a": "962f4f841864768221ef911ffcc26467871e74be793b0e883ccdc38d38a92799",
+      "bf16_b": "69b653214beec07342da67fdc61cdf972fa0341284b200669708f310a59f8ba0",
+      "fp8_a": "5a58b623b1796a6c5e6af95e115528ca1c2025589225c9fd5b8f2c9334b3422b",
+      "fp8_b": "5f577235612bd6579972a598e85342fbb394b5f349d24ec1ff092ed8648d7bf9",
+      "mx_a": "54e2cadc8da9138e612a1a5de2bfbe226db05191eff5ee53c88f1f81da05d4f1",
+      "mx_b": "2c4e23dac9f27f531a32df2bc3692aaf47300caf5470989fd38f9c97fc206f06"
+    },
+    "eight_b_perblock_samples": {
+      "bf16_a": "f548ac2b46f100c546dc044b4bcbe15e08f71e083ed5f646fa15dd559b05d5a3",
+      "bf16_b": "36a8c3ec49b8ec193a3da0e3f1dacbacf5afc4a81aa83ed54d30cc0ec42278a3",
+      "fp8_a": "79d11f95c9bde76df053a7a60018bf6016b3da32fcaf40bb007a5fa992cfa617",
+      "fp8_b": "78177c38c5ae18433a535569c1abf504c7a1fe783c2fbb021c69a401892ba3a8",
+      "mx_a": "e7138878b88fbb1878cffdb1cb13d07c6563cae9da5b12843a6ecf0127f5a00c",
+      "mx_b": "c91b6ec8b7e360b5527a74fece2dccef458eb97670a1d4396cd7cc4c3278d3b4"
+    },
+    "eight_b_fixed_head_profiler_analysis": "d364d3b93530f57a7d337ac1768721d3134be4ab254c3ac13b9d4e8e22180b16",
+    "one_p2b_profiler_analysis": "1392209da8c22b1c30e9f550a6a13681e8229ccbfe11a7cb1733150b33230a1f",
+    "projection_boundary_diagnostic": "9c43fbbec5c05ceb680320fe001e7fc8eb7cd914095a33a0d85f4bd9f19a07ca",
+    "bf16_qkv_dgrad_diagnostic": "f2a9a9d62e3cc65f310374c09ff7c828e85e81ecd18066f9a293677c092bfcd5",
+    "isolated_mx_safe_exactness": "7fb057c6089b6e509702c4ceed2d08003ab3256e4e6f73d9af2d5fd75d6b50f7",
+    "isolated_mx_safe_timing": "1808090fbe30b8ce4138f301a2b6f2aa9bc7a3bdb1bf7767f74b8a78f837c60b",
+    "isolated_mx_unsafe_shift16_exactness": "6bae76e96dffdc81cd15bbd845eb0b431210a3ec5702c9a12c76c11e3e26eb38",
+    "isolated_mx_unsafe_shift16_timing": "447d633e2f079e03c7751025914144971f3353a716003ebb1901f72f1fe9efba",
+    "isolated_mx_production_rebuild_authentication": "95a1cd057de095a28265e984719eacf08870f8ce2a5a6fed1ec4908662990d8d"
+  },
+  "limitations": [
+    "single-GPU short-horizon random-initialization tests, not pretraining curves",
+    "eight_b uses batch one and reserves about 93.35 GiB, so HBM is not maximized",
+    "loss midpoints are descriptive and every B arm references BF16-A samples",
+    "initial low-precision hidden-state cosine versus BF16 remains low",
+    "BF16 packed QKV and low-precision split masters have different physical optimizer tensor counts",
+    "the sub-percent MX-over-FP8 result is noise-sized",
+    "useful MFU is not a hardware saturation metric"
+  ]
+}

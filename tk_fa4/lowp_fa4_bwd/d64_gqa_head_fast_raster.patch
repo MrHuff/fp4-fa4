@@ -1,0 +1,41 @@
+--- a/fmha_bwd.py
++++ b/fmha_bwd.py
+@@ -407,7 +407,8 @@
+         self.signal_dq_tiles = False
+         self.owner_quantize_dq = False
+         self.owner_quantize_kv = False
+         self.reverse_query_tiles = False
++        self.head_fast_raster = False
+         self.use_precomputed_stats = False
+         self.skip_stats_preprocess = False
+         # The reference GQA topology serializes every query head that shares a
+@@ -1423,7 +1424,9 @@
+         physical_bidx, physical_bidy, bidz = cute.arch.block_idx()
+         bidx = physical_bidx
+         bidy = physical_bidy
+-        if cutlass.const_expr(self.owner_quantize_dq):
++        if cutlass.const_expr(
++            self.owner_quantize_dq or self.head_fast_raster
++        ):
+             # Put query heads in physical grid-x so Blackwell dispatches a
+             # breadth-first key wavefront.  Previously, key tiles in grid-x
+             # let the short diagonal owners for a few heads occupy most SMs.
+@@ -2182,7 +2185,9 @@
+         physical_bidx, physical_bidy, blk_coord_b = cute.arch.block_idx()
+         blk_coord_k = physical_bidx
+         blk_coord_h_k = physical_bidy
+-        if cutlass.const_expr(self.owner_quantize_dq):
++        if cutlass.const_expr(
++            self.owner_quantize_dq or self.head_fast_raster
++        ):
+             blk_coord_k = physical_bidy
+             blk_coord_h_k = physical_bidx
+         blk_coord_h_r = Int32(0)
+@@ -4197,7 +4202,7 @@
+         grid_heads = cute.size(H_K)
+         if self.split_gqa_heads:
+             grid_heads *= cute.size(H_R)
+-        if self.owner_quantize_dq:
++        if self.owner_quantize_dq or self.head_fast_raster:
+             return (grid_heads, cute.ceil_div(K, block_k), cute.size(B))
+         return (cute.ceil_div(K, block_k), grid_heads, cute.size(B))

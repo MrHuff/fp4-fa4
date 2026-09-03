@@ -1,0 +1,156 @@
+\section{Profile and Remaining Ceiling}
+
+\subsection{Latest dense-kernel profile}
+
+The latest source-correlated S8192/H8 profile excludes operand preprocessing
+and measures the direct-BF16 dQ specialization.  Table~\ref{tab:profile-sol}
+shows that the kernel is dependency-limited rather than saturated on tensor
+math or HBM bandwidth.
+
+\begin{table}[htbp]
+\centering
+\caption{S8192/H8 dense-kernel profile after BF16 dQ reduction.}
+\label{tab:profile-sol}
+\small
+\begin{tabular}{l r}
+\toprule
+Metric & Value \\
+\midrule
+dense-kernel duration & 691.936 $\mu$s \\
+tensor-pipe active & 21.04\% \\
+issue active & 25.61\% \\
+eligible warps per active cycle & 0.43 \\
+long-scoreboard stalls / issue-active cycle & 5.64 \\
+barrier stalls / issue-active cycle & 1.45 \\
+tensor instructions & 211,200 \\
+DRAM traffic & 94,448,640 bytes \\
+registers / thread & 128 \\
+dynamic shared memory & 231,484 bytes \\
+spill/local stack & zero \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The largest source-attributed long-scoreboard samples are:
+
+\begin{table}[htbp]
+\centering
+\caption{Largest sampled long-scoreboard dependencies.}
+\label{tab:source-stalls}
+\small
+\begin{tabular}{l rr}
+\toprule
+Dependency & samples & share \\
+\midrule
+compute-side \code{score\_issued} wait & 3,025 & 36.8\% \\
+Q-source readiness, two sites & 744 & 9.1\% \\
+statistics-side \code{score\_done} wait & 463 & 5.6\% \\
+\code{dp\_done} wait & 226 & 2.7\% \\
+dQ TMA-store drain/publication & 215 & 2.6\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The score sample does not mean a missing barrier.  It means the consumer has
+reached the earliest legal point and the data-producing tensor work is not yet
+available.  Earlier experiments that rearranged score fanout moved profile
+samples without moving wall time; downstream $dP/dS$ and dQ dependencies then
+became exposed.
+
+\subsection{Why tensor utilization is not higher}
+
+Backward has more tensor products than forward:
+\begin{equation}
+  QK^\mathsf T,\quad GV^\mathsf T,\quad
+  P^\mathsf TG,\quad dSK,\quad dS^\mathsf TQ.
+  \label{eq:five-bwd-products}
+\end{equation}
+More matrix work does not imply that these products can run concurrently.
+Within one tile, the dependency graph contains
+\begin{equation}
+  QK^\mathsf T
+  \rightarrow P
+  \rightarrow (dV,dS),
+  \qquad
+  GV^\mathsf T
+  \rightarrow dS
+  \rightarrow (dQ,dK).
+  \label{eq:bwd-dependency-dag}
+\end{equation}
+The tensor issuer therefore alternates between products whose operands are
+created by scalar/packed producer work.  Score has to fan out to P; dP has to
+be centered; dS has to be quantized in two orientations; and dQ eventually
+has to leave TMEM through a cross-owner reduction.
+
+Forward can devote most TMEM to two score/output pipelines.  Backward keeps
+320 columns permanently occupied by dK and dV, leaving one transient
+score/dP/dQ region.  Thus the forward strategy of adding an independent score
+accumulator is not a local template change: it would evict live gradient
+state.  The three exact K64 score instructions are also a hard $D=192$
+requirement.  Dropping one changes the represented rank and sharply degrades
+accuracy.
+
+\subsection{What the projection result changes}
+
+Before the native learned projection, the low-precision backward gain could be
+lost to Q/K reduction, packing, transposition, and HBM round trips.  The new
+producer removes that systems bottleneck for sufficiently deep projection K.
+It therefore raises the meaningful optimization ceiling: improvements inside
+attention are no longer automatically canceled by fake quantization outside
+it.
+
+The remaining boundaries are now:
+
+\begin{enumerate}
+  \item \textbf{Scale availability.}  The fused Q/K epilogue consumes
+  $m_h$; producing Equation~\ref{eq:head-stats} without a BF16 Q/K round trip
+  still requires an integration policy.
+  \item \textbf{Score production and fanout.}  Exact D192 needs three K64
+  commands and one completed represented score before P.
+  \item \textbf{dQ reduction topology.}  K/V ownership creates many partial
+  dQ contributors.  BF16 halves traffic, but publication remains.
+  \item \textbf{Projection-backward consumer.}  Per-head readiness and two
+  TMEM accumulators reach a small H8 win, but the consumer still observes a
+  globally reduced BF16 tile.  Its bounded grid leaves an exposed tail for
+  wider output matrices, where shape dispatch returns to cuBLAS.
+\end{enumerate}
+
+\subsection{Quantified ceilings}
+
+At S8192/H8:
+\begin{align}
+  T_{\mathrm{direct\ BF16\ endpoint}} &\approx 0.746\ \mathrm{ms},\\
+  T_{\mathrm{dense\ kernel\ profile}} &\approx 0.692\ \mathrm{ms},\\
+  T_{\mathrm{no\ dQ\ publication\ diagnostic}} &\approx 0.693\ \mathrm{ms}.
+  \label{eq:current-ceilings}
+\end{align}
+The near equality of the latter two numbers is coincidental measurement
+context, but both place the remaining standalone opportunity near 53
+$\mu$s, or roughly 7\% of the direct-BF16 endpoint.  A real fused consumer
+must spend some of that budget on reduction and projection work, so 0.693 ms
+is an optimistic floor rather than a forecast.
+
+\subsection{Plausible breakthrough directions}
+
+The profile and ownership proof narrow the next high-leverage work:
+
+\begin{enumerate}
+  \item \textbf{Projection-native adaptive scales.}  Emit per-head scale
+  statistics with the learned projection, use a delayed/calibrated scale, or
+  train a scale predictor so the four E2M1 layouts never depend on a BF16
+  sidecar.
+  \item \textbf{Q-centric reduction and projection dgrad.}  Make one cluster
+  own a complete dQ tile, or fuse a hierarchical owner reduction into
+  Equation~\ref{eq:projection-dgrad}.  The new head-pipelined consumer moves
+  readiness into the K loop, but it does not eliminate the BF16 scratch;
+  eliminating that scratch is the path to the no-publication floor.
+  \item \textbf{Model-supported lower score rank.}  Two K64 score commands
+  become legitimate only if the learned Q/K projection is trained to produce
+  a real rank-128 subspace.  A fixed post-hoc projection is not enough.
+  \item \textbf{Upstream low-precision gradient operands.}  Emit reusable
+  E4M3 or MXFP4 V/$G$ views from adjacent model kernels, preserving the
+  fixed-power contracts without standalone preprocessing.
+\end{enumerate}
+
+More barrier state, scalar atomics, or another TMEM rearrangement within the
+current 512-column map has a much smaller measured ceiling.

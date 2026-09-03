@@ -1,0 +1,2182 @@
+{
+  "schema": "tk_fp4_bert_mlm_eval_v1",
+  "model": "google-bert/bert-base-uncased",
+  "dataset": "Salesforce/wikitext",
+  "dataset_config": "wikitext-2-raw-v1",
+  "split": "test",
+  "seed": 20260728,
+  "extension": "/tmp/tk_hao_unified_g1/b1_s1024_h24_d128_nvmx-fast.so",
+  "protocol": {
+    "sequence_length": 512,
+    "content_tokens_per_block": 510,
+    "mlm_probability": 0.15,
+    "mlm_replacement": "80% mask, 10% random, 10% unchanged",
+    "full_noncausal_attention": true,
+    "interleave_kv_quarters": false,
+    "global_anchor_kv": false,
+    "global_anchor_samples": 32,
+    "key_centering": "none",
+    "score_shift": 0.0,
+    "score_shift_predictor": "fixed",
+    "score_shift_bias": 0.0,
+    "timing_scope": "accuracy only; dynamic Q/K/V quantization is not timed",
+    "requested_samples": 200,
+    "stop_on_nonfinite": false
+  },
+  "masked_language_modeling": {
+    "masked_tokens": 15278,
+    "baseline_loss": 2.1615117958569217,
+    "fp4_loss": 2.1986721301987027,
+    "baseline_perplexity": 8.684256562504071,
+    "fp4_perplexity": 9.013037409655624,
+    "baseline_masked_accuracy": 0.6178819217175023,
+    "fp4_masked_accuracy": 0.6110092944102631,
+    "masked_top1_agreement": 0.9016887027097787,
+    "mean_kl_fp4_vs_baseline": 0.054297267142227296,
+    "logit_error": {
+      "cosine": 0.9969465878592718,
+      "rmse": 0.3984038848862074,
+      "reference_rms": 5.096038679585335,
+      "relative_l2": 0.0781791328394363,
+      "max_abs": 14.5625
+    }
+  },
+  "attention": {
+    "attention_backend": "tk",
+    "topology": {
+      "schema": "tk_hao_direct_pipeline_v1",
+      "valid": 0,
+      "route": "real_fwd_tk_hao_direct_nvfp4_mxfp4pv",
+      "batch": 1,
+      "heads": 24,
+      "seqlen": 1024,
+      "dqk": 128,
+      "dvo": 128,
+      "logical_jobs": 0,
+      "physical_grid_ctas": 0,
+      "threads_per_cta": 0,
+      "query_stages": 2,
+      "kv_stages": 0,
+      "tmem_columns": 0,
+      "dynamic_smem_bytes": 0,
+      "persistent": true,
+      "p_first_chunks": 1,
+      "early_p_k64": true,
+      "sparse_pv": false,
+      "sparse_pattern": "dense",
+      "sparse_selector_mode": 0,
+      "sparse_fixed_selector": 0,
+      "sparse_split_k128": false,
+      "sparse_issue_count": 0,
+      "sparse_logical_k_per_issue": 0,
+      "sparse_early_half": false,
+      "mx_disjoint_scale_handoff": true,
+      "mx_direct_scale_handoff": true,
+      "mx_register_scale_handoff": false,
+      "mx_pair_scale_scratch": false,
+      "mx_async_scale_handoff": true,
+      "mx_shiftless_corr_bypass": true,
+      "mx_defer_job_stats_wait": false,
+      "mx_direct_scale_scratch": false,
+      "mx_split_stage_pv": false,
+      "mx_qk_scale_preload": true,
+      "mx_qk_scale_preload_mask": 1,
+      "mx_qk_scale_preload_before_p": true,
+      "nv_qk_folded_k64_scales": true,
+      "nv_qk_folded_k64_scale_mask": 3,
+      "nv_qk_compact_folded_scales": false,
+      "nv_qk_preload_page_mask": 1,
+      "mx_q3_corr_wg": false,
+      "mx_dual_q3_corr_wg": false,
+      "mx_dual_q3_smem_wg": false,
+      "mx_dual_q3_tmem_wg": false,
+      "fused_pv_issue": false,
+      "log2_p_quant": false,
+      "mx_log2_p_quant": true,
+      "mx_scale_select": 1,
+      "mx_direct_log_code": false,
+      "mx_direct_log_code_mode": 0,
+      "mx_log_lut_bits": 0,
+      "mx_log_lut_bit_code_mode": 0,
+      "mx_quantized_denom": true,
+      "mx_denom_corr_wg": false,
+      "mx_denom_load_width": 4,
+      "mx_denom_pipelined_sum": false,
+      "mx_denom_pair_overlap": false,
+      "mx_denom_factor_hoist": false,
+      "mx_denom_int_scale_fusion": false,
+      "mx_denom_sum_lanes": 1,
+      "mx_denom_words": 4,
+      "mx_denom_decode_mode": 1,
+      "mx_denom_scale_smem": false,
+      "mx_denom_payload_smem": false,
+      "mx_denom_magic_i2f": false,
+      "mx_denom_early_smem": false,
+      "mx_denom_early_split": false,
+      "mx_denom_split_prefetch": false,
+      "mx_global_anchor32": false,
+      "mx_global_anchor128": false,
+      "mx_global_anchor_bias": 0.0,
+      "mx_global_anchor_margin_log2": 0,
+      "mx_anchor_affine_hoist": false,
+      "mx_fixed_anchor_log2": 0,
+      "mx_stored_scale_shift_log2": 16,
+      "debug_lse_stat": 0,
+      "mx_denom_sample_stride": 1,
+      "mx_max_sample_stride": 1,
+      "mx_max_sample_bias_x2": 0,
+      "mx_q1_max_sample_stride": 1,
+      "mx_pair_scale_reuse": 1,
+      "mx_pair_scale_stage_mask": 1,
+      "mx_pair_scale_period": 1,
+      "mx_pair_scale_delta": 0,
+      "mx_q1_pair_probe": 0,
+      "mx_q1_pair_probe_bias": 0.0,
+      "mx_lagged_q1_scale": false,
+      "mx_q1_scale_offload": false,
+      "mx_q1_self_max": 3,
+      "mx_scan_fused_p": false,
+      "mx_local_native_deferred_scale": false,
+      "mx_bit_exp2_mask": 0,
+      "mx_pwl_exp2": true,
+      "mx_pwl_exp2_mode": 23,
+      "mx_mode23_native_density": 0,
+      "mx_mode23_native_quarter_mask": 15,
+      "mx_mode23_early_native": false,
+      "mx_mode23_early_native_stage_mask": 3,
+      "mx_mode23_early_native_quarter_mask": 15,
+      "mx_mode23_early_native_lookahead": 4,
+      "mx_mode23_early_native_order": 0,
+      "mx_pwl_four_sample_denom": false,
+      "mx_full_approx_denom": false,
+      "mx_full_approx_denom_mode": 0,
+      "mx_affine_a": 1.5,
+      "mx_affine_b": 1.2000000476837158,
+      "mx_stage0_affine_mask": 14,
+      "mx_stage1_affine_mask": 14,
+      "mx_shiftless_softmax": true,
+      "nv_shiftless_softmax": false,
+      "nv_shiftless_scale_lift": false,
+      "nv_scale_satfinite": false,
+      "nv_v_global_decode": false,
+      "nv_p_global_log2": 0.0,
+      "nv_policy_id": 0,
+      "nv_pwl_exp2_mode": 0,
+      "nv_stage0_affine_mask": 0,
+      "nv_stage1_affine_mask": 0,
+      "nv_fast_approx_mode": 0,
+      "nv_affine_a": 1.6113160848617554,
+      "nv_affine_b": 0.9357470273971558,
+      "nv_cubic_a": 0.07839805632829666,
+      "nv_cubic_b": 0.286250501871109,
+      "nv_cubic_c": 0.6314520239830017,
+      "nv_cubic_d": 0.9920233488082886,
+      "nv_refit_cubic_a": 0.07430709153413773,
+      "nv_refit_cubic_b": 0.28611862659454346,
+      "nv_refit_cubic_c": 0.6467000246047974,
+      "nv_refit_cubic_d": 0.9901078343391418,
+      "nv_hinge_m": 1.3763010501861572,
+      "nv_hinge_b": 0.2806391716003418,
+      "nv_hinge_d": 0.9073908925056458,
+      "nv_hinge_t": 0.8456308245658875,
+      "nv_native_pairs": 4,
+      "nv_native6_quarter_mask": 0,
+      "nv_relu_pack": false,
+      "nv_quantized_denom": false,
+      "nv_hybrid_denom": false,
+      "nv_sampled_denom": false,
+      "mx_sampled_stabilizer": false,
+      "mx_retain_q0": false,
+      "mx_pair_load_scan": true,
+      "mx_half_prefetch_q0": false,
+      "mx_half_prefetch_q1": false,
+      "mx_half_prefetch_q3": false,
+      "mx_delayed_half_q2": true,
+      "mx_delayed_early_q3": true,
+      "mx_early_q2_reduce": true,
+      "mx_stage1_early_q1": false,
+      "mx_q1_max_interleave": false,
+      "mx_tree_max": true,
+      "mx_max3_reduce": true,
+      "mx_max3_wide_reduce": true,
+      "nv_quarter_scale": false,
+      "nv_scale_encode_mode": 0,
+      "nv_quarter_schedule_mode": 0,
+      "nv_denom_source": 0,
+      "nv_denom_corr_wg": false,
+      "nv_denom_smem_handoff": false,
+      "nv_denom_words": 4,
+      "nv_denom_known_max": false,
+      "nv_denom_short_exact": false,
+      "nv_denom_exact_max_tiles": 0,
+      "nv_global_anchor64": false,
+      "nv_global_anchor32": false,
+      "nv_global_anchor_samples": 0,
+      "nv_global_anchor_scale": 1.0,
+      "nv_global_anchor_bias": 0.0,
+      "nv_debug_lse_rowmax": false,
+      "nv_tail_q3_hook_word": 0,
+      "nv_q01_corr_wg": false,
+      "nv_tree_max": false,
+      "nv_max3_reduce": false,
+      "nv_max_sample_stride": 1,
+      "nv_max_sample_bias_x2": 0,
+      "nv_q0_stabilizer": false,
+      "nv_preview_stabilizer": false,
+      "nv_preview_width": 0,
+      "nv_preview_bias_x8": 0,
+      "nv_full_row_stabilizer": false,
+      "nv_direct_scale_handoff": false,
+      "nv_preload_v_tail_mode": 0,
+      "nv_issuer_v_scale_prefetch_mask": 0,
+      "nv_register_scale_handoff": false,
+      "nv_reuse_v_scale": false,
+      "nv_softmax_v_scale_prefetch": false,
+      "p_ilp_pipeline": false,
+      "fixed_p_ceiling": false,
+      "score_pack_ceiling": false,
+      "rowmax_pack_ceiling": false,
+      "fake_denom_ceiling": false,
+      "ex2_emu_mask": 34952,
+      "ex2_alu_degree": 3,
+      "mx_ex2_q1_mask": 34952,
+      "mx_ex2_q2_mask": 34952,
+      "mx_ex2_q3_mask": 0,
+      "task_order": 0,
+      "wait_hint_cycles": 10000000,
+      "qk_format": "nvfp4_e4m3_block16",
+      "pv_format": "mxfp4_e8m0_block32"
+    },
+    "layer_extension_topologies": {},
+    "formats": {
+      "qk": "nvfp4",
+      "pv": "mxfp4"
+    },
+    "interleave_kv_quarters": false,
+    "global_anchor_kv": false,
+    "global_anchor_samples": 32,
+    "mx_quant_modes": {
+      "q": 0,
+      "k": 0,
+      "v": 0
+    },
+    "nv_qk_fold_k64_scales": "both",
+    "nv_qk_fold_scale_select": "mse",
+    "nv_qk_fold_scale_multiplier": 1.0,
+    "qk_equalization": 1.0,
+    "qk_channel_equalization": "none",
+    "qk_channel_equalization_strength": 1.0,
+    "qk_channel_permutation": "none",
+    "qk_orthogonal_transform": "none",
+    "key_centering": "none",
+    "score_shift": 0.0,
+    "score_shift_predictor": "fixed",
+    "score_shift_bias": 0.0,
+    "all_outputs_finite": true,
+    "nonfinite_output_rows": 0,
+    "layer_output_error": {
+      "0": {
+        "cosine": 0.981446727514267,
+        "rmse": 0.033463987410068514,
+        "reference_rms": 0.17335222609341144,
+        "relative_l2": 0.19314448311924934,
+        "max_abs": 0.711156023144722
+      },
+      "1": {
+        "cosine": 0.9808608177304268,
+        "rmse": 0.05161979792639613,
+        "reference_rms": 0.2644608370959759,
+        "relative_l2": 0.19521741271018983,
+        "max_abs": 1.0529494696855546
+      },
+      "2": {
+        "cosine": 0.9854516673088074,
+        "rmse": 0.052195588257163764,
+        "reference_rms": 0.3069224545359612,
+        "relative_l2": 0.17006646104156972,
+        "max_abs": 0.9749371615052224
+      },
+      "3": {
+        "cosine": 0.9816482234001159,
+        "rmse": 0.06238245591521263,
+        "reference_rms": 0.3252613018453121,
+        "relative_l2": 0.1918379769474268,
+        "max_abs": 1.0057430362701416
+      },
+      "4": {
+        "cosine": 0.9755465710163116,
+        "rmse": 0.06864775564521551,
+        "reference_rms": 0.30700207486748693,
+        "relative_l2": 0.2237377291172743,
+        "max_abs": 1.0467166256904603
+      },
+      "5": {
+        "cosine": 0.9708957344293594,
+        "rmse": 0.07067499343305826,
+        "reference_rms": 0.29045372068881986,
+        "relative_l2": 0.2433572855591774,
+        "max_abs": 1.086541461646557
+      },
+      "6": {
+        "cosine": 0.9684862431883812,
+        "rmse": 0.0701515967771411,
+        "reference_rms": 0.2780555531382561,
+        "relative_l2": 0.2523521265387535,
+        "max_abs": 1.0398248621821404
+      },
+      "7": {
+        "cosine": 0.9679020431637764,
+        "rmse": 0.06979530707001685,
+        "reference_rms": 0.27488021671772,
+        "relative_l2": 0.25395567119121554,
+        "max_abs": 1.0528801545500754
+      },
+      "8": {
+        "cosine": 0.9702930673956871,
+        "rmse": 0.06255296114832162,
+        "reference_rms": 0.25082250088453295,
+        "relative_l2": 0.24944556795060635,
+        "max_abs": 0.9564983767271041
+      },
+      "9": {
+        "cosine": 0.9768262124061584,
+        "rmse": 0.054647842682898046,
+        "reference_rms": 0.25111003875732424,
+        "relative_l2": 0.21769615732133388,
+        "max_abs": 0.9071935501694679
+      },
+      "10": {
+        "cosine": 0.9785292121767998,
+        "rmse": 0.04419877894222737,
+        "reference_rms": 0.21432978607714176,
+        "relative_l2": 0.2065493705868721,
+        "max_abs": 0.8294593098759652
+      },
+      "11": {
+        "cosine": 0.9771373564004898,
+        "rmse": 0.044919208809733394,
+        "reference_rms": 0.21071042388677597,
+        "relative_l2": 0.21372580394148827,
+        "max_abs": 0.8954978251457214
+      }
+    },
+    "layer_finite_stats": {},
+    "p_scale_sweep": {},
+    "p_scale_sweep_applicable": false,
+    "p_scale_distribution": {},
+    "p_replay": {
+      "enabled": false,
+      "samples": 1,
+      "layers": [
+        0
+      ],
+      "ranges": {},
+      "candidate_metrics": {},
+      "candidate_metrics_by_layer": {
+        "0": {}
+      }
+    }
+  },
+  "records": [
+    {
+      "index": 0,
+      "masked_tokens": 88,
+      "baseline_correct": 59,
+      "fp4_correct": 57,
+      "prediction_agreement": 78,
+      "baseline_nll": 148.87298583984375,
+      "fp4_nll": 161.29266357421875
+    },
+    {
+      "index": 1,
+      "masked_tokens": 79,
+      "baseline_correct": 51,
+      "fp4_correct": 50,
+      "prediction_agreement": 76,
+      "baseline_nll": 180.120361328125,
+      "fp4_nll": 177.928955078125
+    },
+    {
+      "index": 2,
+      "masked_tokens": 83,
+      "baseline_correct": 52,
+      "fp4_correct": 47,
+      "prediction_agreement": 70,
+      "baseline_nll": 172.309326171875,
+      "fp4_nll": 178.2366180419922
+    },
+    {
+      "index": 3,
+      "masked_tokens": 89,
+      "baseline_correct": 53,
+      "fp4_correct": 54,
+      "prediction_agreement": 83,
+      "baseline_nll": 168.39627075195312,
+      "fp4_nll": 168.2735595703125
+    },
+    {
+      "index": 4,
+      "masked_tokens": 77,
+      "baseline_correct": 48,
+      "fp4_correct": 47,
+      "prediction_agreement": 69,
+      "baseline_nll": 175.1253662109375,
+      "fp4_nll": 174.74932861328125
+    },
+    {
+      "index": 5,
+      "masked_tokens": 63,
+      "baseline_correct": 47,
+      "fp4_correct": 45,
+      "prediction_agreement": 58,
+      "baseline_nll": 91.29398345947266,
+      "fp4_nll": 95.09709930419922
+    },
+    {
+      "index": 6,
+      "masked_tokens": 75,
+      "baseline_correct": 51,
+      "fp4_correct": 50,
+      "prediction_agreement": 64,
+      "baseline_nll": 141.84326171875,
+      "fp4_nll": 140.56573486328125
+    },
+    {
+      "index": 7,
+      "masked_tokens": 76,
+      "baseline_correct": 45,
+      "fp4_correct": 45,
+      "prediction_agreement": 69,
+      "baseline_nll": 148.56752014160156,
+      "fp4_nll": 155.53717041015625
+    },
+    {
+      "index": 8,
+      "masked_tokens": 80,
+      "baseline_correct": 36,
+      "fp4_correct": 37,
+      "prediction_agreement": 65,
+      "baseline_nll": 235.6697998046875,
+      "fp4_nll": 241.63717651367188
+    },
+    {
+      "index": 9,
+      "masked_tokens": 78,
+      "baseline_correct": 45,
+      "fp4_correct": 48,
+      "prediction_agreement": 65,
+      "baseline_nll": 198.6884765625,
+      "fp4_nll": 198.19253540039062
+    },
+    {
+      "index": 10,
+      "masked_tokens": 77,
+      "baseline_correct": 50,
+      "fp4_correct": 48,
+      "prediction_agreement": 74,
+      "baseline_nll": 137.8793182373047,
+      "fp4_nll": 136.31646728515625
+    },
+    {
+      "index": 11,
+      "masked_tokens": 58,
+      "baseline_correct": 34,
+      "fp4_correct": 35,
+      "prediction_agreement": 55,
+      "baseline_nll": 112.1258544921875,
+      "fp4_nll": 107.20436096191406
+    },
+    {
+      "index": 12,
+      "masked_tokens": 83,
+      "baseline_correct": 42,
+      "fp4_correct": 43,
+      "prediction_agreement": 76,
+      "baseline_nll": 239.205078125,
+      "fp4_nll": 241.3946533203125
+    },
+    {
+      "index": 13,
+      "masked_tokens": 77,
+      "baseline_correct": 49,
+      "fp4_correct": 50,
+      "prediction_agreement": 68,
+      "baseline_nll": 116.38621520996094,
+      "fp4_nll": 122.46621704101562
+    },
+    {
+      "index": 14,
+      "masked_tokens": 74,
+      "baseline_correct": 48,
+      "fp4_correct": 47,
+      "prediction_agreement": 67,
+      "baseline_nll": 147.38345336914062,
+      "fp4_nll": 157.05706787109375
+    },
+    {
+      "index": 15,
+      "masked_tokens": 76,
+      "baseline_correct": 49,
+      "fp4_correct": 52,
+      "prediction_agreement": 70,
+      "baseline_nll": 132.75421142578125,
+      "fp4_nll": 131.8780975341797
+    },
+    {
+      "index": 16,
+      "masked_tokens": 70,
+      "baseline_correct": 41,
+      "fp4_correct": 40,
+      "prediction_agreement": 65,
+      "baseline_nll": 188.56820678710938,
+      "fp4_nll": 194.38961791992188
+    },
+    {
+      "index": 17,
+      "masked_tokens": 72,
+      "baseline_correct": 47,
+      "fp4_correct": 45,
+      "prediction_agreement": 65,
+      "baseline_nll": 151.74160766601562,
+      "fp4_nll": 150.09695434570312
+    },
+    {
+      "index": 18,
+      "masked_tokens": 76,
+      "baseline_correct": 50,
+      "fp4_correct": 49,
+      "prediction_agreement": 70,
+      "baseline_nll": 190.17141723632812,
+      "fp4_nll": 197.98353576660156
+    },
+    {
+      "index": 19,
+      "masked_tokens": 69,
+      "baseline_correct": 47,
+      "fp4_correct": 48,
+      "prediction_agreement": 65,
+      "baseline_nll": 115.15103149414062,
+      "fp4_nll": 119.52828979492188
+    },
+    {
+      "index": 20,
+      "masked_tokens": 69,
+      "baseline_correct": 43,
+      "fp4_correct": 40,
+      "prediction_agreement": 61,
+      "baseline_nll": 139.78878784179688,
+      "fp4_nll": 140.20294189453125
+    },
+    {
+      "index": 21,
+      "masked_tokens": 80,
+      "baseline_correct": 50,
+      "fp4_correct": 51,
+      "prediction_agreement": 72,
+      "baseline_nll": 175.86541748046875,
+      "fp4_nll": 178.10382080078125
+    },
+    {
+      "index": 22,
+      "masked_tokens": 78,
+      "baseline_correct": 54,
+      "fp4_correct": 51,
+      "prediction_agreement": 73,
+      "baseline_nll": 145.82533264160156,
+      "fp4_nll": 152.3003692626953
+    },
+    {
+      "index": 23,
+      "masked_tokens": 88,
+      "baseline_correct": 51,
+      "fp4_correct": 50,
+      "prediction_agreement": 77,
+      "baseline_nll": 201.69151306152344,
+      "fp4_nll": 200.84625244140625
+    },
+    {
+      "index": 24,
+      "masked_tokens": 65,
+      "baseline_correct": 39,
+      "fp4_correct": 36,
+      "prediction_agreement": 60,
+      "baseline_nll": 110.24288940429688,
+      "fp4_nll": 113.78353118896484
+    },
+    {
+      "index": 25,
+      "masked_tokens": 72,
+      "baseline_correct": 53,
+      "fp4_correct": 53,
+      "prediction_agreement": 70,
+      "baseline_nll": 92.567626953125,
+      "fp4_nll": 100.87623596191406
+    },
+    {
+      "index": 26,
+      "masked_tokens": 85,
+      "baseline_correct": 55,
+      "fp4_correct": 54,
+      "prediction_agreement": 77,
+      "baseline_nll": 203.4943389892578,
+      "fp4_nll": 206.48548889160156
+    },
+    {
+      "index": 27,
+      "masked_tokens": 85,
+      "baseline_correct": 42,
+      "fp4_correct": 44,
+      "prediction_agreement": 69,
+      "baseline_nll": 239.51174926757812,
+      "fp4_nll": 247.89852905273438
+    },
+    {
+      "index": 28,
+      "masked_tokens": 79,
+      "baseline_correct": 51,
+      "fp4_correct": 48,
+      "prediction_agreement": 67,
+      "baseline_nll": 168.10610961914062,
+      "fp4_nll": 176.1037139892578
+    },
+    {
+      "index": 29,
+      "masked_tokens": 68,
+      "baseline_correct": 40,
+      "fp4_correct": 43,
+      "prediction_agreement": 62,
+      "baseline_nll": 154.01214599609375,
+      "fp4_nll": 149.32327270507812
+    },
+    {
+      "index": 30,
+      "masked_tokens": 85,
+      "baseline_correct": 42,
+      "fp4_correct": 43,
+      "prediction_agreement": 77,
+      "baseline_nll": 245.05853271484375,
+      "fp4_nll": 246.5673065185547
+    },
+    {
+      "index": 31,
+      "masked_tokens": 76,
+      "baseline_correct": 44,
+      "fp4_correct": 45,
+      "prediction_agreement": 66,
+      "baseline_nll": 153.81922912597656,
+      "fp4_nll": 149.2215576171875
+    },
+    {
+      "index": 32,
+      "masked_tokens": 71,
+      "baseline_correct": 41,
+      "fp4_correct": 41,
+      "prediction_agreement": 65,
+      "baseline_nll": 148.01535034179688,
+      "fp4_nll": 150.920166015625
+    },
+    {
+      "index": 33,
+      "masked_tokens": 82,
+      "baseline_correct": 47,
+      "fp4_correct": 47,
+      "prediction_agreement": 74,
+      "baseline_nll": 217.06686401367188,
+      "fp4_nll": 218.4774169921875
+    },
+    {
+      "index": 34,
+      "masked_tokens": 74,
+      "baseline_correct": 49,
+      "fp4_correct": 50,
+      "prediction_agreement": 68,
+      "baseline_nll": 125.86302185058594,
+      "fp4_nll": 130.92337036132812
+    },
+    {
+      "index": 35,
+      "masked_tokens": 74,
+      "baseline_correct": 38,
+      "fp4_correct": 37,
+      "prediction_agreement": 70,
+      "baseline_nll": 215.59524536132812,
+      "fp4_nll": 217.88766479492188
+    },
+    {
+      "index": 36,
+      "masked_tokens": 91,
+      "baseline_correct": 62,
+      "fp4_correct": 60,
+      "prediction_agreement": 81,
+      "baseline_nll": 158.75906372070312,
+      "fp4_nll": 166.29446411132812
+    },
+    {
+      "index": 37,
+      "masked_tokens": 70,
+      "baseline_correct": 45,
+      "fp4_correct": 43,
+      "prediction_agreement": 62,
+      "baseline_nll": 121.10631561279297,
+      "fp4_nll": 121.49394226074219
+    },
+    {
+      "index": 38,
+      "masked_tokens": 79,
+      "baseline_correct": 53,
+      "fp4_correct": 51,
+      "prediction_agreement": 70,
+      "baseline_nll": 144.21363830566406,
+      "fp4_nll": 152.38246154785156
+    },
+    {
+      "index": 39,
+      "masked_tokens": 84,
+      "baseline_correct": 52,
+      "fp4_correct": 54,
+      "prediction_agreement": 78,
+      "baseline_nll": 164.51388549804688,
+      "fp4_nll": 158.77639770507812
+    },
+    {
+      "index": 40,
+      "masked_tokens": 76,
+      "baseline_correct": 40,
+      "fp4_correct": 40,
+      "prediction_agreement": 68,
+      "baseline_nll": 148.71084594726562,
+      "fp4_nll": 148.80836486816406
+    },
+    {
+      "index": 41,
+      "masked_tokens": 78,
+      "baseline_correct": 46,
+      "fp4_correct": 47,
+      "prediction_agreement": 67,
+      "baseline_nll": 173.1387939453125,
+      "fp4_nll": 170.68515014648438
+    },
+    {
+      "index": 42,
+      "masked_tokens": 77,
+      "baseline_correct": 39,
+      "fp4_correct": 39,
+      "prediction_agreement": 74,
+      "baseline_nll": 212.43287658691406,
+      "fp4_nll": 215.68194580078125
+    },
+    {
+      "index": 43,
+      "masked_tokens": 74,
+      "baseline_correct": 44,
+      "fp4_correct": 41,
+      "prediction_agreement": 64,
+      "baseline_nll": 143.17425537109375,
+      "fp4_nll": 159.79519653320312
+    },
+    {
+      "index": 44,
+      "masked_tokens": 75,
+      "baseline_correct": 48,
+      "fp4_correct": 48,
+      "prediction_agreement": 70,
+      "baseline_nll": 134.896484375,
+      "fp4_nll": 140.2315673828125
+    },
+    {
+      "index": 45,
+      "masked_tokens": 87,
+      "baseline_correct": 45,
+      "fp4_correct": 47,
+      "prediction_agreement": 75,
+      "baseline_nll": 203.39903259277344,
+      "fp4_nll": 204.77548217773438
+    },
+    {
+      "index": 46,
+      "masked_tokens": 93,
+      "baseline_correct": 54,
+      "fp4_correct": 51,
+      "prediction_agreement": 78,
+      "baseline_nll": 196.24234008789062,
+      "fp4_nll": 199.4466094970703
+    },
+    {
+      "index": 47,
+      "masked_tokens": 84,
+      "baseline_correct": 47,
+      "fp4_correct": 44,
+      "prediction_agreement": 75,
+      "baseline_nll": 180.09425354003906,
+      "fp4_nll": 190.3444366455078
+    },
+    {
+      "index": 48,
+      "masked_tokens": 75,
+      "baseline_correct": 47,
+      "fp4_correct": 44,
+      "prediction_agreement": 68,
+      "baseline_nll": 157.68081665039062,
+      "fp4_nll": 158.38397216796875
+    },
+    {
+      "index": 49,
+      "masked_tokens": 78,
+      "baseline_correct": 47,
+      "fp4_correct": 47,
+      "prediction_agreement": 71,
+      "baseline_nll": 147.84487915039062,
+      "fp4_nll": 137.83544921875
+    },
+    {
+      "index": 50,
+      "masked_tokens": 79,
+      "baseline_correct": 43,
+      "fp4_correct": 42,
+      "prediction_agreement": 73,
+      "baseline_nll": 174.4488983154297,
+      "fp4_nll": 184.2755126953125
+    },
+    {
+      "index": 51,
+      "masked_tokens": 71,
+      "baseline_correct": 44,
+      "fp4_correct": 43,
+      "prediction_agreement": 67,
+      "baseline_nll": 129.39862060546875,
+      "fp4_nll": 128.74258422851562
+    },
+    {
+      "index": 52,
+      "masked_tokens": 74,
+      "baseline_correct": 47,
+      "fp4_correct": 46,
+      "prediction_agreement": 65,
+      "baseline_nll": 138.1199951171875,
+      "fp4_nll": 150.62750244140625
+    },
+    {
+      "index": 53,
+      "masked_tokens": 60,
+      "baseline_correct": 35,
+      "fp4_correct": 35,
+      "prediction_agreement": 58,
+      "baseline_nll": 119.03789520263672,
+      "fp4_nll": 119.48466491699219
+    },
+    {
+      "index": 54,
+      "masked_tokens": 75,
+      "baseline_correct": 43,
+      "fp4_correct": 43,
+      "prediction_agreement": 68,
+      "baseline_nll": 183.37713623046875,
+      "fp4_nll": 175.7677001953125
+    },
+    {
+      "index": 55,
+      "masked_tokens": 86,
+      "baseline_correct": 46,
+      "fp4_correct": 45,
+      "prediction_agreement": 74,
+      "baseline_nll": 194.41929626464844,
+      "fp4_nll": 201.2757568359375
+    },
+    {
+      "index": 56,
+      "masked_tokens": 87,
+      "baseline_correct": 44,
+      "fp4_correct": 43,
+      "prediction_agreement": 78,
+      "baseline_nll": 256.5877685546875,
+      "fp4_nll": 264.0565185546875
+    },
+    {
+      "index": 57,
+      "masked_tokens": 81,
+      "baseline_correct": 48,
+      "fp4_correct": 44,
+      "prediction_agreement": 74,
+      "baseline_nll": 200.90121459960938,
+      "fp4_nll": 208.26168823242188
+    },
+    {
+      "index": 58,
+      "masked_tokens": 77,
+      "baseline_correct": 46,
+      "fp4_correct": 45,
+      "prediction_agreement": 69,
+      "baseline_nll": 178.7677459716797,
+      "fp4_nll": 187.60528564453125
+    },
+    {
+      "index": 59,
+      "masked_tokens": 67,
+      "baseline_correct": 37,
+      "fp4_correct": 36,
+      "prediction_agreement": 62,
+      "baseline_nll": 158.4796142578125,
+      "fp4_nll": 160.46218872070312
+    },
+    {
+      "index": 60,
+      "masked_tokens": 82,
+      "baseline_correct": 39,
+      "fp4_correct": 38,
+      "prediction_agreement": 70,
+      "baseline_nll": 215.05101013183594,
+      "fp4_nll": 214.79965209960938
+    },
+    {
+      "index": 61,
+      "masked_tokens": 65,
+      "baseline_correct": 44,
+      "fp4_correct": 45,
+      "prediction_agreement": 57,
+      "baseline_nll": 114.6042709350586,
+      "fp4_nll": 110.75592041015625
+    },
+    {
+      "index": 62,
+      "masked_tokens": 69,
+      "baseline_correct": 40,
+      "fp4_correct": 41,
+      "prediction_agreement": 62,
+      "baseline_nll": 115.00408935546875,
+      "fp4_nll": 120.12635803222656
+    },
+    {
+      "index": 63,
+      "masked_tokens": 75,
+      "baseline_correct": 45,
+      "fp4_correct": 45,
+      "prediction_agreement": 68,
+      "baseline_nll": 160.88955688476562,
+      "fp4_nll": 163.39999389648438
+    },
+    {
+      "index": 64,
+      "masked_tokens": 73,
+      "baseline_correct": 51,
+      "fp4_correct": 48,
+      "prediction_agreement": 64,
+      "baseline_nll": 103.13639831542969,
+      "fp4_nll": 103.9096908569336
+    },
+    {
+      "index": 65,
+      "masked_tokens": 74,
+      "baseline_correct": 43,
+      "fp4_correct": 43,
+      "prediction_agreement": 68,
+      "baseline_nll": 167.50759887695312,
+      "fp4_nll": 171.0162811279297
+    },
+    {
+      "index": 66,
+      "masked_tokens": 74,
+      "baseline_correct": 59,
+      "fp4_correct": 57,
+      "prediction_agreement": 68,
+      "baseline_nll": 93.68777465820312,
+      "fp4_nll": 98.75686645507812
+    },
+    {
+      "index": 67,
+      "masked_tokens": 83,
+      "baseline_correct": 55,
+      "fp4_correct": 54,
+      "prediction_agreement": 78,
+      "baseline_nll": 164.9981689453125,
+      "fp4_nll": 163.3461151123047
+    },
+    {
+      "index": 68,
+      "masked_tokens": 70,
+      "baseline_correct": 56,
+      "fp4_correct": 56,
+      "prediction_agreement": 66,
+      "baseline_nll": 72.50424194335938,
+      "fp4_nll": 72.82758331298828
+    },
+    {
+      "index": 69,
+      "masked_tokens": 77,
+      "baseline_correct": 35,
+      "fp4_correct": 35,
+      "prediction_agreement": 64,
+      "baseline_nll": 330.35955810546875,
+      "fp4_nll": 325.879638671875
+    },
+    {
+      "index": 70,
+      "masked_tokens": 74,
+      "baseline_correct": 54,
+      "fp4_correct": 54,
+      "prediction_agreement": 69,
+      "baseline_nll": 109.7843017578125,
+      "fp4_nll": 107.8665542602539
+    },
+    {
+      "index": 71,
+      "masked_tokens": 73,
+      "baseline_correct": 49,
+      "fp4_correct": 50,
+      "prediction_agreement": 68,
+      "baseline_nll": 157.4485626220703,
+      "fp4_nll": 157.92437744140625
+    },
+    {
+      "index": 72,
+      "masked_tokens": 71,
+      "baseline_correct": 35,
+      "fp4_correct": 35,
+      "prediction_agreement": 65,
+      "baseline_nll": 233.753173828125,
+      "fp4_nll": 234.95498657226562
+    },
+    {
+      "index": 73,
+      "masked_tokens": 94,
+      "baseline_correct": 53,
+      "fp4_correct": 50,
+      "prediction_agreement": 83,
+      "baseline_nll": 210.5228271484375,
+      "fp4_nll": 219.44906616210938
+    },
+    {
+      "index": 74,
+      "masked_tokens": 56,
+      "baseline_correct": 39,
+      "fp4_correct": 37,
+      "prediction_agreement": 48,
+      "baseline_nll": 73.69132995605469,
+      "fp4_nll": 78.64256286621094
+    },
+    {
+      "index": 75,
+      "masked_tokens": 77,
+      "baseline_correct": 46,
+      "fp4_correct": 44,
+      "prediction_agreement": 71,
+      "baseline_nll": 177.47378540039062,
+      "fp4_nll": 177.254150390625
+    },
+    {
+      "index": 76,
+      "masked_tokens": 79,
+      "baseline_correct": 47,
+      "fp4_correct": 50,
+      "prediction_agreement": 71,
+      "baseline_nll": 195.89454650878906,
+      "fp4_nll": 190.01043701171875
+    },
+    {
+      "index": 77,
+      "masked_tokens": 81,
+      "baseline_correct": 46,
+      "fp4_correct": 44,
+      "prediction_agreement": 78,
+      "baseline_nll": 155.72586059570312,
+      "fp4_nll": 161.8893280029297
+    },
+    {
+      "index": 78,
+      "masked_tokens": 66,
+      "baseline_correct": 39,
+      "fp4_correct": 40,
+      "prediction_agreement": 59,
+      "baseline_nll": 147.2563018798828,
+      "fp4_nll": 148.29248046875
+    },
+    {
+      "index": 79,
+      "masked_tokens": 70,
+      "baseline_correct": 46,
+      "fp4_correct": 47,
+      "prediction_agreement": 64,
+      "baseline_nll": 135.697265625,
+      "fp4_nll": 139.6026611328125
+    },
+    {
+      "index": 80,
+      "masked_tokens": 78,
+      "baseline_correct": 47,
+      "fp4_correct": 48,
+      "prediction_agreement": 69,
+      "baseline_nll": 170.79676818847656,
+      "fp4_nll": 175.02342224121094
+    },
+    {
+      "index": 81,
+      "masked_tokens": 86,
+      "baseline_correct": 46,
+      "fp4_correct": 44,
+      "prediction_agreement": 74,
+      "baseline_nll": 225.89569091796875,
+      "fp4_nll": 236.7545623779297
+    },
+    {
+      "index": 82,
+      "masked_tokens": 73,
+      "baseline_correct": 49,
+      "fp4_correct": 48,
+      "prediction_agreement": 64,
+      "baseline_nll": 114.62588500976562,
+      "fp4_nll": 114.3029556274414
+    },
+    {
+      "index": 83,
+      "masked_tokens": 68,
+      "baseline_correct": 44,
+      "fp4_correct": 43,
+      "prediction_agreement": 61,
+      "baseline_nll": 130.5198974609375,
+      "fp4_nll": 130.31546020507812
+    },
+    {
+      "index": 84,
+      "masked_tokens": 80,
+      "baseline_correct": 49,
+      "fp4_correct": 53,
+      "prediction_agreement": 66,
+      "baseline_nll": 164.42294311523438,
+      "fp4_nll": 162.5807342529297
+    },
+    {
+      "index": 85,
+      "masked_tokens": 75,
+      "baseline_correct": 34,
+      "fp4_correct": 32,
+      "prediction_agreement": 63,
+      "baseline_nll": 241.7494659423828,
+      "fp4_nll": 252.49061584472656
+    },
+    {
+      "index": 86,
+      "masked_tokens": 60,
+      "baseline_correct": 40,
+      "fp4_correct": 40,
+      "prediction_agreement": 54,
+      "baseline_nll": 107.60556030273438,
+      "fp4_nll": 116.61404418945312
+    },
+    {
+      "index": 87,
+      "masked_tokens": 77,
+      "baseline_correct": 45,
+      "fp4_correct": 46,
+      "prediction_agreement": 71,
+      "baseline_nll": 199.82244873046875,
+      "fp4_nll": 203.1697998046875
+    },
+    {
+      "index": 88,
+      "masked_tokens": 71,
+      "baseline_correct": 45,
+      "fp4_correct": 44,
+      "prediction_agreement": 68,
+      "baseline_nll": 217.0187225341797,
+      "fp4_nll": 219.81381225585938
+    },
+    {
+      "index": 89,
+      "masked_tokens": 75,
+      "baseline_correct": 45,
+      "fp4_correct": 46,
+      "prediction_agreement": 68,
+      "baseline_nll": 154.95526123046875,
+      "fp4_nll": 161.25201416015625
+    },
+    {
+      "index": 90,
+      "masked_tokens": 84,
+      "baseline_correct": 41,
+      "fp4_correct": 42,
+      "prediction_agreement": 71,
+      "baseline_nll": 267.15655517578125,
+      "fp4_nll": 273.2672119140625
+    },
+    {
+      "index": 91,
+      "masked_tokens": 79,
+      "baseline_correct": 41,
+      "fp4_correct": 41,
+      "prediction_agreement": 68,
+      "baseline_nll": 234.9808349609375,
+      "fp4_nll": 233.96121215820312
+    },
+    {
+      "index": 92,
+      "masked_tokens": 73,
+      "baseline_correct": 52,
+      "fp4_correct": 49,
+      "prediction_agreement": 59,
+      "baseline_nll": 159.6328125,
+      "fp4_nll": 171.28994750976562
+    },
+    {
+      "index": 93,
+      "masked_tokens": 75,
+      "baseline_correct": 47,
+      "fp4_correct": 48,
+      "prediction_agreement": 67,
+      "baseline_nll": 157.29531860351562,
+      "fp4_nll": 159.12796020507812
+    },
+    {
+      "index": 94,
+      "masked_tokens": 79,
+      "baseline_correct": 53,
+      "fp4_correct": 53,
+      "prediction_agreement": 74,
+      "baseline_nll": 164.7948455810547,
+      "fp4_nll": 171.47030639648438
+    },
+    {
+      "index": 95,
+      "masked_tokens": 86,
+      "baseline_correct": 56,
+      "fp4_correct": 55,
+      "prediction_agreement": 79,
+      "baseline_nll": 176.25894165039062,
+      "fp4_nll": 170.23226928710938
+    },
+    {
+      "index": 96,
+      "masked_tokens": 62,
+      "baseline_correct": 37,
+      "fp4_correct": 37,
+      "prediction_agreement": 56,
+      "baseline_nll": 149.07498168945312,
+      "fp4_nll": 143.48382568359375
+    },
+    {
+      "index": 97,
+      "masked_tokens": 71,
+      "baseline_correct": 43,
+      "fp4_correct": 45,
+      "prediction_agreement": 65,
+      "baseline_nll": 129.06382751464844,
+      "fp4_nll": 133.34649658203125
+    },
+    {
+      "index": 98,
+      "masked_tokens": 74,
+      "baseline_correct": 44,
+      "fp4_correct": 44,
+      "prediction_agreement": 59,
+      "baseline_nll": 143.93899536132812,
+      "fp4_nll": 147.02792358398438
+    },
+    {
+      "index": 99,
+      "masked_tokens": 72,
+      "baseline_correct": 42,
+      "fp4_correct": 39,
+      "prediction_agreement": 63,
+      "baseline_nll": 194.1492919921875,
+      "fp4_nll": 195.6651611328125
+    },
+    {
+      "index": 100,
+      "masked_tokens": 72,
+      "baseline_correct": 52,
+      "fp4_correct": 51,
+      "prediction_agreement": 64,
+      "baseline_nll": 135.98849487304688,
+      "fp4_nll": 135.8991241455078
+    },
+    {
+      "index": 101,
+      "masked_tokens": 78,
+      "baseline_correct": 49,
+      "fp4_correct": 49,
+      "prediction_agreement": 72,
+      "baseline_nll": 188.03909301757812,
+      "fp4_nll": 191.61729431152344
+    },
+    {
+      "index": 102,
+      "masked_tokens": 67,
+      "baseline_correct": 45,
+      "fp4_correct": 44,
+      "prediction_agreement": 64,
+      "baseline_nll": 127.45973205566406,
+      "fp4_nll": 126.3044204711914
+    },
+    {
+      "index": 103,
+      "masked_tokens": 90,
+      "baseline_correct": 45,
+      "fp4_correct": 45,
+      "prediction_agreement": 79,
+      "baseline_nll": 267.55523681640625,
+      "fp4_nll": 274.19891357421875
+    },
+    {
+      "index": 104,
+      "masked_tokens": 76,
+      "baseline_correct": 52,
+      "fp4_correct": 52,
+      "prediction_agreement": 73,
+      "baseline_nll": 113.8818359375,
+      "fp4_nll": 117.61251831054688
+    },
+    {
+      "index": 105,
+      "masked_tokens": 73,
+      "baseline_correct": 43,
+      "fp4_correct": 43,
+      "prediction_agreement": 67,
+      "baseline_nll": 134.32073974609375,
+      "fp4_nll": 139.56124877929688
+    },
+    {
+      "index": 106,
+      "masked_tokens": 84,
+      "baseline_correct": 60,
+      "fp4_correct": 60,
+      "prediction_agreement": 77,
+      "baseline_nll": 118.35814666748047,
+      "fp4_nll": 119.54792785644531
+    },
+    {
+      "index": 107,
+      "masked_tokens": 87,
+      "baseline_correct": 58,
+      "fp4_correct": 58,
+      "prediction_agreement": 82,
+      "baseline_nll": 173.369140625,
+      "fp4_nll": 170.80108642578125
+    },
+    {
+      "index": 108,
+      "masked_tokens": 68,
+      "baseline_correct": 42,
+      "fp4_correct": 41,
+      "prediction_agreement": 64,
+      "baseline_nll": 133.4635009765625,
+      "fp4_nll": 127.45365142822266
+    },
+    {
+      "index": 109,
+      "masked_tokens": 87,
+      "baseline_correct": 56,
+      "fp4_correct": 53,
+      "prediction_agreement": 76,
+      "baseline_nll": 201.43954467773438,
+      "fp4_nll": 210.6473388671875
+    },
+    {
+      "index": 110,
+      "masked_tokens": 85,
+      "baseline_correct": 57,
+      "fp4_correct": 61,
+      "prediction_agreement": 76,
+      "baseline_nll": 125.16717529296875,
+      "fp4_nll": 125.50686645507812
+    },
+    {
+      "index": 111,
+      "masked_tokens": 78,
+      "baseline_correct": 50,
+      "fp4_correct": 46,
+      "prediction_agreement": 67,
+      "baseline_nll": 177.5814208984375,
+      "fp4_nll": 181.3463592529297
+    },
+    {
+      "index": 112,
+      "masked_tokens": 73,
+      "baseline_correct": 56,
+      "fp4_correct": 56,
+      "prediction_agreement": 67,
+      "baseline_nll": 108.66969299316406,
+      "fp4_nll": 113.59771728515625
+    },
+    {
+      "index": 113,
+      "masked_tokens": 69,
+      "baseline_correct": 42,
+      "fp4_correct": 39,
+      "prediction_agreement": 58,
+      "baseline_nll": 162.9573974609375,
+      "fp4_nll": 170.59942626953125
+    },
+    {
+      "index": 114,
+      "masked_tokens": 74,
+      "baseline_correct": 43,
+      "fp4_correct": 42,
+      "prediction_agreement": 66,
+      "baseline_nll": 148.55226135253906,
+      "fp4_nll": 154.60748291015625
+    },
+    {
+      "index": 115,
+      "masked_tokens": 74,
+      "baseline_correct": 49,
+      "fp4_correct": 47,
+      "prediction_agreement": 68,
+      "baseline_nll": 138.367431640625,
+      "fp4_nll": 139.89654541015625
+    },
+    {
+      "index": 116,
+      "masked_tokens": 77,
+      "baseline_correct": 54,
+      "fp4_correct": 52,
+      "prediction_agreement": 70,
+      "baseline_nll": 131.7906951904297,
+      "fp4_nll": 138.01217651367188
+    },
+    {
+      "index": 117,
+      "masked_tokens": 74,
+      "baseline_correct": 50,
+      "fp4_correct": 50,
+      "prediction_agreement": 72,
+      "baseline_nll": 117.90013885498047,
+      "fp4_nll": 118.66464233398438
+    },
+    {
+      "index": 118,
+      "masked_tokens": 73,
+      "baseline_correct": 48,
+      "fp4_correct": 49,
+      "prediction_agreement": 68,
+      "baseline_nll": 153.47300720214844,
+      "fp4_nll": 154.95535278320312
+    },
+    {
+      "index": 119,
+      "masked_tokens": 87,
+      "baseline_correct": 57,
+      "fp4_correct": 58,
+      "prediction_agreement": 83,
+      "baseline_nll": 162.30364990234375,
+      "fp4_nll": 164.0730438232422
+    },
+    {
+      "index": 120,
+      "masked_tokens": 74,
+      "baseline_correct": 49,
+      "fp4_correct": 50,
+      "prediction_agreement": 69,
+      "baseline_nll": 162.26315307617188,
+      "fp4_nll": 160.19320678710938
+    },
+    {
+      "index": 121,
+      "masked_tokens": 63,
+      "baseline_correct": 39,
+      "fp4_correct": 38,
+      "prediction_agreement": 58,
+      "baseline_nll": 144.19436645507812,
+      "fp4_nll": 147.49722290039062
+    },
+    {
+      "index": 122,
+      "masked_tokens": 81,
+      "baseline_correct": 44,
+      "fp4_correct": 45,
+      "prediction_agreement": 73,
+      "baseline_nll": 200.76202392578125,
+      "fp4_nll": 200.09861755371094
+    },
+    {
+      "index": 123,
+      "masked_tokens": 83,
+      "baseline_correct": 54,
+      "fp4_correct": 52,
+      "prediction_agreement": 75,
+      "baseline_nll": 153.74835205078125,
+      "fp4_nll": 161.43783569335938
+    },
+    {
+      "index": 124,
+      "masked_tokens": 78,
+      "baseline_correct": 48,
+      "fp4_correct": 46,
+      "prediction_agreement": 74,
+      "baseline_nll": 175.39968872070312,
+      "fp4_nll": 173.20326232910156
+    },
+    {
+      "index": 125,
+      "masked_tokens": 73,
+      "baseline_correct": 56,
+      "fp4_correct": 56,
+      "prediction_agreement": 69,
+      "baseline_nll": 124.34806060791016,
+      "fp4_nll": 120.67236328125
+    },
+    {
+      "index": 126,
+      "masked_tokens": 86,
+      "baseline_correct": 59,
+      "fp4_correct": 60,
+      "prediction_agreement": 80,
+      "baseline_nll": 185.85714721679688,
+      "fp4_nll": 182.7698516845703
+    },
+    {
+      "index": 127,
+      "masked_tokens": 68,
+      "baseline_correct": 37,
+      "fp4_correct": 37,
+      "prediction_agreement": 62,
+      "baseline_nll": 171.54312133789062,
+      "fp4_nll": 175.09091186523438
+    },
+    {
+      "index": 128,
+      "masked_tokens": 63,
+      "baseline_correct": 34,
+      "fp4_correct": 34,
+      "prediction_agreement": 55,
+      "baseline_nll": 160.91322326660156,
+      "fp4_nll": 164.97119140625
+    },
+    {
+      "index": 129,
+      "masked_tokens": 94,
+      "baseline_correct": 46,
+      "fp4_correct": 43,
+      "prediction_agreement": 82,
+      "baseline_nll": 303.9761962890625,
+      "fp4_nll": 302.7789001464844
+    },
+    {
+      "index": 130,
+      "masked_tokens": 74,
+      "baseline_correct": 51,
+      "fp4_correct": 50,
+      "prediction_agreement": 68,
+      "baseline_nll": 86.59111022949219,
+      "fp4_nll": 92.2690658569336
+    },
+    {
+      "index": 131,
+      "masked_tokens": 69,
+      "baseline_correct": 38,
+      "fp4_correct": 39,
+      "prediction_agreement": 63,
+      "baseline_nll": 178.77389526367188,
+      "fp4_nll": 177.59420776367188
+    },
+    {
+      "index": 132,
+      "masked_tokens": 73,
+      "baseline_correct": 41,
+      "fp4_correct": 42,
+      "prediction_agreement": 66,
+      "baseline_nll": 180.18592834472656,
+      "fp4_nll": 185.83770751953125
+    },
+    {
+      "index": 133,
+      "masked_tokens": 86,
+      "baseline_correct": 64,
+      "fp4_correct": 61,
+      "prediction_agreement": 79,
+      "baseline_nll": 127.74842071533203,
+      "fp4_nll": 137.70703125
+    },
+    {
+      "index": 134,
+      "masked_tokens": 69,
+      "baseline_correct": 46,
+      "fp4_correct": 45,
+      "prediction_agreement": 63,
+      "baseline_nll": 162.19381713867188,
+      "fp4_nll": 168.06011962890625
+    },
+    {
+      "index": 135,
+      "masked_tokens": 83,
+      "baseline_correct": 62,
+      "fp4_correct": 59,
+      "prediction_agreement": 74,
+      "baseline_nll": 117.99443817138672,
+      "fp4_nll": 126.41747283935547
+    },
+    {
+      "index": 136,
+      "masked_tokens": 62,
+      "baseline_correct": 41,
+      "fp4_correct": 41,
+      "prediction_agreement": 60,
+      "baseline_nll": 108.49026489257812,
+      "fp4_nll": 109.65352630615234
+    },
+    {
+      "index": 137,
+      "masked_tokens": 79,
+      "baseline_correct": 48,
+      "fp4_correct": 46,
+      "prediction_agreement": 72,
+      "baseline_nll": 162.7066650390625,
+      "fp4_nll": 173.0374755859375
+    },
+    {
+      "index": 138,
+      "masked_tokens": 77,
+      "baseline_correct": 55,
+      "fp4_correct": 56,
+      "prediction_agreement": 70,
+      "baseline_nll": 116.16716003417969,
+      "fp4_nll": 116.69599914550781
+    },
+    {
+      "index": 139,
+      "masked_tokens": 70,
+      "baseline_correct": 49,
+      "fp4_correct": 50,
+      "prediction_agreement": 62,
+      "baseline_nll": 126.07784271240234,
+      "fp4_nll": 121.58927917480469
+    },
+    {
+      "index": 140,
+      "masked_tokens": 70,
+      "baseline_correct": 54,
+      "fp4_correct": 53,
+      "prediction_agreement": 67,
+      "baseline_nll": 129.75286865234375,
+      "fp4_nll": 132.73077392578125
+    },
+    {
+      "index": 141,
+      "masked_tokens": 87,
+      "baseline_correct": 46,
+      "fp4_correct": 44,
+      "prediction_agreement": 77,
+      "baseline_nll": 259.3031005859375,
+      "fp4_nll": 254.48141479492188
+    },
+    {
+      "index": 142,
+      "masked_tokens": 85,
+      "baseline_correct": 64,
+      "fp4_correct": 64,
+      "prediction_agreement": 79,
+      "baseline_nll": 123.31765747070312,
+      "fp4_nll": 120.90198516845703
+    },
+    {
+      "index": 143,
+      "masked_tokens": 69,
+      "baseline_correct": 41,
+      "fp4_correct": 39,
+      "prediction_agreement": 60,
+      "baseline_nll": 173.6566162109375,
+      "fp4_nll": 172.66079711914062
+    },
+    {
+      "index": 144,
+      "masked_tokens": 73,
+      "baseline_correct": 43,
+      "fp4_correct": 42,
+      "prediction_agreement": 63,
+      "baseline_nll": 146.88345336914062,
+      "fp4_nll": 149.63809204101562
+    },
+    {
+      "index": 145,
+      "masked_tokens": 78,
+      "baseline_correct": 53,
+      "fp4_correct": 55,
+      "prediction_agreement": 72,
+      "baseline_nll": 111.41107177734375,
+      "fp4_nll": 116.68864440917969
+    },
+    {
+      "index": 146,
+      "masked_tokens": 83,
+      "baseline_correct": 51,
+      "fp4_correct": 52,
+      "prediction_agreement": 76,
+      "baseline_nll": 152.7017822265625,
+      "fp4_nll": 157.538818359375
+    },
+    {
+      "index": 147,
+      "masked_tokens": 63,
+      "baseline_correct": 41,
+      "fp4_correct": 41,
+      "prediction_agreement": 55,
+      "baseline_nll": 140.7735595703125,
+      "fp4_nll": 144.23104858398438
+    },
+    {
+      "index": 148,
+      "masked_tokens": 74,
+      "baseline_correct": 35,
+      "fp4_correct": 39,
+      "prediction_agreement": 57,
+      "baseline_nll": 216.98678588867188,
+      "fp4_nll": 212.16883850097656
+    },
+    {
+      "index": 149,
+      "masked_tokens": 84,
+      "baseline_correct": 55,
+      "fp4_correct": 56,
+      "prediction_agreement": 81,
+      "baseline_nll": 186.5550537109375,
+      "fp4_nll": 195.92868041992188
+    },
+    {
+      "index": 150,
+      "masked_tokens": 86,
+      "baseline_correct": 48,
+      "fp4_correct": 46,
+      "prediction_agreement": 76,
+      "baseline_nll": 241.25540161132812,
+      "fp4_nll": 252.6022491455078
+    },
+    {
+      "index": 151,
+      "masked_tokens": 80,
+      "baseline_correct": 47,
+      "fp4_correct": 44,
+      "prediction_agreement": 69,
+      "baseline_nll": 241.51296997070312,
+      "fp4_nll": 243.10568237304688
+    },
+    {
+      "index": 152,
+      "masked_tokens": 66,
+      "baseline_correct": 45,
+      "fp4_correct": 42,
+      "prediction_agreement": 59,
+      "baseline_nll": 126.61063385009766,
+      "fp4_nll": 136.80023193359375
+    },
+    {
+      "index": 153,
+      "masked_tokens": 69,
+      "baseline_correct": 44,
+      "fp4_correct": 44,
+      "prediction_agreement": 65,
+      "baseline_nll": 152.2176971435547,
+      "fp4_nll": 157.03988647460938
+    },
+    {
+      "index": 154,
+      "masked_tokens": 83,
+      "baseline_correct": 47,
+      "fp4_correct": 47,
+      "prediction_agreement": 76,
+      "baseline_nll": 221.30282592773438,
+      "fp4_nll": 226.2276611328125
+    },
+    {
+      "index": 155,
+      "masked_tokens": 78,
+      "baseline_correct": 37,
+      "fp4_correct": 40,
+      "prediction_agreement": 62,
+      "baseline_nll": 280.3182678222656,
+      "fp4_nll": 281.82177734375
+    },
+    {
+      "index": 156,
+      "masked_tokens": 74,
+      "baseline_correct": 37,
+      "fp4_correct": 34,
+      "prediction_agreement": 63,
+      "baseline_nll": 213.03746032714844,
+      "fp4_nll": 217.45834350585938
+    },
+    {
+      "index": 157,
+      "masked_tokens": 83,
+      "baseline_correct": 49,
+      "fp4_correct": 48,
+      "prediction_agreement": 77,
+      "baseline_nll": 198.39015197753906,
+      "fp4_nll": 202.148681640625
+    },
+    {
+      "index": 158,
+      "masked_tokens": 78,
+      "baseline_correct": 40,
+      "fp4_correct": 39,
+      "prediction_agreement": 66,
+      "baseline_nll": 210.00161743164062,
+      "fp4_nll": 212.84298706054688
+    },
+    {
+      "index": 159,
+      "masked_tokens": 79,
+      "baseline_correct": 40,
+      "fp4_correct": 41,
+      "prediction_agreement": 66,
+      "baseline_nll": 229.61619567871094,
+      "fp4_nll": 235.47508239746094
+    },
+    {
+      "index": 160,
+      "masked_tokens": 61,
+      "baseline_correct": 39,
+      "fp4_correct": 38,
+      "prediction_agreement": 57,
+      "baseline_nll": 135.7024383544922,
+      "fp4_nll": 131.5501251220703
+    },
+    {
+      "index": 161,
+      "masked_tokens": 91,
+      "baseline_correct": 55,
+      "fp4_correct": 52,
+      "prediction_agreement": 81,
+      "baseline_nll": 220.93402099609375,
+      "fp4_nll": 228.674560546875
+    },
+    {
+      "index": 162,
+      "masked_tokens": 66,
+      "baseline_correct": 43,
+      "fp4_correct": 40,
+      "prediction_agreement": 60,
+      "baseline_nll": 137.00253295898438,
+      "fp4_nll": 142.67684936523438
+    },
+    {
+      "index": 163,
+      "masked_tokens": 68,
+      "baseline_correct": 44,
+      "fp4_correct": 43,
+      "prediction_agreement": 60,
+      "baseline_nll": 137.10328674316406,
+      "fp4_nll": 139.64688110351562
+    },
+    {
+      "index": 164,
+      "masked_tokens": 72,
+      "baseline_correct": 46,
+      "fp4_correct": 45,
+      "prediction_agreement": 67,
+      "baseline_nll": 152.16981506347656,
+      "fp4_nll": 150.8488311767578
+    },
+    {
+      "index": 165,
+      "masked_tokens": 83,
+      "baseline_correct": 37,
+      "fp4_correct": 38,
+      "prediction_agreement": 73,
+      "baseline_nll": 254.62635803222656,
+      "fp4_nll": 254.13270568847656
+    },
+    {
+      "index": 166,
+      "masked_tokens": 78,
+      "baseline_correct": 43,
+      "fp4_correct": 40,
+      "prediction_agreement": 71,
+      "baseline_nll": 221.77528381347656,
+      "fp4_nll": 228.74600219726562
+    },
+    {
+      "index": 167,
+      "masked_tokens": 80,
+      "baseline_correct": 54,
+      "fp4_correct": 55,
+      "prediction_agreement": 73,
+      "baseline_nll": 121.29368591308594,
+      "fp4_nll": 124.51195526123047
+    },
+    {
+      "index": 168,
+      "masked_tokens": 65,
+      "baseline_correct": 44,
+      "fp4_correct": 44,
+      "prediction_agreement": 59,
+      "baseline_nll": 121.19867706298828,
+      "fp4_nll": 118.89569854736328
+    },
+    {
+      "index": 169,
+      "masked_tokens": 81,
+      "baseline_correct": 47,
+      "fp4_correct": 43,
+      "prediction_agreement": 70,
+      "baseline_nll": 206.45965576171875,
+      "fp4_nll": 204.6410675048828
+    },
+    {
+      "index": 170,
+      "masked_tokens": 76,
+      "baseline_correct": 43,
+      "fp4_correct": 41,
+      "prediction_agreement": 71,
+      "baseline_nll": 179.98951721191406,
+      "fp4_nll": 181.1685028076172
+    },
+    {
+      "index": 171,
+      "masked_tokens": 76,
+      "baseline_correct": 50,
+      "fp4_correct": 50,
+      "prediction_agreement": 73,
+      "baseline_nll": 163.3590087890625,
+      "fp4_nll": 163.95681762695312
+    },
+    {
+      "index": 172,
+      "masked_tokens": 81,
+      "baseline_correct": 51,
+      "fp4_correct": 51,
+      "prediction_agreement": 70,
+      "baseline_nll": 206.21353149414062,
+      "fp4_nll": 209.700927734375
+    },
+    {
+      "index": 173,
+      "masked_tokens": 82,
+      "baseline_correct": 43,
+      "fp4_correct": 42,
+      "prediction_agreement": 73,
+      "baseline_nll": 241.478759765625,
+      "fp4_nll": 245.16546630859375
+    },
+    {
+      "index": 174,
+      "masked_tokens": 83,
+      "baseline_correct": 53,
+      "fp4_correct": 54,
+      "prediction_agreement": 77,
+      "baseline_nll": 139.6117401123047,
+      "fp4_nll": 142.73886108398438
+    },
+    {
+      "index": 175,
+      "masked_tokens": 74,
+      "baseline_correct": 45,
+      "fp4_correct": 41,
+      "prediction_agreement": 64,
+      "baseline_nll": 162.9732666015625,
+      "fp4_nll": 172.07070922851562
+    },
+    {
+      "index": 176,
+      "masked_tokens": 81,
+      "baseline_correct": 54,
+      "fp4_correct": 54,
+      "prediction_agreement": 75,
+      "baseline_nll": 162.97369384765625,
+      "fp4_nll": 163.85020446777344
+    },
+    {
+      "index": 177,
+      "masked_tokens": 73,
+      "baseline_correct": 42,
+      "fp4_correct": 41,
+      "prediction_agreement": 63,
+      "baseline_nll": 193.4076385498047,
+      "fp4_nll": 187.02081298828125
+    },
+    {
+      "index": 178,
+      "masked_tokens": 67,
+      "baseline_correct": 38,
+      "fp4_correct": 37,
+      "prediction_agreement": 63,
+      "baseline_nll": 160.45350646972656,
+      "fp4_nll": 161.54214477539062
+    },
+    {
+      "index": 179,
+      "masked_tokens": 82,
+      "baseline_correct": 46,
+      "fp4_correct": 48,
+      "prediction_agreement": 72,
+      "baseline_nll": 213.62448120117188,
+      "fp4_nll": 213.3299560546875
+    },
+    {
+      "index": 180,
+      "masked_tokens": 90,
+      "baseline_correct": 58,
+      "fp4_correct": 58,
+      "prediction_agreement": 84,
+      "baseline_nll": 203.519287109375,
+      "fp4_nll": 207.82989501953125
+    },
+    {
+      "index": 181,
+      "masked_tokens": 71,
+      "baseline_correct": 58,
+      "fp4_correct": 57,
+      "prediction_agreement": 66,
+      "baseline_nll": 69.90530395507812,
+      "fp4_nll": 70.85276794433594
+    },
+    {
+      "index": 182,
+      "masked_tokens": 107,
+      "baseline_correct": 62,
+      "fp4_correct": 57,
+      "prediction_agreement": 93,
+      "baseline_nll": 286.09893798828125,
+      "fp4_nll": 302.60113525390625
+    },
+    {
+      "index": 183,
+      "masked_tokens": 87,
+      "baseline_correct": 54,
+      "fp4_correct": 52,
+      "prediction_agreement": 80,
+      "baseline_nll": 223.75213623046875,
+      "fp4_nll": 227.9276885986328
+    },
+    {
+      "index": 184,
+      "masked_tokens": 81,
+      "baseline_correct": 51,
+      "fp4_correct": 52,
+      "prediction_agreement": 72,
+      "baseline_nll": 127.95884704589844,
+      "fp4_nll": 129.8208770751953
+    },
+    {
+      "index": 185,
+      "masked_tokens": 84,
+      "baseline_correct": 48,
+      "fp4_correct": 47,
+      "prediction_agreement": 76,
+      "baseline_nll": 188.56948852539062,
+      "fp4_nll": 190.33621215820312
+    },
+    {
+      "index": 186,
+      "masked_tokens": 63,
+      "baseline_correct": 44,
+      "fp4_correct": 43,
+      "prediction_agreement": 61,
+      "baseline_nll": 114.63347625732422,
+      "fp4_nll": 115.87471771240234
+    },
+    {
+      "index": 187,
+      "masked_tokens": 62,
+      "baseline_correct": 45,
+      "fp4_correct": 46,
+      "prediction_agreement": 56,
+      "baseline_nll": 78.29119873046875,
+      "fp4_nll": 79.89717102050781
+    },
+    {
+      "index": 188,
+      "masked_tokens": 93,
+      "baseline_correct": 67,
+      "fp4_correct": 68,
+      "prediction_agreement": 90,
+      "baseline_nll": 137.10508728027344,
+      "fp4_nll": 144.55502319335938
+    },
+    {
+      "index": 189,
+      "masked_tokens": 77,
+      "baseline_correct": 59,
+      "fp4_correct": 55,
+      "prediction_agreement": 70,
+      "baseline_nll": 97.55671691894531,
+      "fp4_nll": 104.72807312011719
+    },
+    {
+      "index": 190,
+      "masked_tokens": 77,
+      "baseline_correct": 52,
+      "fp4_correct": 55,
+      "prediction_agreement": 72,
+      "baseline_nll": 133.5338134765625,
+      "fp4_nll": 138.3587646484375
+    },
+    {
+      "index": 191,
+      "masked_tokens": 86,
+      "baseline_correct": 49,
+      "fp4_correct": 50,
+      "prediction_agreement": 79,
+      "baseline_nll": 208.38323974609375,
+      "fp4_nll": 217.2379608154297
+    },
+    {
+      "index": 192,
+      "masked_tokens": 81,
+      "baseline_correct": 43,
+      "fp4_correct": 42,
+      "prediction_agreement": 71,
+      "baseline_nll": 195.08993530273438,
+      "fp4_nll": 203.69821166992188
+    },
+    {
+      "index": 193,
+      "masked_tokens": 60,
+      "baseline_correct": 38,
+      "fp4_correct": 39,
+      "prediction_agreement": 55,
+      "baseline_nll": 130.02908325195312,
+      "fp4_nll": 123.87834167480469
+    },
+    {
+      "index": 194,
+      "masked_tokens": 73,
+      "baseline_correct": 49,
+      "fp4_correct": 49,
+      "prediction_agreement": 67,
+      "baseline_nll": 145.3651123046875,
+      "fp4_nll": 152.49319458007812
+    },
+    {
+      "index": 195,
+      "masked_tokens": 80,
+      "baseline_correct": 56,
+      "fp4_correct": 55,
+      "prediction_agreement": 74,
+      "baseline_nll": 148.26806640625,
+      "fp4_nll": 155.04681396484375
+    },
+    {
+      "index": 196,
+      "masked_tokens": 80,
+      "baseline_correct": 53,
+      "fp4_correct": 52,
+      "prediction_agreement": 73,
+      "baseline_nll": 148.44163513183594,
+      "fp4_nll": 155.705078125
+    },
+    {
+      "index": 197,
+      "masked_tokens": 59,
+      "baseline_correct": 42,
+      "fp4_correct": 41,
+      "prediction_agreement": 55,
+      "baseline_nll": 103.16552734375,
+      "fp4_nll": 103.27262878417969
+    },
+    {
+      "index": 198,
+      "masked_tokens": 65,
+      "baseline_correct": 45,
+      "fp4_correct": 45,
+      "prediction_agreement": 57,
+      "baseline_nll": 115.85350036621094,
+      "fp4_nll": 118.76412963867188
+    },
+    {
+      "index": 199,
+      "masked_tokens": 79,
+      "baseline_correct": 58,
+      "fp4_correct": 61,
+      "prediction_agreement": 71,
+      "baseline_nll": 122.25430297851562,
+      "fp4_nll": 121.45795440673828
+    }
+  ]
+}

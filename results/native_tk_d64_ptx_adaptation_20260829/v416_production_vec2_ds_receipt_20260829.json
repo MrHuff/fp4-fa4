@@ -1,0 +1,113 @@
+{
+  "schema": "tkfa4.v416_production_vec2_ds_receipt.v1",
+  "date_utc": "2026-08-29",
+  "claim_scope": "isolated causal D64 GQA backward on one NVIDIA GB200; not an end-to-end transformer result",
+  "shape": {
+    "batch": 16,
+    "sequence": 4096,
+    "query_heads": 32,
+    "kv_heads": 8,
+    "head_dim": 64
+  },
+  "candidate": {
+    "parent": "v414_d64_gqa_e4m3_production_bshd_dq_first_v1",
+    "source_identity": "v416_d64_gqa_e4m3_production_bshd_dq_first_vec2_ds_v1",
+    "change": "publish two adjacent packed E4M3 dS words with one st.shared.v2.b32",
+    "address_proof": "each lane's 32-byte owner span stays inside one 128-byte swizzle segment, so the XOR swizzle term is constant across each adjacent eight-byte pair",
+    "deliberate_approximation": false,
+    "attention_math_changed": false,
+    "production_abi_changed": false
+  },
+  "static_audit": {
+    "v414": {
+      "instructions": 3120,
+      "scalar_sts_sites": 18,
+      "sts64_sites": 0,
+      "ldtm_sites": 14,
+      "sttm_sites": 4
+    },
+    "v416": {
+      "instructions": 3088,
+      "scalar_sts_sites": 2,
+      "sts64_sites": 8,
+      "ldtm_sites": 14,
+      "sttm_sites": 4,
+      "registers": 128,
+      "stack_bytes": 0,
+      "spill_store_bytes": 0,
+      "spill_load_bytes": 0,
+      "ptxas_shared_bytes": 116960
+    },
+    "instruction_delta_v416_minus_v414": -32
+  },
+  "production_paired_validation": {
+    "device": "NVIDIA GB200",
+    "input_contract": "BSHD contiguous E4M3 operands with lstat=8-LSE*log2(e) and dstat=-16*sum(O*dO)",
+    "boundary": "backward_e4m3_bshd_precomputed_out including three output clears",
+    "warmups": 10,
+    "samples": 51,
+    "order": "per-sample two-way rotation in one process",
+    "v414_median_ms": 3.738464117050171,
+    "v416_median_ms": 3.7202560901641846,
+    "speedup_v416_over_v414": 1.0048942939530765,
+    "v416_binary_sha256": "d974cdc3706bc48f1f5452f31c6688f13b510672992da8536e5fe2c824ffdfd5",
+    "v416_vs_v414_relative_l2": {
+      "dq": 0.000024796172510832548,
+      "dk": 0.0002825597766786814,
+      "dv": 0.00029348116368055344
+    },
+    "v416_repeat_relative_l2": {
+      "dq": 0.00003881795055349357,
+      "dk": 0.00017381853831466287,
+      "dv": 0.00018714749603532255
+    },
+    "all_outputs_finite": true,
+    "zero_dout_nonzeros": {
+      "dq": 0,
+      "dk": 0,
+      "dv": 0
+    }
+  },
+  "fixed_grid_attribution": {
+    "fixture": "raw-stat BHSD v406/v415 all-zero operands, 65536 total tokens and 16384 CTAs",
+    "v406_fit_ms": "0.490561 + 0.200522*x",
+    "v415_fit_ms": "0.489018 + 0.198183*x",
+    "v415_r_squared": 0.9999941963387111,
+    "slope_reduction_fraction": 0.011665
+  },
+  "authenticated_cute_comparison": {
+    "classification": "same-process diagnostic with native EX2; cd57 public fast policy uses a different selective polynomial approximation",
+    "boundary": "full reset including three destination clears",
+    "warmups": 10,
+    "samples": 51,
+    "order": "per-sample four-way rotation in one process",
+    "v416_median_ms": 3.7291200160980225,
+    "cd57_native_ex2_median_ms": 3.7490880489349365,
+    "v416_over_cd57_native_ex2_ratio": 0.9946738960044998,
+    "v416_speedup_over_cd57_native_ex2": 1.0053546232759245,
+    "cd57_public_period2_median_ms": 3.3560640811920166,
+    "v416_over_cd57_public_period2_ratio": 1.1111587639213083,
+    "cd57_control_sha256": "cd57e3360082abe4bad7560c51a7793a4e9bfd4d16efc1259b92ce20238b99e1",
+    "cutlass_commit": "b2ca083d2bb96c41d9b3c5a930637c641f6669bf",
+    "native_period0_gate_lifted_locally": true,
+    "repository_edited_for_cute_diagnostic": false,
+    "timed_v416_binary_sha256": "dd542942afb4e1970d96d636fc42de149b7a9f82f3e179f612352df58f7f5caf",
+    "caveat": "the public period-2 result changes gradients relative to native EX2 and remains a separate numerical policy claim"
+  },
+  "source_artifacts": {
+    "v416_header": {
+      "path": "tk_fa4/native_gqa_tk_bwd/v416_d64_gqa_e4m3_production_bshd_dq_first_vec2_ds.cuh",
+      "sha256": "7b9785cb35d8113b9b7b4fcc99e0e08bf4a38bfd608c6d18a76f1082e61cf92c"
+    },
+    "v416_binding": {
+      "path": "tk_fa4/native_gqa_tk_bwd/v416_d64_gqa_e4m3_production_bshd_dq_first_vec2_ds.cu",
+      "sha256": "c4d31adcdc2ecb2dcb2809bdc43e28a974e5355590bfe827a7f75fee5c760b1f",
+      "measured_source_sha256": "2eab93589fd18235bbd2f8b572fb600669715b5cbec9e482d2adcc6d3d2d721b",
+      "publication_normalization": "The published source removes one terminal blank line from the measured source; CUDA/C++ tokens and executable code are unchanged."
+    },
+    "v416_makefile": {
+      "path": "tk_fa4/native_gqa_tk_bwd/Makefile.v416",
+      "sha256": "c173ac98dfeba3520963b22c958ecf8171edb3f41f0f6abc54da7a144c562fae"
+    }
+  }
+}

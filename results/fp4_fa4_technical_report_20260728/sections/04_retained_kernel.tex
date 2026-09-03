@@ -1,0 +1,186 @@
+\section{NV/MX Probability Path}
+
+\subsection{Design boundary}
+
+HAO solves the outer storage and scheduling problem; this work changes the
+path from a ready FP32 score fragment to a legal FP4 PV operand. The boundary
+is summarized below so that inherited machinery is not presented as a new
+contribution.
+
+\begin{table}[htbp]
+\centering
+\caption{Inherited structure and changes made in this work.}
+\label{tab:hao-vs-ours}
+\small
+\begin{tabularx}{\textwidth}{p{.24\textwidth}X X}
+\toprule
+Component & Inherited from HAO & This work \\
+\midrule
+CTA and TMEM & Two query stages, two score banks, two FP32 output banks, one ordered MMA issuer. & Retained. \\
+P publication & N32 producer quarters, first-half and tail barriers, score/P overlay. & Retained; less work before each event. \\
+Formats & NVFP4 QK and stabilized NVFP4 P/V. & NVFP4 QK, MXFP4 P/V. \\
+P arithmetic & Stabilized exponential, P quantization, and scale publication. & Direct log-score-to-E2M1 map with selective EX2. \\
+Normalization & Floating probability path. & Sum the represented P consumed by PV. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Q, K, and V are prequantized. QK uses NVFP4 with adjacent K64 Q/K scales
+folded offline by an MSE rule. For P/V, each N32 probability block uses one
+MXFP4 E8M0 scale. P payload and scale pages overwrite retired score addresses,
+exactly as required by the lifecycle in Algorithm~\ref{alg:hao-pipeline}.
+
+\subsection{Map scores to E2M1 codes directly}
+
+Let $m_i$ be a row reference, $s_B=2^{e_B}$ the selected MX scale for one
+N32 block, and represent a probability as
+\begin{equation}
+  \widetilde p_{ij}=s_B q_{ij}/6,
+  \qquad q_{ij}\in\mathcal F_{\mathrm{E2M1}}.
+  \label{eq:represented-probability}
+\end{equation}
+The ideal converter input is
+\begin{align}
+  x_{ij} &= (z_{ij}-m_i)\log_2 e-e_B+\log_2 6, \\
+  q_{ij} &= Q_{\mathrm{E2M1}}(2^{x_{ij}}).
+  \label{eq:ideal-code-path}
+\end{align}
+Only the code $q_{ij}$ reaches PV. Computing an accurate FP32 $2^x$ and then
+discarding almost all of its precision is unnecessary.
+
+Positive E2M1 changes value at seven rounding boundaries,
+\begin{equation}
+  \left\{\tfrac14,\tfrac34,\tfrac54,\tfrac74,
+  \tfrac52,\tfrac72,5\right\}.
+  \label{eq:e2m1-boundaries}
+\end{equation}
+We therefore fit an affine classifier in value space,
+\begin{equation}
+  \widehat u(x)=\max(0,Ax+B),\qquad
+  \widehat q(x)=Q_{\mathrm{E2M1}}(\widehat u(x)),
+  \label{eq:affine-code-map}
+\end{equation}
+to maximize E2M1 code agreement rather than real-valued exponential
+accuracy. The score transform, $e_B$, and $\log_2 6$ term are folded into the
+packed-FMA coefficients. One \code{FFMA2} handles two scores, and packed
+\code{F2FP} emits their E2M1 payloads. A selected pair may instead use native
+EX2 when that improves the machine schedule.
+
+\begin{algorithm}[H]
+\caption{Direct MXFP4 probability production for one N32 score fragment}
+\label{alg:direct-p-pack}
+\small
+\begin{tabularx}{\textwidth}{@{}rX@{}}
+\toprule
+1 & Load 32 scores per row from the completed TMEM score tile and reduce the block maximum. \\
+2 & Select power-of-two block scale $s_B=2^{e_B}$ from that maximum and the row reference $m_i$. \\
+3 & For each packed score pair, form $x=(z-m_i)\log_2 e-e_B+\log_2 6$. \\
+4 & Evaluate either $\max(0,Ax+B)$ or selected native $2^x$, then use packed conversion to emit E2M1 codes $q$. \\
+5 & Pack four payload words and decode their small represented sum $c_B=\sum_{j\in B}q_{ij}$. \\
+6 & Accumulate denominator contribution $d_{iB}=s_B(c_B/6)$, using the same scale and codes as PV. \\
+7 & Overlay P payload and the swizzled scale page onto retired score addresses. Publish after two adjacent N32 fragments form one legal K64 operand. \\
+\bottomrule
+\end{tabularx}
+\end{algorithm}
+
+The generic \code{fast} fit uses $A=1.50,B=1.20$. Wan activation replays
+select the equal-cost pair $A=1.60,B=0.95$. These constants move the seven
+decision boundaries,
+\begin{equation}
+  x_j=(t_j-B)/A,
+  \label{eq:affine-log-boundaries}
+\end{equation}
+where $t_j$ is an E2M1 boundary. They are quantizer-calibration parameters,
+not changes to exact softmax. Layer-wise maps were tested but not retained:
+isolated substitutions on a BF16 teacher trajectory did not predict the
+composed all-FP4 trajectory (Appendix~\ref{app:joint-affine}).
+
+Integer threshold trees, LUTs, and custom nibble packing generated more SASS
+than packed FMA followed by Blackwell's native converter. Quadratic and cubic
+fits improved real-function error but placed extra dependent FMA operations
+directly before publication.
+
+\subsection{Normalize the represented probability}
+
+For block $B$, the numerator and denominator actually consumed by the
+approximate operator are
+\begin{align}
+  \widetilde N_{iB} &= \frac{s_B}{6}
+    \sum_{j\in B}q_{ij}\widehat V_j, \\
+  \widetilde L_{iB} &= \frac{s_B}{6}
+    \sum_{j\in B}q_{ij}.
+  \label{eq:represented-contributions}
+\end{align}
+The output is
+\begin{equation}
+  \widetilde O_i=
+  \frac{\sum_B\widetilde N_{iB}}{\sum_B\widetilde L_{iB}}.
+  \label{eq:represented-output}
+\end{equation}
+This avoids normalizing an E2M1 numerator with an unrelated approximate FP32
+exponential sum. Four packed payload words are reduced with byte permutations,
+carry-free byte addition, and one \code{DP4A}. Streaming each word or keeping
+pairwise partials is algebraically equivalent but slower because it extends
+live ranges and changes instruction interleaving.
+
+FA4 routes some exponential work from SFUs to ordinary arithmetic pipelines
+\cite{zadouri2026flashattention4}. We apply the same balancing principle to
+the code map. GB200 D128 \code{fast} is all-affine; \code{accurate} uses
+native EX2 on roughly one quarter of pair positions. B300 has stronger SFUs,
+but broad EX2 routing still loses. Its retained policy uses native EX2 only in
+the quarter and shape regimes where the measured dependency schedule benefits.
+
+\subsection{Range guard for extreme model logits}
+
+The fast shiftless path is finite on the synthetic grid and most model
+layers, but a few late Wan layers produce BF16 logits above 500 and sometimes
+1000. Scanning or reloading every score would remove the speed advantage. We
+instead route only those layers through Algorithm~\ref{alg:sampled-guard}.
+Before launch, 128 globally distributed K/V rows are moved together into the
+first physical key tile. This permutation leaves exact attention unchanged.
+
+\begin{algorithm}[H]
+\caption{Sampled QK guard and underflow-safe represented denominator}
+\label{alg:sampled-guard}
+\small
+\begin{tabularx}{\textwidth}{@{}rX@{}}
+\toprule
+1 & In the first key tile, reduce all four N32 quarters and set sampled anchor $a_i=\max_{j\in\mathcal A}z_{ij}$, where $|\mathcal A|=128$. \\
+2 & Choose compile-time margin $M$ and stored-scale shift $L$ with $M+L\le126$; use row reference $m_i=a_i+M\ln2$. \\
+3 & Run Algorithm~\ref{alg:direct-p-pack}. If its selected E8M0 code is $e_B$, publish translated code $e'_B=\max(1,e_B-L)$. \\
+4 & Let $s'_B=2^{e'_B-127}$ and $c_B=\sum q_{ij}$. Evaluate the represented denominator as $s'_B(c_B/6)$ in that order. \\
+5 & Never evaluate $(s'_B/6)c_B$: at $e'_B=1$, the first product is subnormal and may flush a valid block to zero. \\
+\bottomrule
+\end{tabularx}
+\end{algorithm}
+
+Wan1.3B uses $(M,L)=(110,16)$ and Wan14B uses $(112,14)$, so both consume the
+full 126-step budget. The bound is enforced at compile time and translated
+E8M0 scales are floored at code 1. The reordered evaluation uses the same two
+multiplies as the failing expression. On the original layer-39 failure, the
+sampled anchor already equalled the exact row maximum; the failure was solely
+the subnormal intermediate. This correction fixes it without a second scan,
+new barrier, or stable-softmax fallback.
+
+\subsection{Exposed policies}
+
+\begin{table}[htbp]
+\centering
+\caption{Retained policies. Both use NVFP4 QK, MXFP4 P/V, K64 PV issue, and
+the two-query HAO layout.}
+\label{tab:policy-definition}
+\small
+\begin{tabularx}{\textwidth}{lccccX}
+\toprule
+Policy & K/V stages & Anchor & Native EX2 & Denominator & Goal \\
+\midrule
+\code{fast} & 12 & none by default & 0 on GB200 & producer & minimum latency \\
+\code{accurate} & 13 & 32 fixed rows & about 25\% & correction WG & higher fidelity \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The Wan bundle can add the 128-row routed guard to either base policy. Anchor
+permutations and folded Q/K scale preparation are outside the timed attention
+kernel and should be fused into an upstream layout or quantization step in a
+deployment.

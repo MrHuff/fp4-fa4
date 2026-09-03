@@ -1,0 +1,126 @@
+\section{Retained Adaptive FP4+FP8 Kernel}
+
+\subsection{End-to-end dataflow}
+
+Algorithm~\ref{alg:retained-bwd} describes one owner iteration.  It is a
+dependency description rather than a serialized instruction listing:
+independent loader, tensor, statistics, compute, and reducer roles overlap
+whenever the lifetime constraints of Figure~\ref{fig:bwd-tmem-map} permit.
+
+\begin{algorithm}[htbp]
+\caption{Retained adaptive low-precision backward for one K/V owner}
+\label{alg:retained-bwd}
+\small
+\begin{tabularx}{\textwidth}{@{}r p{.19\textwidth} X@{}}
+\toprule
+& Owner & Action \\
+\midrule
+0 & preprocessing & Compute $r=\langle O,G\rangle$ and $L\log_2e$; pack
+$2^2G$ and $2^2V$ to E4M3; overlap the BF16 dQ clear. \\
+1 & loader & Bring compact adaptive Q/K, V, and $G$ views into their
+instruction-facing shared-memory stages. \\
+2 & tensor issuer & Issue three K64 NVFP4 score commands into
+TMEM [320,448), using the per-head E4M3 scale page. \\
+3 & compute warps & Read N32 score fragments, apply saved LSE and causal mask,
+and publish $Q_{\mathrm{E4M3}}(2^8\widetilde P)$ directly to TMEM. \\
+4 & tensor issuer & Issue E4M3 $dP=GV^\mathsf T$ and
+$dV=P^\mathsf TG$ commands into their FP32 accumulators. \\
+5 & compute warps & Center scaled dP by $2^4r$, multiply by the represented
+P, and emit both E4M3 dS orientations at scale $2^{12}$. \\
+6 & tensor issuer & Issue mixed E4M3$\times$E2M1 dK and dQ commands; retain
+dK/dV and publish dQ issue markers. \\
+7 & reducers & Drain dQ in x32 fragments, apply
+$\alpha/(2^{12}m_h)$, and perform BF16 TMA reductions to global memory. \\
+8 & owner epilogue & Apply the dK and dV corrections and store each once;
+release the persistent owner state. \\
+\bottomrule
+\end{tabularx}
+\end{algorithm}
+
+\subsection{Quantization is fused where the value is born}
+
+The implementation follows one rule: conversion should happen in the producer
+that already owns the FP32 or BF16 fragment.  In particular:
+
+\begin{itemize}
+  \item $G$, V, row dot products, and LSE conversion share one mandatory
+  linear preprocessing pass.
+  \item P is converted directly from the score fragment and stored in its
+  final E4M3 TMEM orientation.
+  \item dS is converted directly from four N32 producer fragments.  The code
+  simultaneously forms local-dQ, peer-dQ, and dK-facing layouts.
+  \item Q/K projection integration, described in
+  Section~\ref{sec:projection-integration}, creates the four E2M1 layouts from
+  projection-epilogue registers rather than rereading BF16 Q/K.
+\end{itemize}
+
+This is materially different from fake quantization, in which a BF16 tensor
+is written to HBM and a separate kernel rereads, quantizes, and transposes it.
+The fallback packers remain useful for validation and shallow projection
+depths, but they are not the intended integrated dataflow.
+
+\subsection{P reuse joins dV and dS}
+
+The E4M3 P code consumed by dV is also the value used in
+Equation~\ref{eq:fused-ds}.  Reusing the exact bits has two benefits.  It
+removes a second BF16 P representation, and it ensures that the softmax
+derivative is taken with respect to the same represented P used by the dV
+tensor product.  The fixed powers satisfy
+\begin{equation}
+  (2^8P)\,[2^4(dP-r)] = 2^{12}dS,
+  \label{eq:scale-factorization}
+\end{equation}
+so the producer needs packed half arithmetic and one native E4M3 conversion,
+not general scale multiplies.
+
+The row term is published as FP16 after being multiplied by $2^4$.  This cuts
+the shared loads and registers of the eight native-x32 consumers.  The final
+two words of the first P fragment are pre-unpacked into otherwise-unused
+registers, shortening the dependent dS loop without extending its live range.
+
+\subsection{Score and dQ use issue-before-completion handoffs}
+
+Score consumers do not first spin on a full completion event.  Once all three
+NVFP4 commands are queued, the tensor role publishes \code{score\_issued};
+the compute warps enqueue synchronous TMEM reads and rely on
+\code{tensor\_load\_wait} for actual data readiness.  The ordinary
+\code{score\_done} event stays live for statistics and final drain.
+
+dQ uses the same pattern.  The tensor role publishes \code{dq\_issued} after
+the mixed dQ command is queued.  Reducers begin their progressive prefix
+loads, allowing columns 416--447 to retire earlier for the following score.
+This reduces exposed producer-to-consumer latency without allocating another
+TMEM accumulator or weakening the final lifetime proof.
+
+\subsection{BF16 dQ is the projection-ready endpoint}
+
+The default public API preserves an FP32 dQ result: owners reduce into BF16,
+then a linear epilogue widens the completed tensor.  When the next learned
+linear backward accepts BF16, \code{return\_bf16\_dq=True} omits that pass and
+the FP32 allocation.  The represented operation is unchanged; the remaining
+difference is the order of nondeterministic owner reductions.
+
+The direct-BF16 endpoint is the retained deployable boundary.  Suppressing dQ
+publication entirely measured a lower floor, but a correct consumer cannot
+use a partial tile:
+\begin{equation}
+  dQ_{\mathrm{complete}}[I,:]
+  =\sum_o dQ^{(o)}[I,:].
+  \label{eq:complete-dq-tile}
+\end{equation}
+Under K/V ownership, the contributing owners are unclustered.  Removing the
+global BF16 reduction requires a q-centric schedule or a larger fused
+projection/reduction topology.
+
+\subsection{Current compile-time state}
+
+The result tables use:
+\begin{align*}
+  \code{TK\_FA4\_BWD\_FP8DPDV\_BF16\_DQ\_REDUCTION} &= 1,\\
+  \code{TK\_FA4\_BWD\_FP8DPDV\_TWO\_COMMAND\_SCORE} &= 0,\\
+  \code{TK\_FA4\_BWD\_FP8DPDV\_HALF\_DQ\_REDUCTION\_CEILING} &= 0,\\
+  \code{TK\_FA4\_BWD\_FP8DPDV\_SKIP\_DQ\_REDUCTION\_CEILING} &= 0,\\
+  \code{TK\_FA4\_BWD\_FP8DPDV\_SKIP\_DQ\_WIDEN\_CEILING} &= 0.
+\end{align*}
+The hot specialization remains at 128 registers with zero spill loads,
+zero spill stores, and the exact three-command score.

@@ -1,0 +1,45 @@
+GPU := B200
+SRC := hao_direct_candidate.cu
+EXT_SUFFIX := $(shell python3 -c "import sysconfig; print(sysconfig.get_config_var('EXT_SUFFIX'))")
+OUT ?= /tmp/_C_tk_hao_direct$(EXT_SUFFIX)
+MODULE ?= _C_tk_hao_direct
+CONFIG := pytorch
+NVCC_THREADS ?= 2
+NVCC_SPLIT_COMPILE ?= 2
+HAO_SEQ_LEN ?= 4096
+HAO_HEADS ?= 24
+HAO_BATCH ?= 1
+HAO_FP8PV_FIXED_P_CEILING ?= 0
+HAO_FP8PV_SCORE_PACK_CEILING ?= 0
+HAO_FP8PV_P_ILP_PIPELINE ?= 0
+HAO_FP8PV_EARLY_Q3 ?= 0
+HAO_FP8PV_TWO_CHUNK_PIPELINE ?= 0
+HAO_FP8PV_SHIFTLESS_MODE ?= 0
+include ../../ThunderKittens/kernels/common.mk
+NVCCFLAGS += -DTK_FA4_FORWARD_ONLY_BUILD \
+  -DTK_FA4_UPSTREAM_OWNED_TWO_STAGE_ONLY_BUILD=1 \
+  -DTK_FA4_ENABLE_MXFP4_FWD_TIMELINE=0 \
+  -DTK_FA4_ENABLE_MXFP4_FWD_PCHAIN_STAMPS=0 \
+  -DTK_HAO_DIRECT_SEQ_LEN=$(HAO_SEQ_LEN) \
+  -DTK_HAO_DIRECT_HEADS=$(HAO_HEADS) \
+  -DTK_HAO_DIRECT_BATCH=$(HAO_BATCH) \
+  -DTK_HAO_DIRECT_FP8PV_FIXED_P_CEILING=$(HAO_FP8PV_FIXED_P_CEILING) \
+  -DTK_HAO_DIRECT_FP8PV_SCORE_PACK_CEILING=$(HAO_FP8PV_SCORE_PACK_CEILING) \
+  -DTK_HAO_DIRECT_FP8PV_P_ILP_PIPELINE=$(HAO_FP8PV_P_ILP_PIPELINE) \
+  -DTK_HAO_DIRECT_FP8PV_EARLY_Q3=$(HAO_FP8PV_EARLY_Q3) \
+  -DTK_HAO_DIRECT_FP8PV_TWO_CHUNK_PIPELINE=$(HAO_FP8PV_TWO_CHUNK_PIPELINE) \
+  -DTK_HAO_DIRECT_FP8PV_SHIFTLESS_MODE=$(HAO_FP8PV_SHIFTLESS_MODE) \
+  --threads $(NVCC_THREADS) --split-compile=$(NVCC_SPLIT_COMPILE) \
+  -UTORCH_EXTENSION_NAME \
+  -DTORCH_EXTENSION_NAME=$(MODULE)
+
+all: $(OUT)
+
+$(OUT): $(SRC) upstream_mxfp4_fp8pv_bf16_baseline.inc \
+  fwd_configs.inc fwd_device_helpers.inc stage2_ex2_alu_helpers.cuh \
+  depth1_upstream_mxfp4_fp8pv_kernel.inc \
+  hao_direct_config.inc hao_direct_kernel.inc \
+  hao_direct_softmax_reader.inc shared_host_helpers.inc \
+  hao_direct_host.inc
+
+.PHONY: all

@@ -1,0 +1,15 @@
+GPU ?= B300
+SRC := raw_sm103_k96_probe.cu
+OUT ?= /tmp/raw_sm103_k96
+CONFIG := standalone
+CMD := true
+NVCC_THREADS ?= 1
+NVCC_SPLIT_COMPILE ?= 0
+
+include ../../ThunderKittens/kernels/common.mk
+
+NVCCFLAGS += \
+	--threads $(NVCC_THREADS) \
+	--split-compile=$(NVCC_SPLIT_COMPILE)
+
+$(OUT): $(SRC) fwd_raw_fp4_throughput_helpers.inc

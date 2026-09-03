@@ -1,0 +1,108 @@
+\section{What Prevents a Full-FP4 Speedup?}
+\label{sec:forward-problems}
+
+HAO's schedule already overlaps QK, softmax, and PV whenever their
+dependencies allow.  Replacing its FP8 probability--value product with FP4
+leaves two linked problems.  The first is timing: constructing P delays the
+first useful PV instruction.  The second is numerical: softmax probabilities
+span a range that is awkward for a 4-bit payload and its block scale.
+
+\subsection{Problem 1: P lies on the critical path}
+
+In tiled attention, P is produced inside the kernel rather than loaded as an
+input.  For full FP4 attention, the first useful PV command therefore waits
+for
+\begin{equation}
+  S\rightarrow\text{maximum}\rightarrow\text{scale}
+  \rightarrow\text{probability}\rightarrow\text{E2M1 pack}
+  \rightarrow\text{publish}.
+  \label{eq:serial-p-path}
+\end{equation}
+Work removed after publication may not change latency. Work removed before
+the first legal P tile can.
+
+FP4 accelerates QK and PV, but not score reduction, exponentiation,
+synchronization, or scale publication.  It also requires P to be converted
+between the two products.  Removing work before the first legal P tile can
+shorten the critical path; removing work after that publication may not
+change latency \cite{nvidia2026ptx,zadouri2026flashattention4}.
+
+\subsection{Problem 2: P needs both range and cheap scales}
+
+NVFP4 and MXFP4 both use signed E2M1 payloads.  Ignoring sign, their
+nonnegative magnitudes are
+\begin{equation}
+  \mathcal F_{\mathrm{E2M1}}=
+  \left\{0,\tfrac12,1,\tfrac32,2,3,4,6\right\}.
+\end{equation}
+The formats differ in how they scale these payloads:
+\begin{table}[H]
+\centering
+\caption{Block-scaled FP4 formats used in this work.}
+\label{tab:fp4-formats}
+\small
+\begin{tabularx}{\textwidth}{lcccX}
+\toprule
+Format & Block & Encoded scale & Main strength & Role in this work \\
+\midrule
+NVFP4 & 16 & E4M3, optional tensor scale & fine local placement & signed Q and K \\
+MXFP4 & 32 & E8M0 amplitude, power of two & wide exponent range & P and V operands \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+For an NVFP4 P block with maximum $a_B$ and global encode factor $G$, the
+decoded block scale is approximately
+\begin{equation}
+  \widehat s_{\mathrm{NV}}=
+  \frac{Q_{\mathrm{E4M3}}(G a_B/6)}{G}.
+  \label{eq:nv-scale}
+\end{equation}
+If the E4M3 scale rounds to zero, the entire block disappears. A row-level
+stabilizer fixes the range, but its scale and inverse correction add state to
+the online path. MXFP4 instead stores a power-of-two block amplitude near
+$a_B$,
+\begin{equation}
+  \alpha_B\in
+  \left\{2^{\lfloor\log_2 a_B\rfloor},
+          2^{\lceil\log_2 a_B\rceil}\right\},
+  \qquad \delta_B=\frac{\alpha_B}{6},
+  \label{eq:mx-scale}
+\end{equation}
+where $\alpha_B$ is the E8M0 value written to the scale page and $\delta_B$
+is the effective reconstruction step.  Since the largest E2M1 code is 6, our
+convention reconstructs one operand as $\alpha_B q/6$ and corrects an MXFP4
+P/V product by $1/36$.  The amplitude folds naturally into a base-two score
+transform and matches one 32-column producer fragment (N32). The choice is a
+latency--range trade-off, not a claim that E8M0 is intrinsically more accurate
+than E4M3.
+
+Table~\ref{tab:p-range} isolates numerical range from kernel scheduling. It
+forms exact Gaussian softmax probabilities, quantizes matched N32 blocks,
+renormalizes the represented P, and multiplies by the same FP32 V. Stabilized
+NVFP4 is the high-fidelity control; unscaled NVFP4 exposes underflow.
+
+\begin{table}[htbp]
+\centering
+\caption{Probability-format range at D128. ``Zero scales'' is the fraction
+of blocks whose scale encodes as zero; ``lost mass'' is exact probability
+mass mapped to zero. This is a numerical diagnostic, not a kernel timing.}
+\label{tab:p-range}
+\scriptsize
+\begin{adjustbox}{max width=\textwidth}
+\begin{tabular}{llrrrrrr}
+\toprule
+$S$ & Format & Zero scales & Zero payload & Lost mass & $P$ rel.-$L_2$
+& $PV$ cosine & $PV$ rel.-$L_2$ \\
+\midrule
+\input{../fp4_fa4_unified_20260801/tables/p_range_rows.tex}%
+\end{tabular}
+\end{adjustbox}
+\end{table}
+
+The alternatives therefore impose different costs.  Stabilized NVFP4 offers
+the best FP4 fidelity but needs a row-level range correction.  FP8 avoids the
+4-bit range problem but gives up the FP4 PV instruction.  MXFP4 provides a
+power-of-two scale at the same N32 granularity as the producer fragment, but
+places probabilities more coarsely.  Direct-P chooses MXFP4 and redesigns how
+that operand is produced and normalized.

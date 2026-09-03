@@ -1,0 +1,895 @@
+--- a/fmha_bwd.py
++++ b/fmha_bwd.py
+@@ -36 +36 @@
+-from typing import Type, Tuple, Union, Optional
++from typing import Any, Type, Tuple, Union, Optional
+@@ -50 +50,9 @@
+-from cutlass.cute.typing import Int32, Float32, Float8E4M3FN, Float16, BFloat16, Boolean
++from cutlass.cute.typing import (
++    Int32,
++    Float32,
++    Float8E4M3FN,
++    Float16,
++    BFloat16,
++    Boolean,
++    Uint8,
++)
+@@ -70,0 +79,157 @@
++def tk_pack_e2m1_f32x2(
++    x: Float32,
++    y: Float32,
++    *,
++    loc=None,
++    ip=None,
++) -> Int32:
++    result = llvm.inline_asm(
++        T.i32(),
++        [
++            Float32(x).ir_value(loc=loc, ip=ip),
++            Float32(y).ir_value(loc=loc, ip=ip),
++        ],
++        """{
++        .reg .b8 packed;
++        cvt.rn.satfinite.e2m1x2.f32 packed, $2, $1;
++        cvt.u32.u8 $0, packed;
++        }""",
++        "=r,f,f",
++        has_side_effects=False,
++        is_align_stack=False,
++        asm_dialect=llvm.AsmDialect.AD_ATT,
++        loc=loc,
++        ip=ip,
++    )
++    return Int32(result)
++
++
++@dsl_user_op
++def tk_pack_u8x4(
++    x0: Int32,
++    x1: Int32,
++    x2: Int32,
++    x3: Int32,
++    *,
++    loc=None,
++    ip=None,
++) -> Int32:
++    result = llvm.inline_asm(
++        T.i32(),
++        [
++            Int32(x0).ir_value(loc=loc, ip=ip),
++            Int32(x1).ir_value(loc=loc, ip=ip),
++            Int32(x2).ir_value(loc=loc, ip=ip),
++            Int32(x3).ir_value(loc=loc, ip=ip),
++        ],
++        """{
++        .reg .b32 b0, b1, b2, b3;
++        and.b32 b0, $1, 255;
++        and.b32 b1, $2, 255;
++        and.b32 b2, $3, 255;
++        and.b32 b3, $4, 255;
++        shl.b32 b1, b1, 8;
++        shl.b32 b2, b2, 16;
++        shl.b32 b3, b3, 24;
++        or.b32 b0, b0, b1;
++        or.b32 b2, b2, b3;
++        or.b32 $0, b0, b2;
++        }""",
++        "=r,r,r,r,r",
++        has_side_effects=False,
++        is_align_stack=False,
++        asm_dialect=llvm.AsmDialect.AD_ATT,
++        loc=loc,
++        ip=ip,
++    )
++    return Int32(result)
++
++
++@dsl_user_op
++def tk_inverse_rope_bf16_pair(
++    x: Float32,
++    y: Float32,
++    packed_rope: Int32,
++    *,
++    loc=None,
++    ip=None,
++) -> Tuple[Float32, Float32]:
++    result = llvm.inline_asm(
++        llvm.StructType.get_literal([T.i32(), T.i32()]),
++        [
++            Float32(x).ir_value(loc=loc, ip=ip),
++            Float32(y).ir_value(loc=loc, ip=ip),
++            Int32(packed_rope).ir_value(loc=loc, ip=ip),
++        ],
++        """{
++        .reg .b16 cos_bf16, sin_bf16;
++        .reg .f32 cosine, sine, rx, ry, tmp, neg_x;
++        mov.b32 {cos_bf16, sin_bf16}, $4;
++        cvt.f32.bf16 cosine, cos_bf16;
++        cvt.f32.bf16 sine, sin_bf16;
++        mul.rn.f32 tmp, $2, cosine;
++        fma.rn.f32 rx, $3, sine, tmp;
++        neg.f32 neg_x, $2;
++        mul.rn.f32 tmp, $3, cosine;
++        fma.rn.f32 ry, neg_x, sine, tmp;
++        mov.b32 $0, rx;
++        mov.b32 $1, ry;
++        }""",
++        "=r,=r,f,f,r",
++        has_side_effects=False,
++        is_align_stack=False,
++        asm_dialect=llvm.AsmDialect.AD_ATT,
++        loc=loc,
++        ip=ip,
++    )
++    rx = llvm.extractvalue(T.i32(), result, [0], loc=loc, ip=ip)
++    ry = llvm.extractvalue(T.i32(), result, [1], loc=loc, ip=ip)
++    return (
++        Float32(llvm.bitcast(Float32.mlir_type, rx, loc=loc, ip=ip)),
++        Float32(llvm.bitcast(Float32.mlir_type, ry, loc=loc, ip=ip)),
++    )
++
++
++@dsl_user_op
++def tk_encode_e4m3_f32(
++    value: Float32,
++    *,
++    loc=None,
++    ip=None,
++) -> Tuple[Int32, Float32]:
++    result = llvm.inline_asm(
++        llvm.StructType.get_literal([T.i32(), T.i32()]),
++        [Float32(value).ir_value(loc=loc, ip=ip)],
++        """{
++        .reg .b16 packed;
++        .reg .b32 half2;
++        .reg .b16 half0, half1;
++        .reg .pred value_is_nan;
++        .reg .f32 clamped;
++        .reg .f32 decoded;
++        setp.nan.f32 value_is_nan, $2, $2;
++        selp.f32 clamped, 0f43E00000, $2, value_is_nan;
++        min.f32 clamped, clamped, 0f43E00000;
++        cvt.rn.satfinite.e4m3x2.f32 packed, clamped, clamped;
++        cvt.rn.f16x2.e4m3x2 half2, packed;
++        mov.b32 {half0, half1}, half2;
++        cvt.f32.f16 decoded, half0;
++        cvt.u32.u8 $0, packed;
++        mov.b32 $1, decoded;
++        }""",
++        "=r,=r,f",
++        has_side_effects=False,
++        is_align_stack=False,
++        asm_dialect=llvm.AsmDialect.AD_ATT,
++        loc=loc,
++        ip=ip,
++    )
++    packed = llvm.extractvalue(T.i32(), result, [0], loc=loc, ip=ip)
++    decoded = llvm.extractvalue(T.i32(), result, [1], loc=loc, ip=ip)
++    return (
++        Int32(packed),
++        Float32(llvm.bitcast(Float32.mlir_type, decoded, loc=loc, ip=ip)),
++    )
++
++
++@dsl_user_op
+@@ -240,0 +406 @@
++        self.owner_quantize_dq = False
+@@ -343,0 +510,5 @@
++        self.owner_quantize_sync_barrier = pipeline.NamedBarrier(
++            barrier_id=6,
++            num_threads=(self.num_reduce_warps + self.num_compute_warps)
++            * self.threads_per_warp,
++        )
+@@ -393,0 +565,5 @@
++        owner_dq_fp4_iter: Any,
++        owner_dq_scale_iter: Any,
++        owner_dq_global_scale: Union[cute.Tensor, None],
++        owner_rope_packed: Union[cute.Tensor, None],
++        owner_dq_ready: Union[cute.Tensor, None],
+@@ -400,0 +577,31 @@
++        owner_dq_fp4 = None
++        owner_dq_scales = None
++        if cutlass.const_expr(self.owner_quantize_dq):
++            if cutlass.const_expr(
++                not self.compact_dq_acc
++                or self.direct_compact_dq
++                or self.hierarchical_dq_lanes != 1
++                or not self.split_gqa_heads
++                or self.varlen
++                or self.tile_shape_Q != 128
++                or self.tile_shape_K != 128
++                or self.tile_shape_dQ_K != 128
++            ):
++                raise RuntimeError(
++                    "owner dQ quantization requires compact private BF16 dQ, "
++                    "split heads, fixed B/S, and D128 128x128 tiles"
++                )
++            owner_dq_fp4 = cute.make_tensor(
++                owner_dq_fp4_iter,
++                cute.make_layout(
++                    (q_seq_max, h_r * h_k * 64),
++                    stride=(h_r * h_k * 64, 1),
++                ),
++            )
++            owner_dq_scales = cute.make_tensor(
++                owner_dq_scale_iter,
++                cute.make_layout(
++                    (q_seq_max // 128, h_r * h_k * 2, 512),
++                    stride=(h_r * h_k * 1024, 512, 1),
++                ),
++            )
+@@ -703,0 +911,14 @@
++        owner_dq_smem_elements = 0
++        owner_packed_smem_elements = 0
++        owner_scale_smem_elements = 0
++        owner_smem_alignment = 1
++        if cutlass.const_expr(self.owner_quantize_dq):
++            owner_smem_alignment = self.buffer_align_bytes
++            # Append two prior stages to the existing aligned owner field.
++            # A separate field pushes the BF16 control over its SMEM limit.
++            owner_dq_smem_elements = (
++                self.tile_shape_Q * self.tile_shape_dQ_K
++                + self.tile_shape_Q * 32 * 2
++            )
++            owner_packed_smem_elements = self.tile_shape_Q * 64
++            owner_scale_smem_elements = 2 * 512
+@@ -775,0 +990,12 @@
++            sOwnerdQ: cute.struct.Align[
++                cute.struct.MemRange[dQ_store_dtype, owner_dq_smem_elements],
++                owner_smem_alignment,
++            ]
++            sOwnerPacked: cute.struct.Align[
++                cute.struct.MemRange[Uint8, owner_packed_smem_elements],
++                owner_smem_alignment,
++            ]
++            sOwnerScales: cute.struct.Align[
++                cute.struct.MemRange[Uint8, owner_scale_smem_elements],
++                owner_smem_alignment,
++            ]
+@@ -815,0 +1042,34 @@
++        owner_payload_tma_atom = None
++        owner_payload_tma_tensor = None
++        owner_scale_tma_atom = None
++        owner_scale_tma_tensor = None
++        if cutlass.const_expr(self.owner_quantize_dq):
++            owner_payload_smem_layout = cute.make_layout(
++                (self.tile_shape_Q, 64),
++                stride=(64, 1),
++            )
++            owner_payload_tma_atom, owner_payload_tma_tensor = (
++                cute.nvgpu.cpasync.make_tiled_tma_atom(
++                    cpasync.CopyBulkTensorTileS2GOp(),
++                    owner_dq_fp4,
++                    owner_payload_smem_layout,
++                    (self.tile_shape_Q, 64),
++                )
++            )
++            owner_scale_tma_view = cute.make_tensor(
++                owner_dq_scales.iterator,
++                cute.make_layout(
++                    (512, h_r * h_k * 2, q_seq_max // self.tile_shape_Q),
++                    stride=(1, 512, h_r * h_k * 1024),
++                ),
++            )
++            owner_scale_smem_layout = cute.make_layout(512)
++            owner_scale_tma_atom, owner_scale_tma_tensor = (
++                cute.nvgpu.cpasync.make_tiled_tma_atom(
++                    cpasync.CopyBulkTensorTileS2GOp(),
++                    owner_scale_tma_view,
++                    owner_scale_smem_layout,
++                    (512,),
++                )
++            )
++
+@@ -864,0 +1125,5 @@
++            owner_payload_tma_atom,
++            owner_payload_tma_tensor,
++            owner_scale_tma_atom,
++            owner_scale_tma_tensor,
++            dQ_acc,
+@@ -870,0 +1136,5 @@
++            owner_dq_fp4,
++            owner_dq_scales,
++            owner_dq_global_scale,
++            owner_rope_packed,
++            owner_dq_ready,
+@@ -1119 +1389,6 @@
+-        dQ_acc: cute.Tensor,
++        dQ_acc_tma: cute.Tensor,
++        owner_payload_tma_atom: Union[cute.CopyAtom, None],
++        owner_payload_tma_tensor: Union[cute.Tensor, None],
++        owner_scale_tma_atom: Union[cute.CopyAtom, None],
++        owner_scale_tma_tensor: Union[cute.Tensor, None],
++        dQ_acc_storage: cute.Tensor,
+@@ -1125,0 +1401,5 @@
++        owner_dq_fp4: Union[cute.Tensor, None],
++        owner_dq_scales: Union[cute.Tensor, None],
++        owner_dq_global_scale: Union[cute.Tensor, None],
++        owner_rope_packed: Union[cute.Tensor, None],
++        owner_dq_ready: Union[cute.Tensor, None],
+@@ -1146 +1426,10 @@
+-        bidx, bidy, bidz = cute.arch.block_idx()
++        physical_bidx, physical_bidy, bidz = cute.arch.block_idx()
++        bidx = physical_bidx
++        bidy = physical_bidy
++        if cutlass.const_expr(self.owner_quantize_dq):
++            # Put query heads in physical grid-x so Blackwell dispatches a
++            # breadth-first key wavefront.  With key tiles in grid-x, the
++            # short diagonal owners for a few heads can occupy most SMs while
++            # waiting for those heads' long prefix contributors.
++            bidx = physical_bidy
++            bidy = physical_bidx
+@@ -1154,0 +1444,3 @@
++            if cutlass.const_expr(self.owner_quantize_dq):
++                cpasync.prefetch_descriptor(owner_payload_tma_atom)
++                cpasync.prefetch_descriptor(owner_scale_tma_atom)
+@@ -1210,0 +1510,24 @@
++        sOwnerdQ = sdQ
++        sOwnerPrior = sdQ
++        sOwnerPacked = sdQ
++        sOwnerScales = sdQ
++        if cutlass.const_expr(self.owner_quantize_dq):
++            sOwnerdQ = storage.sOwnerdQ.get_tensor(
++                cute.make_layout(
++                    (self.tile_shape_Q, self.tile_shape_dQ_K),
++                    stride=(self.tile_shape_dQ_K, 1),
++                )
++            )
++            sOwnerPrior = cute.make_tensor(
++                sOwnerdQ.iterator + self.tile_shape_Q * self.tile_shape_dQ_K,
++                cute.make_layout((self.tile_shape_Q, 32, 2), stride=(32, 1, self.tile_shape_Q * 32)),
++            )
++            sOwnerPacked = storage.sOwnerPacked.get_tensor(
++                cute.make_layout(
++                    (self.tile_shape_Q, 64),
++                    stride=(64, 1),
++                )
++            )
++            sOwnerScales = storage.sOwnerScales.get_tensor(
++                cute.make_layout((2, 512), stride=(512, 1))
++            )
+@@ -1479,0 +1787,27 @@
++
++                if cutlass.const_expr(self.owner_quantize_dq):
++                    # The reduction warpgroup preserves the diagonal
++                    # contribution. Once its required prior publications are
++                    # complete, both compute warpgroups merge the one prior
++                    # BF16 lane, apply inverse RoPE, and publish NVFP4.
++                    self.owner_quantize_sync_barrier.arrive_and_wait()
++                    self.quantize_owner_dq_tile_compute_wg(
++                        sOwnerdQ,
++                        sOwnerPrior,
++                        sOwnerPacked,
++                        sOwnerScales,
++                        dQ_acc_storage,
++                        owner_payload_tma_atom,
++                        owner_payload_tma_tensor,
++                        owner_scale_tma_atom,
++                        owner_scale_tma_tensor,
++                        bidx,
++                        blk_coord[3],
++                        bidz,
++                        problem_shape_cur_batch,
++                        owner_dq_fp4,
++                        owner_dq_scales,
++                        owner_dq_global_scale,
++                        owner_rope_packed,
++                        owner_dq_ready,
++                    )
+@@ -1493 +1827,2 @@
+-                    dQ_acc,
++                    dQ_acc_tma,
++                    dQ_acc_storage,
+@@ -1494,0 +1830 @@
++                    sOwnerdQ,
+@@ -1502,0 +1839,5 @@
++                    owner_dq_fp4,
++                    owner_dq_scales,
++                    owner_dq_global_scale,
++                    owner_rope_packed,
++                    owner_dq_ready,
+@@ -1529 +1870,3 @@
+-            self.direct_compact_dq or self.hierarchical_dq_lanes > 1
++            self.direct_compact_dq
++            or self.hierarchical_dq_lanes > 1
++            or self.owner_quantize_dq
+@@ -1668 +2011,6 @@
+-        blk_coord_k, blk_coord_h_k, blk_coord_b = cute.arch.block_idx()
++        physical_bidx, physical_bidy, blk_coord_b = cute.arch.block_idx()
++        blk_coord_k = physical_bidx
++        blk_coord_h_k = physical_bidy
++        if cutlass.const_expr(self.owner_quantize_dq):
++            blk_coord_k = physical_bidy
++            blk_coord_h_k = physical_bidx
+@@ -2607,0 +2993 @@
++        dQ_acc_storage: cute.Tensor,
+@@ -2608,0 +2995 @@
++        sOwnerdQ: cute.Tensor,
+@@ -2617,0 +3005,5 @@
++        owner_dq_fp4: Union[cute.Tensor, None],
++        owner_dq_scales: Union[cute.Tensor, None],
++        owner_dq_global_scale: Union[cute.Tensor, None],
++        owner_rope_packed: Union[cute.Tensor, None],
++        owner_dq_ready: Union[cute.Tensor, None],
+@@ -2626,0 +3019,4 @@
++        H_R, H_K = problem_shape[3][0]
++        q_head = blk_coord_h_r + H_R * arrival_h_k
++        q_tiles = cute.ceil_div(Q, self.KQ_mma_tiler[1])
++        k_tiles = cute.ceil_div(K, self.KQ_mma_tiler[0])
+@@ -2666,0 +3070,7 @@
++        owner_local_row = tTR_cdQ[(0, 0), 0, 0][0]
++        tOwnerRow = None
++        if cutlass.const_expr(self.owner_quantize_dq):
++            tOwnerRow = cute.logical_divide(
++                sOwnerdQ[owner_local_row, None],
++                cute.make_layout(32),
++            )
+@@ -2675,0 +3077 @@
++        pending_ready_q = Int32(-1)
+@@ -2690 +3092,3 @@
+-                    self.direct_compact_dq or self.hierarchical_dq_lanes > 1
++                    self.direct_compact_dq
++                    or self.hierarchical_dq_lanes > 1
++                    or self.owner_quantize_dq
+@@ -2700,18 +3115,60 @@
+-            # We don't have enough smem to dump it all to smem, so we do it in stages
+-            for i in cutlass.range(0, cute.size(tTR_cdQ, mode=[2]), unroll_full=True):
+-                if warp_idx == 0:
+-                    reduce_tma_store_pipeline.producer_acquire()
+-                # Wait in all threads for the acquire to complete
+-                self.reduce_sync_barrier.arrive_and_wait()
+-
+-                cute.autovec_copy(
+-                    tTR_store_dQ[None, None, i],
+-                    tTR_sdQ[None, None, 0, reduce_tma_store_producer_state.index],
+-                )
+-
+-                # Wait for the stores to all be visible to the TMA
+-                cute.arch.fence_proxy(
+-                    cute.arch.ProxyKind.async_shared,
+-                    space=cute.arch.SharedSpace.shared_cta,
+-                )
+-                self.reduce_sync_barrier.arrive_and_wait()
++            if cutlass.const_expr(self.owner_quantize_dq):
++                if iter_index == blk_coord_k:
++                    # Preserve the diagonal contribution on chip while this
++                    # CTA continues publishing its later-query partials.
++                    for i in cutlass.range_constexpr(4):
++                        cute.autovec_copy(
++                            tTR_store_dQ[None, None, i],
++                            tOwnerRow[None, i],
++                        )
++                    self.reduce_sync_barrier.arrive_and_wait()
++                    # Let the compute WGs start owner quantization now. The
++                    # reduction WGs continue publishing later-query partials
++                    # through sdQ while the owner uses its disjoint stages.
++                    self.owner_quantize_sync_barrier.arrive()
++                else:
++                    # Later-query contributions retain the pipelined TMA
++                    # reduction into the one private BF16 partial.
++                    for i in cutlass.range(
++                        0,
++                        cute.size(tTR_cdQ, mode=[2]),
++                        unroll_full=True,
++                    ):
++                        if warp_idx == 0:
++                            reduce_tma_store_pipeline.producer_acquire()
++                        self.reduce_sync_barrier.arrive_and_wait()
++
++                        # Four chunks cycle through a two-stage TMA-store
++                        # pipeline.  Reacquiring stages 0 and 1 for the next
++                        # query proves that both trailing stores for the
++                        # previous query are globally complete, so publish
++                        # readiness here instead of delaying every tile until
++                        # the CTA tail.
++                        if i == 1 and pending_ready_q >= 0:
++                            if (
++                                warp_idx == self.reduce_warp_id[0]
++                                and tidx % 32 == 0
++                            ):
++                                tk_fence_proxy_async_global()
++                                ready_offset = pending_ready_q + q_tiles * (
++                                    q_head + H_R * H_K * blk_coord_b
++                                )
++                                ready_ptr = (
++                                    owner_dq_ready.iterator + ready_offset
++                                )
++                                cute.arch.atomic_add(
++                                    ready_ptr.llvm_ptr,
++                                    Int32(1),
++                                    sem="release",
++                                    scope="gpu",
++                                )
++
++                        cute.autovec_copy(
++                            tTR_store_dQ[None, None, i],
++                            tTR_sdQ[
++                                None,
++                                None,
++                                0,
++                                reduce_tma_store_producer_state.index,
++                            ],
++                        )
+@@ -2719,5 +3161,44 @@
+-                if warp_idx == 0:
+-                    cute.copy(
+-                        tma_atom_dQ_acc,
+-                        tdQsdQ[None, reduce_tma_store_producer_state.index],
+-                        tdQgdQ[None, iter_index, i, blk_coord_batch],
++                        cute.arch.fence_proxy(
++                            cute.arch.ProxyKind.async_shared,
++                            space=cute.arch.SharedSpace.shared_cta,
++                        )
++                        self.reduce_sync_barrier.arrive_and_wait()
++
++                        if warp_idx == 0:
++                            cute.copy(
++                                tma_atom_dQ_acc,
++                                tdQsdQ[
++                                    None,
++                                    reduce_tma_store_producer_state.index,
++                                ],
++                                tdQgdQ[
++                                    None,
++                                    iter_index,
++                                    i,
++                                    blk_coord_batch,
++                                ],
++                            )
++                            reduce_tma_store_pipeline.producer_commit()
++
++                        reduce_tma_store_producer_state.advance()
++                    pending_ready_q = iter_index
++            else:
++                # We don't have enough smem to dump it all to smem, so we do
++                # it in stages.
++                for i in cutlass.range(
++                    0,
++                    cute.size(tTR_cdQ, mode=[2]),
++                    unroll_full=True,
++                ):
++                    if warp_idx == 0:
++                        reduce_tma_store_pipeline.producer_acquire()
++                    self.reduce_sync_barrier.arrive_and_wait()
++
++                    cute.autovec_copy(
++                        tTR_store_dQ[None, None, i],
++                        tTR_sdQ[
++                            None,
++                            None,
++                            0,
++                            reduce_tma_store_producer_state.index,
++                        ],
+@@ -2726 +3207,5 @@
+-                    reduce_tma_store_pipeline.producer_commit()
++                    cute.arch.fence_proxy(
++                        cute.arch.ProxyKind.async_shared,
++                        space=cute.arch.SharedSpace.shared_cta,
++                    )
++                    self.reduce_sync_barrier.arrive_and_wait()
+@@ -2728 +3213,17 @@
+-                reduce_tma_store_producer_state.advance()
++                    if warp_idx == 0:
++                        cute.copy(
++                            tma_atom_dQ_acc,
++                            tdQsdQ[
++                                None,
++                                reduce_tma_store_producer_state.index,
++                            ],
++                            tdQgdQ[
++                                None,
++                                iter_index,
++                                i,
++                                blk_coord_batch,
++                            ],
++                        )
++                        reduce_tma_store_pipeline.producer_commit()
++
++                    reduce_tma_store_producer_state.advance()
+@@ -2736 +3237,4 @@
+-                    blk_coord_batch = ((blk_coord_h_r, blk_coord_h_k), blk_coord_b)
++                    blk_coord_batch = (
++                        (blk_coord_h_r, blk_coord_h_k),
++                        blk_coord_b,
++                    )
+@@ -2739,0 +3261,17 @@
++        if cutlass.const_expr(self.owner_quantize_dq):
++            if (
++                pending_ready_q >= 0
++                and warp_idx == self.reduce_warp_id[0]
++                and tidx % 32 == 0
++            ):
++                tk_fence_proxy_async_global()
++                ready_offset = pending_ready_q + q_tiles * (
++                    q_head + H_R * H_K * blk_coord_b
++                )
++                ready_ptr = owner_dq_ready.iterator + ready_offset
++                cute.arch.atomic_add(
++                    ready_ptr.llvm_ptr,
++                    Int32(1),
++                    sem="release",
++                    scope="gpu",
++                )
+@@ -2761,0 +3300,249 @@
++    def quantize_owner_dq_tile_compute_wg(
++        self,
++        sOwnerdQ: cute.Tensor,
++        sOwnerPrior: cute.Tensor,
++        sOwnerPacked: cute.Tensor,
++        sOwnerScales: cute.Tensor,
++        dQ_acc_storage: cute.Tensor,
++        owner_payload_tma_atom: cute.CopyAtom,
++        owner_payload_tma_tensor: cute.Tensor,
++        owner_scale_tma_atom: cute.CopyAtom,
++        owner_scale_tma_tensor: cute.Tensor,
++        iter_index: Int32,
++        blk_coord_batch: cute.Coord,
++        blk_coord_b: Int32,
++        problem_shape: Tuple[Int32, Int32, Int32, Tuple[Tuple[Int32, Int32], Int32]],
++        owner_dq_fp4: cute.Tensor,
++        owner_dq_scales: cute.Tensor,
++        owner_dq_global_scale: cute.Tensor,
++        owner_rope_packed: cute.Tensor,
++        owner_dq_ready: cute.Tensor,
++    ):
++        tidx, _, _ = cute.arch.thread_idx()
++        Q, _, _, HB = problem_shape
++        H_R, H_K = HB[0]
++        q_tiles = cute.ceil_div(Q, self.KQ_mma_tiler[1])
++        q_head = blk_coord_batch[0][0] + H_R * blk_coord_batch[0][1]
++        expected_prior = iter_index
++        ready_offset = iter_index + q_tiles * (q_head + H_R * H_K * blk_coord_b)
++        compute_thread = tidx - self.compute_warp_id[0] * self.threads_per_warp
++        if compute_thread == 0:
++            ready_ptr = owner_dq_ready.iterator + ready_offset
++            observed = cute.arch.atomic_add(
++                ready_ptr.llvm_ptr,
++                Int32(0),
++                sem="acquire",
++                scope="gpu",
++            )
++            while observed < expected_prior:
++                observed = cute.arch.atomic_add(
++                    ready_ptr.llvm_ptr,
++                    Int32(0),
++                    sem="acquire",
++                    scope="gpu",
++                )
++        self.compute_sync_barrier.arrive_and_wait()
++
++        local_row = compute_thread % self.tile_shape_Q
++        block_in_chunk = compute_thread // self.tile_shape_Q
++        global_row = iter_index * self.tile_shape_Q + local_row
++
++        gOwnerPayload = cute.local_tile(
++            owner_payload_tma_tensor,
++            (self.tile_shape_Q, 64),
++            (None, None),
++        )
++        tPayloadS, tPayloadG = cute.nvgpu.cpasync.tma_partition(
++            owner_payload_tma_atom,
++            0,
++            cute.make_layout(1),
++            cute.group_modes(sOwnerPacked, 0, 2),
++            cute.group_modes(gOwnerPayload, 0, 2),
++        )
++        tScaleS0, tScaleG = cute.nvgpu.cpasync.tma_partition(
++            owner_scale_tma_atom,
++            0,
++            cute.make_layout(1),
++            cute.group_modes(sOwnerScales[0, None], 0, 1),
++            cute.group_modes(owner_scale_tma_tensor, 0, 1),
++        )
++        tScaleS1, _ = cute.nvgpu.cpasync.tma_partition(
++            owner_scale_tma_atom,
++            0,
++            cute.make_layout(1),
++            cute.group_modes(sOwnerScales[1, None], 0, 1),
++            cute.group_modes(owner_scale_tma_tensor, 0, 1),
++        )
++        sOwnerPackedWords = cute.make_tensor(
++            cute.recast_ptr(sOwnerPacked.iterator, dtype=Int32),
++            cute.make_layout(
++                (self.tile_shape_Q, 16),
++                stride=(16, 1),
++            ),
++        )
++        global_decode = Float32(owner_dq_global_scale[0])
++        global_encode = cute.arch.rcp_approx(
++            cute.arch.fmax(global_decode, Float32(0.000000000001))
++        )
++        scale_row_offset = (local_row % 32) * 16 + (local_row // 32) * 4
++        local_pairs = cute.logical_divide(
++            sOwnerdQ[local_row, None],
++            cute.make_layout(2),
++        )
++        copy_warp = compute_thread // self.threads_per_warp
++        copy_lane = compute_thread % self.threads_per_warp
++        # Prime stage zero. Subsequent chunks load into the alternate stage
++        # while other warps execute the current chunk's RoPE/max/pack work.
++        for row_group in cutlass.range_constexpr(8):
++            copy_row = (
++                row_group * 16
++                + copy_warp * 2
++                + copy_lane // 16
++            )
++            copy_pair = copy_lane % 16
++            source_pairs = cute.logical_divide(
++                dQ_acc_storage[
++                    iter_index * self.tile_shape_Q + copy_row,
++                    None,
++                    blk_coord_batch,
++                ],
++                cute.make_layout(2),
++            )
++            stage_pairs = cute.logical_divide(
++                sOwnerPrior[copy_row, None, 0],
++                cute.make_layout(2),
++            )
++            stage_pairs[None, copy_pair].store(
++                source_pairs[None, copy_pair].load()
++            )
++        self.compute_sync_barrier.arrive_and_wait()
++
++        for chunk in cutlass.range_constexpr(4):
++            if cutlass.const_expr(chunk < 3):
++                next_chunk = chunk + 1
++                next_stage = next_chunk % 2
++                for row_group in cutlass.range_constexpr(8):
++                    copy_row = (
++                        row_group * 16
++                        + copy_warp * 2
++                        + copy_lane // 16
++                    )
++                    copy_pair = copy_lane % 16
++                    source_pairs = cute.logical_divide(
++                        dQ_acc_storage[
++                            iter_index * self.tile_shape_Q + copy_row,
++                            None,
++                            blk_coord_batch,
++                        ],
++                        cute.make_layout(2),
++                    )
++                    stage_pairs = cute.logical_divide(
++                        sOwnerPrior[copy_row, None, next_stage],
++                        cute.make_layout(2),
++                    )
++                    stage_pairs[None, copy_pair].store(
++                        source_pairs[
++                            None,
++                            next_chunk * 16 + copy_pair,
++                        ].load()
++                    )
++
++            value_begin = chunk * 32 + block_in_chunk * 16
++            prior_pairs = cute.logical_divide(
++                sOwnerPrior[local_row, None, chunk % 2],
++                cute.make_layout(2),
++            )
++            values = cute.make_rmem_tensor(cute.make_layout(16), BFloat16)
++            amax = Float32(0.0)
++            for pair in cutlass.range_constexpr(8):
++                j = pair * 2
++                column = value_begin + j
++                prior = prior_pairs[None, block_in_chunk * 8 + pair].load()
++                local = local_pairs[None, column // 2].load()
++                sum_x = (Float32(prior[0]) + Float32(local[0])).to(BFloat16)
++                sum_y = (Float32(prior[1]) + Float32(local[1])).to(BFloat16)
++                rotary_pair = column // 2
++                rotated_x_f32, rotated_y_f32 = tk_inverse_rope_bf16_pair(
++                    Float32(sum_x),
++                    Float32(sum_y),
++                    owner_rope_packed[
++                        blk_coord_b, global_row, rotary_pair
++                    ],
++                )
++                rotated_x = rotated_x_f32.to(BFloat16)
++                rotated_y = rotated_y_f32.to(BFloat16)
++                values[j] = rotated_x
++                values[j + 1] = rotated_y
++                amax = cute.arch.fmax(amax, abs(Float32(rotated_x)))
++                amax = cute.arch.fmax(amax, abs(Float32(rotated_y)))
++
++            packed_scale, local_decode = tk_encode_e4m3_f32(
++                amax * global_encode * Float32(1.0 / 6.0)
++            )
++            global_block = chunk * 2 + block_in_chunk
++            scale_half = global_block // 4
++            scale_block = global_block % 4
++            sOwnerScales[
++                scale_half,
++                scale_row_offset + scale_block,
++            ] = Uint8(packed_scale)
++            encode = cute.arch.rcp_approx(
++                cute.arch.fmax(
++                    local_decode * global_decode,
++                    Float32(0.000000000001),
++                )
++            )
++            packed_values = cute.make_rmem_tensor(cute.make_layout(8), Int32)
++            for pair in cutlass.range_constexpr(8):
++                j = pair * 2
++                x = Float32(values[j]) * encode
++                y = Float32(values[j + 1]) * encode
++                packed_values[pair] = tk_pack_e2m1_f32x2(x, y)
++            sOwnerPackedWords[
++                local_row,
++                value_begin // 8,
++            ] = tk_pack_u8x4(
++                packed_values[0],
++                packed_values[1],
++                packed_values[2],
++                packed_values[3],
++            )
++            sOwnerPackedWords[
++                local_row,
++                value_begin // 8 + 1,
++            ] = tk_pack_u8x4(
++                packed_values[4],
++                packed_values[5],
++                packed_values[6],
++                packed_values[7],
++            )
++            if cutlass.const_expr(chunk < 3):
++                self.compute_sync_barrier.arrive_and_wait()
++
++        cute.arch.fence_proxy(
++            cute.arch.ProxyKind.async_shared,
++            space=cute.arch.SharedSpace.shared_cta,
++        )
++        self.compute_sync_barrier.arrive_and_wait()
++        if compute_thread == 0:
++            cute.copy(
++                owner_payload_tma_atom,
++                tPayloadS[None],
++                tPayloadG[None, iter_index, q_head],
++            )
++            cute.arch.cp_async_bulk_commit_group()
++            cute.copy(
++                owner_scale_tma_atom,
++                tScaleS0[None],
++                tScaleG[None, q_head * 2, iter_index],
++            )
++            cute.arch.cp_async_bulk_commit_group()
++            cute.copy(
++                owner_scale_tma_atom,
++                tScaleS1[None],
++                tScaleG[None, q_head * 2 + 1, iter_index],
++            )
++            cute.arch.cp_async_bulk_commit_group()
++            cute.arch.cp_async_bulk_wait_group(0, read=True)
++
++    @cute.jit
+@@ -3159,0 +3901,2 @@
++        if self.owner_quantize_dq:
++            return (grid_heads, cute.ceil_div(K, block_k), cute.size(B))
+@@ -3640,0 +4384,5 @@
++        None,
++        None,
++        None,
++        None,
++        None,
+@@ -3667,0 +4416,5 @@
++            None,
++            None,
++            None,
++            None,
++            None,
+@@ -3692,0 +4446,5 @@
++            None,
++            None,
++            None,
++            None,
++            None,
+@@ -3720,0 +4479,5 @@
++            None,
++            None,
++            None,
++            None,
++            None,
+@@ -3894,0 +4658,5 @@
++            None,
++            None,
++            None,
++            None,
++            None,

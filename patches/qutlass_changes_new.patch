@@ -1,0 +1,37 @@
+diff --git a/qutlass/csrc/gemm.cu b/qutlass/csrc/gemm.cu
+index 57ebcc2..0dd4321 100644
+--- a/qutlass/csrc/gemm.cu
++++ b/qutlass/csrc/gemm.cu
+@@ -169,16 +169,17 @@ void runGemm(at::Tensor& D,
+ 
+     size_t workspace_size = Gemm::get_workspace_size(arguments);
+ 
+-    cutlass::device_memory::allocation<uint8_t> workspace(workspace_size);
++    auto workspace_options = torch::TensorOptions().dtype(torch::kUInt8).device(device);
++    auto workspace = torch::empty({static_cast<int64_t>(workspace_size)}, workspace_options);
+ 
+     const at::cuda::OptionalCUDAGuard device_guard(device_of(A));
+     cudaStream_t stream = at::cuda::getCurrentCUDAStream(device.index());
+ 
+     CUTLASS_CHECK(gemm.can_implement(arguments));
+ 
+-    CUTLASS_CHECK(gemm.initialize(arguments, workspace.get(), stream));
++    CUTLASS_CHECK(gemm.initialize(arguments, workspace.data_ptr(), stream));
+ 
+-    CUTLASS_CHECK(gemm.run(arguments, workspace.get(), stream));
++    CUTLASS_CHECK(gemm.run(arguments, workspace.data_ptr(), stream));
+ }
+ 
+ void matmul_host_mxf4_bf16_tn(torch::Tensor& D,
+diff --git a/setup.py b/setup.py
+index 3fd3495..698881d 100644
+--- a/setup.py
++++ b/setup.py
+@@ -140,7 +140,6 @@ if __name__ == "__main__":
+                 },
+                 extra_link_args=[
+                     "-lcudart",
+-                    "-lcuda",
+                 ],
+             )
+         ],

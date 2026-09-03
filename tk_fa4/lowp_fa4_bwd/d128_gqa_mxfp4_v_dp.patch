@@ -1,0 +1,874 @@
+--- fmha_bwd.py
++++ fmha_bwd.py
+@@ -46,6 +46,8 @@
+ import cutlass.pipeline as pipeline
+ import cutlass.torch as cutlass_torch
+ import cutlass.utils.blackwell_helpers as sm100_utils
++import cutlass.utils.blockscaled_layout as blockscaled_utils
++from cutlass import Float4E2M1FN, Float8E8M0FNU
+ from cutlass.cute.runtime import from_dlpack
+ from cutlass.cute.typing import (
+     Int32,
+@@ -519,6 +521,78 @@
+     )
+ 
+ 
++# D128 MX-V dP integration spike.
++#
++# The producer ABI is deliberately described here rather than hidden behind a
++# scale-page reorder.  V is a logical [K, D, ((G, Hkv), B)] Float4 tensor.  G
++# has zero stride, so neither its payload nor its scales are replicated for
++# GQA.  The physical scale allocation is [B, ceil(K / 128), Hkv, 512], where
++# one 512-byte page uses the SM100 scale-factor address
++#
++#   (row % 32) * 16 + ((row // 32) % 4) * 4 + (column // 32).
++#
++# The packed payload keeps its nested zero-stride G mode for TMA.  The scale
++# page remains in producer order and is cooperatively preloaded as 128 x 4
++# contiguous bytes, avoiding a second logical scale layout or any G copies.
++TK_D128_MXFP4_DP_HEAD_DIM = 128
++TK_D128_MXFP4_DP_SF_VECTOR = 32
++TK_D128_MXFP4_DP_SCALE_PAGE_ROWS = 128
++TK_D128_MXFP4_DP_SCALE_PAGE_BYTES = 512
++TK_D128_MXFP4_DP_PAYLOAD_BYTES = 128 * 128 // 2
++TK_D128_MXFP4_DP_SHARED_SCALE_BYTES = 2 * 512
++TK_D128_MXFP4_DP_SFA_TMEM_COLUMNS = 16
++TK_D128_MXFP4_DP_RAW_TO_X16 = 2.0 / 3.0
++
++
++def tk_d128_mxfp4_v_payload_layout(k_seq, h_r, h_k, batch):
++    """Logical Float4 V with a zero-stride GQA group mode."""
++    d = TK_D128_MXFP4_DP_HEAD_DIM
++    return cute.make_layout(
++        (k_seq, d, ((h_r, h_k), batch)),
++        stride=(
++            d * h_k,
++            1,
++            ((0, d), k_seq * d * h_k),
++        ),
++    )
++
++
++def tk_d128_mxfp4_v_physical_scale_layout(k_seq, h_k, batch):
++    """Flat view of producer-owned [B, K/128, Hkv, 512] E8M0 pages."""
++    pages = k_seq // TK_D128_MXFP4_DP_SCALE_PAGE_ROWS
++    return cute.make_layout(
++        (
++            TK_D128_MXFP4_DP_SCALE_PAGE_BYTES,
++            pages,
++            h_k,
++            batch,
++        ),
++        stride=(
++            1,
++            h_k * TK_D128_MXFP4_DP_SCALE_PAGE_BYTES,
++            TK_D128_MXFP4_DP_SCALE_PAGE_BYTES,
++            pages * h_k * TK_D128_MXFP4_DP_SCALE_PAGE_BYTES,
++        ),
++    )
++
++
++# Correctness-first on-chip route:
++#
++# * the projection's row-major MX V payload is loaded once by TMA and its
++#   physical SFA page is cooperatively preloaded without a descriptor;
++# * the mixed FP4-by-E4M3 MMA consumes each resident E4M3(x4) dO stage
++#   directly with a one-time unity SFB page, so no second dO payload is
++#   quantized or published and the same dO bytes remain live for dV;
++# * SFA/SFB occupy TMEM columns [384,416), but only after compute releases the
++#   score tile in S[384,512); and
++# * a shadow dP completion wait proves the scale reads are dead before the
++#   next score MMA reclaims the aliased columns.
++#
++# The public flag remains false by default.  A second compile latch keeps an
++# explicitly enabled route fail-closed until a real SM100 CuTe compile has
++# validated the complete specialization.
++
++
+ current_dir = os.path.dirname(os.path.abspath(__file__))
+ sys.path.insert(0, os.path.join(current_dir, ".."))
+ from utils import fmha_helpers as fmha_utils
+@@ -585,6 +659,8 @@
+         self.exp2_alu_degree = 1
+         self.forward_mx_probability_replay = False
+         self.use_forward_mx_probability_scales = False
++        self.use_d128_mxfp4_v_dp = False
++        self.d128_mxfp4_v_dp_compiled = False
+         self.compact_dq_acc = False
+         self.direct_compact_dq = False
+         self.hierarchical_dq_lanes = 1
+@@ -758,12 +834,32 @@
+         owner_rope_packed: Union[cute.Tensor, None],
+         owner_dq_ready: Union[cute.Tensor, None],
+         stream: cuda.CUstream,
++        mxfp4_v_scale_iter: Any = None,
+     ):
+         q_seq_max, k_seq_max, d, hb = problem_shape
+         precomputed_sum_OdO = O
+         precomputed_scaled_LSE = LSE
+         h, b = hb
+         h_r, h_k = h
++        if cutlass.const_expr(self.use_d128_mxfp4_v_dp):
++            if cutlass.const_expr(
++                self.element_dtype != Float8E4M3FN
++                # D128 is authenticated by the host tensor ABI.
++                or self.tile_shape_Q != 128
++                or self.tile_shape_K != 128
++                or self.tile_shape_dQ_K != 128
++                or self.varlen
++            ):
++                raise RuntimeError(
++                    "MXFP4 V dP spike requires fixed-length D128 E4M3 "
++                    "backward with 128x128 tiles"
++                )
++            if cutlass.const_expr(mxfp4_v_scale_iter is None):
++                raise RuntimeError("physical MXFP4 V scales are not bound")
++            # ``d`` and ``k_seq_max`` are runtime problem-shape values in
++            # CuTe.  The Python ABI authenticates D128 and K % 128 == 0
++            # before compilation; putting either comparison in const_expr
++            # makes the specialization fail during AST lowering.
+         if cutlass.const_expr(
+             self.use_forward_mx_probability_scales
+             and not self.forward_mx_probability_replay
+@@ -853,32 +949,60 @@
+             ),
+         )
+         # (s, d, 1, h_k, b) -> (s, d, (（1, h_k), b))
+-        V = cute.make_tensor(
+-            V.iterator,
+-            cute.make_layout(
+-                (V.shape[0], V.shape[1], hb),
+-                stride=(
+-                    V.stride[0],
+-                    V.stride[1],
+-                    (
+-                        (0, V.shape[1]),
++        mxfp4_v_scales = None
++        if cutlass.const_expr(self.use_d128_mxfp4_v_dp):
++            V = cute.make_tensor(
++                cute.recast_ptr(V.iterator, dtype=Float4E2M1FN),
++                tk_d128_mxfp4_v_payload_layout(k_seq_max, h_r, h_k, b),
++            )
++            mxfp4_v_scales = cute.make_tensor(
++                cute.recast_ptr(
++                    mxfp4_v_scale_iter,
++                    dtype=Float8E8M0FNU,
++                ),
++                tk_d128_mxfp4_v_physical_scale_layout(k_seq_max, h_k, b),
++            )
++        else:
++            V = cute.make_tensor(
++                V.iterator,
++                cute.make_layout(
++                    (V.shape[0], V.shape[1], hb),
++                    stride=(
++                        V.stride[0],
++                        V.stride[1],
+                         (
+-                            0
+-                            if self.varlen
+-                            else cute.assume(
+-                                V.shape[0] * V.shape[1] * 1 * h_k, divby=64
+-                            )
++                            (0, V.shape[1]),
++                            (
++                                0
++                                if self.varlen
++                                else cute.assume(
++                                    V.shape[0] * V.shape[1] * 1 * h_k, divby=64
++                                )
++                            ),
+                         ),
+                     ),
+                 ),
+-            ),
+-        )
++            )
++            mxfp4_v_scales = V
+         O = cute.make_tensor(O.iterator, Q.layout)
+ 
+         dQ = cute.make_tensor(dQ.iterator, Q.layout)
+         dK = cute.make_tensor(dK.iterator, K.layout)
+-        dV = cute.make_tensor(dV.iterator, V.layout)
++        if cutlass.const_expr(self.use_d128_mxfp4_v_dp):
++            # V is packed, but the published dV remains a full-width BF16
++            # gradient with the same zero-stride GQA ownership as K.
++            dV = cute.make_tensor(dV.iterator, dK.layout)
++        else:
++            dV = cute.make_tensor(dV.iterator, V.layout)
+         dO = cute.make_tensor(dO.iterator, O.layout)
++        if cutlass.const_expr(
++            self.use_d128_mxfp4_v_dp
++            and not self.d128_mxfp4_v_dp_compiled
++        ):
++            raise RuntimeError(
++                "D128 MXFP4 V dP is fail-closed until the complete on-chip "
++                "consumer passes an SM100 CuTe compile"
++            )
+ 
+         # (s, h_r, h_k, b) -> (s, ((h_r, h_k), b))
+         LSE = cute.make_tensor(
+@@ -949,6 +1073,21 @@
+             cta_group,
+             self.VdO_mma_tiler[:2],
+         )
++        mx_VdO_tiled_mma = sm100_utils.make_blockscaled_trivial_tiled_mma(
++            Float4E2M1FN,
++            Float8E4M3FN,
++            tcgen05.OperandMajorMode.K,
++            tcgen05.OperandMajorMode.K,
++            Float8E8M0FNU,
++            TK_D128_MXFP4_DP_SF_VECTOR,
++            cta_group,
++            self.VdO_mma_tiler[:2],
++        )
++        dP_tiled_mma = VdO_tiled_mma
++        dP_operand_dtype = self.element_dtype
++        if cutlass.const_expr(self.use_d128_mxfp4_v_dp):
++            dP_tiled_mma = mx_VdO_tiled_mma
++            dP_operand_dtype = Float4E2M1FN
+         # compute dV
+         if cutlass.const_expr(self.element_dtype == Float8E4M3FN):
+             PdO_tiled_mma = sm100_utils.make_trivial_tiled_mma(
+@@ -1006,12 +1145,43 @@
+             self.element_dtype,
+             self.load_mma_Q_stage,
+         )
++        v_smem_layout_dtype = self.element_dtype
++        if cutlass.const_expr(self.use_d128_mxfp4_v_dp):
++            # SM100's FP4 TMA-unpack representation occupies byte-addressed
++            # SMEM with a physical 8B gap after every 8B of packed payload.
++            # Keep the UMMA descriptor byte-typed; the MMA atom independently
++            # declares the logical E2M1 operand.
++            v_smem_layout_dtype = Uint8
+         V_smem_layout_staged = sm100_utils.make_smem_layout_a(
+-            VdO_tiled_mma,
++            dP_tiled_mma,
+             self.VdO_mma_tiler,
+-            self.element_dtype,
++            v_smem_layout_dtype,
++            1,
++        )
++        mx_V_sfa_layout_staged = blockscaled_utils.make_smem_layout_sfa(
++            mx_VdO_tiled_mma,
++            self.VdO_mma_tiler,
++            TK_D128_MXFP4_DP_SF_VECTOR,
+             1,
+         )
++        mx_dO_sfb_layout_staged = blockscaled_utils.make_smem_layout_sfb(
++            mx_VdO_tiled_mma,
++            self.VdO_mma_tiler,
++            TK_D128_MXFP4_DP_SF_VECTOR,
++            1,
++        )
++        mx_V_sfa_tmem_layout = blockscaled_utils.make_tmem_layout_sfa(
++            mx_VdO_tiled_mma,
++            self.VdO_mma_tiler,
++            TK_D128_MXFP4_DP_SF_VECTOR,
++            cute.select(mx_V_sfa_layout_staged, mode=[0, 1, 2]),
++        )
++        mx_dO_sfb_tmem_layout = blockscaled_utils.make_tmem_layout_sfb(
++            mx_VdO_tiled_mma,
++            self.VdO_mma_tiler,
++            TK_D128_MXFP4_DP_SF_VECTOR,
++            cute.select(mx_dO_sfb_layout_staged, mode=[0, 1, 2]),
++        )
+         dO_smem_layout_staged = sm100_utils.make_smem_layout_b(
+             VdO_tiled_mma,
+             self.VdO_mma_tiler,
+@@ -1090,15 +1260,25 @@
+         )
+ 
+         V_smem_layout = cute.select(V_smem_layout_staged, mode=[0, 1, 2])
+-        tma_atom_V, tma_tensor_V = cute.nvgpu.make_tiled_tma_atom_A(
+-            tma_load_op,
+-            V,
+-            V_smem_layout,
+-            self.VdO_mma_tiler,
+-            VdO_tiled_mma,
+-            self.cluster_layout_vmnk.shape,
+-        )
+-
++        if cutlass.const_expr(self.use_d128_mxfp4_v_dp):
++            tma_atom_V, tma_tensor_V = cute.nvgpu.make_tiled_tma_atom_A(
++                tma_load_op,
++                V,
++                V_smem_layout,
++                self.VdO_mma_tiler,
++                dP_tiled_mma,
++                self.cluster_layout_vmnk.shape,
++                internal_type=Uint8,
++            )
++        else:
++            tma_atom_V, tma_tensor_V = cute.nvgpu.make_tiled_tma_atom_A(
++                tma_load_op,
++                V,
++                V_smem_layout,
++                self.VdO_mma_tiler,
++                dP_tiled_mma,
++                self.cluster_layout_vmnk.shape,
++            )
+         Q_smem_layout = cute.select(Q_smem_layout_staged, mode=[0, 1, 2])
+         tma_atom_Q, tma_tensor_Q = cute.nvgpu.make_tiled_tma_atom_B(
+             tma_load_op,
+@@ -1121,7 +1301,9 @@
+ 
+         self.tma_copy_Q_bytes = cute.size_in_bytes(self.element_dtype, Q_smem_layout)
+         self.tma_copy_K_bytes = cute.size_in_bytes(self.element_dtype, K_smem_layout)
+-        self.tma_copy_V_bytes = cute.size_in_bytes(self.element_dtype, V_smem_layout)
++        self.tma_copy_V_bytes = cute.size_in_bytes(
++            dP_operand_dtype, V_smem_layout
++        )
+         self.tma_copy_dO_bytes = cute.size_in_bytes(self.element_dtype, dO_smem_layout)
+         owner_dq_smem_elements = 0
+         owner_packed_smem_elements = 0
+@@ -1130,6 +1312,13 @@
+         owner_smem_alignment = 1
+         mx_probability_scale_smem_elements = 0
+         mx_probability_scale_smem_alignment = 1
++        mx_scale_smem_elements = 0
++        mx_operand_smem_alignment = 1
++        v_smem_dtype = self.element_dtype
++        if cutlass.const_expr(self.use_d128_mxfp4_v_dp):
++            v_smem_dtype = Uint8
++            mx_scale_smem_elements = TK_D128_MXFP4_DP_SHARED_SCALE_BYTES
++            mx_operand_smem_alignment = self.buffer_align_bytes
+         if cutlass.const_expr(
+             self.forward_mx_probability_replay
+             and not self.use_forward_mx_probability_scales
+@@ -1195,10 +1384,14 @@
+             ]
+             sV: cute.struct.Align[
+                 cute.struct.MemRange[
+-                    self.element_dtype, cute.cosize(V_smem_layout_staged)
++                    v_smem_dtype, cute.cosize(V_smem_layout_staged)
+                 ],
+                 self.buffer_align_bytes,
+             ]
++            sD128MxScales: cute.struct.Align[
++                cute.struct.MemRange[Uint8, mx_scale_smem_elements],
++                mx_operand_smem_alignment,
++            ]
+             sQ: cute.struct.Align[
+                 cute.struct.MemRange[
+                     self.element_dtype, cute.cosize(Q_smem_layout_staged)
+@@ -1358,6 +1551,7 @@
+ 
+         self.bwd(
+             KQ_tiled_mma,
++            dP_tiled_mma,
+             VdO_tiled_mma,
+             PdO_tiled_mma,
+             dSQ_tiled_mma,
+@@ -1366,6 +1560,7 @@
+             tma_tensor_K,
+             tma_atom_V,
+             tma_tensor_V,
++            mxfp4_v_scales,
+             tma_atom_Q,
+             tma_tensor_Q,
+             tma_atom_dO,
+@@ -1397,6 +1592,10 @@
+             K_smem_layout_staged,
+             Q_smem_layout_staged,
+             V_smem_layout_staged,
++            mx_V_sfa_layout_staged,
++            mx_dO_sfb_layout_staged,
++            mx_V_sfa_tmem_layout,
++            mx_dO_sfb_tmem_layout,
+             dO_smem_layout_staged,
+             dS_smem_layout_staged,
+             KT_smem_layout_staged,
+@@ -1637,6 +1836,7 @@
+     def bwd(
+         self,
+         KQ_tiled_mma: cute.TiledMma,
++        dP_tiled_mma: cute.TiledMma,
+         VdO_tiled_mma: cute.TiledMma,
+         PdO_tiled_mma: cute.TiledMma,
+         dSQ_tiled_mma: cute.TiledMma,
+@@ -1645,6 +1845,7 @@
+         K_in: cute.Tensor,
+         tma_atom_V: cute.CopyAtom,
+         V_in: cute.Tensor,
++        V_scale_in: cute.Tensor,
+         tma_atom_Q: cute.CopyAtom,
+         Q_in: cute.Tensor,
+         tma_atom_dO: cute.CopyAtom,
+@@ -1676,6 +1877,10 @@
+         K_smem_layout_staged: cute.ComposedLayout,
+         Q_smem_layout_staged: cute.ComposedLayout,
+         V_smem_layout_staged: cute.ComposedLayout,
++        mx_V_sfa_layout_staged: cute.Layout,
++        mx_dO_sfb_layout_staged: cute.Layout,
++        mx_V_sfa_tmem_layout: cute.Layout,
++        mx_dO_sfb_tmem_layout: cute.Layout,
+         dO_smem_layout_staged: cute.ComposedLayout,
+         dS_smem_layout_staged: cute.ComposedLayout,
+         KT_smem_layout_staged: cute.ComposedLayout,
+@@ -1764,6 +1969,58 @@
+         sdO = storage.sdO.get_tensor(
+             dO_smem_layout_staged.outer, swizzle=dO_smem_layout_staged.inner
+         )
++        sMxVScale = sdO
++        sMxdOScale = sdO
++        if cutlass.const_expr(self.use_d128_mxfp4_v_dp):
++            mx_scale_ptr = cute.recast_ptr(
++                storage.sD128MxScales.data_ptr(), dtype=Float8E8M0FNU
++            )
++            sMxVScale = cute.make_tensor(
++                mx_scale_ptr, mx_V_sfa_layout_staged
++            )
++            sMxdOScale = cute.make_tensor(
++                mx_scale_ptr + TK_D128_MXFP4_DP_SCALE_PAGE_BYTES,
++                mx_dO_sfb_layout_staged,
++            )
++
++            # The projection already publishes the exact 512-byte physical
++            # page consumed by SM100 SFA.  Avoid asking TMA to reinterpret it
++            # through a blockscaled logical layout: one reduce warpgroup
++            # cooperatively copies four contiguous bytes per thread before
++            # any specialized role starts its main loop.
++            mx_scale_h_k = bidy
++            if cutlass.const_expr(self.split_gqa_heads):
++                mx_scale_h_k = bidy // problem_shape[3][0][0]
++            gMxVScalePage = V_scale_in[
++                None, bidx, mx_scale_h_k, bidz
++            ]
++            sMxVScaleFlat = cute.make_tensor(
++                sMxVScale.iterator,
++                cute.make_layout(TK_D128_MXFP4_DP_SCALE_PAGE_BYTES),
++            )
++            gMxVScaleVec = cute.logical_divide(
++                gMxVScalePage, cute.make_layout(4)
++            )
++            sMxVScaleVec = cute.logical_divide(
++                sMxVScaleFlat, cute.make_layout(4)
++            )
++            if tidx < 128:
++                sMxVScaleVec[None, tidx].store(
++                    gMxVScaleVec[None, tidx].load()
++                )
++
++            # B is the already-resident E4M3 dO tile, so its block-scale is
++            # exactly one.  Materialize the 512-byte E8M0 page once instead
++            # of publishing a second MXFP4 dO payload every query tile.
++            sMxdOScaleBytes = cute.make_tensor(
++                cute.recast_ptr(sMxdOScale.iterator, dtype=Uint8),
++                cute.make_layout(TK_D128_MXFP4_DP_SCALE_PAGE_BYTES),
++            )
++            if tidx < 128:
++                for byte in cutlass.range_constexpr(4):
++                    sMxdOScaleBytes[tidx * 4 + byte] = Uint8(127)
++            cute.arch.fence_view_async_shared()
++            self.cta_sync_barrier.arrive_and_wait()
+         sdQ = storage.sdQ.get_tensor(
+             dQ_smem_layout_staged.outer, swizzle=dQ_smem_layout_staged.inner
+         )
+@@ -1831,9 +2088,9 @@
+         tSTrQ = KQ_tiled_mma.make_fragment_B(sQ)
+ 
+         # (MMA, MMA_M, MMA_K, STAGE)
+-        tdPTrV = VdO_tiled_mma.make_fragment_A(sV)
++        tdPTrV = dP_tiled_mma.make_fragment_A(sV)
+         # (MMA, MMA_N, MMA_K, STAGE)
+-        tdPTrdO = VdO_tiled_mma.make_fragment_B(sdO)
++        tdPTrdO = dP_tiled_mma.make_fragment_B(sdO)
+ 
+         # (MMA, MMA_M, MMA_K, STAGE)
+         tdQrdS = dSK_tiled_mma.make_fragment_A(sdS)
+@@ -1852,6 +2109,21 @@
+         # (MMA, MMA_M, MMA_N)
+         tSTtST = cute.make_tensor(tSTtST.iterator + self.tmem_S_offset, tSTtST.layout)
+ 
++        tMxSFA = tSTtST
++        tMxSFB = tSTtST
++        if cutlass.const_expr(self.use_d128_mxfp4_v_dp):
++            tMxSFA = cute.make_tensor(
++                cute.recast_ptr(tSTtST.iterator, dtype=Float8E8M0FNU),
++                mx_V_sfa_tmem_layout,
++            )
++            tMxSFB = cute.make_tensor(
++                cute.recast_ptr(
++                    tSTtST.iterator + TK_D128_MXFP4_DP_SFA_TMEM_COLUMNS,
++                    dtype=Float8E8M0FNU,
++                ),
++                mx_dO_sfb_tmem_layout,
++            )
++
+         # (MMA, MMA_M, MMA_K, STAGE)
+         if cutlass.const_expr(self.element_dtype == Float8E4M3FN):
+             tdVrP = PdO_tiled_mma.make_fragment_A(sP)
+@@ -1864,10 +2136,10 @@
+         # (MMA, MMA_N, MMA_K, STAGE)
+         tdVrdOT = PdO_tiled_mma.make_fragment_B(sdOT)
+ 
+-        tdPTtdPT_shape = VdO_tiled_mma.partition_shape_C(
++        tdPTtdPT_shape = dP_tiled_mma.partition_shape_C(
+             cute.select(self.VdO_mma_tiler, mode=[0, 1])
+         )
+-        tdPTtdPT = VdO_tiled_mma.make_fragment_C(tdPTtdPT_shape)
++        tdPTtdPT = dP_tiled_mma.make_fragment_C(tdPTtdPT_shape)
+         # (MMA, MMA_M, MMA_N)
+         tdPTtdPT = cute.make_tensor(
+             tdPTtdPT.iterator + self.tmem_dP_offset, tdPTtdPT.layout
+@@ -1971,6 +2243,7 @@
+                     sSum_OdO,
+                     KQ_tiled_mma,
+                     VdO_tiled_mma,
++                    dP_tiled_mma,
+                     tma_atom_K,
+                     tma_atom_Q,
+                     tma_atom_V,
+@@ -1996,7 +2269,7 @@
+ 
+                 self.mma(
+                     KQ_tiled_mma,
+-                    VdO_tiled_mma,
++                    dP_tiled_mma,
+                     PdO_tiled_mma,
+                     dSK_tiled_mma,
+                     dSQ_tiled_mma,
+@@ -2015,6 +2288,10 @@
+                     tdKrdST,
+                     tdKtdK,
+                     tdKrQT,
++                    tMxSFA,
++                    tMxSFB,
++                    sMxVScale,
++                    sMxdOScale,
+                     tmem_holding_buf,
+                     trip_count,
+                     (
+@@ -2448,6 +2725,7 @@
+         sSum_OdO: cute.Tensor,
+         KQ_tiled_mma: cute.TiledMma,
+         VdO_tiled_mma: cute.TiledMma,
++        dP_tiled_mma: cute.TiledMma,
+         tma_atom_K: cute.CopyAtom,
+         tma_atom_Q: cute.CopyAtom,
+         tma_atom_V: cute.CopyAtom,
+@@ -2511,13 +2789,14 @@
+ 
+         KQ_thr_mma = KQ_tiled_mma.get_slice(0)
+         VdO_thr_mma = VdO_tiled_mma.get_slice(0)
++        dP_thr_mma = dP_tiled_mma.get_slice(0)
+ 
+         # (MMA, MMA_M, MMA_K, RestM, RestK, (H, B))
+         tSTgK = KQ_thr_mma.partition_A(gK)
+         # (MMA, MMA_N, MMA_K, RestN, RestK, (H, B))
+         tSTgQ = KQ_thr_mma.partition_B(gQ)
+         # (MMA, MMA_M, MMA_K, RestM, RestK, (H, B))
+-        tdPTgV = VdO_thr_mma.partition_A(gV)
++        tdPTgV = dP_thr_mma.partition_A(gV)
+         # (MMA, MMA_N, MMA_K, RestN, RestK, (H, B))
+         tdPTgdO = VdO_thr_mma.partition_B(gdO)
+ 
+@@ -2647,7 +2926,6 @@
+             tVsV[(None, 0)],
+             tma_bar_ptr=tma_barrier,
+         )
+-
+         # Load dO
+         cute.copy(
+             tma_atom_dO,
+@@ -2834,6 +3112,10 @@
+         tdKrdST: cute.Tensor,
+         tdKtdK: cute.Tensor,
+         tdKrQT: cute.Tensor,
++        tMxSFA: cute.Tensor,
++        tMxSFB: cute.Tensor,
++        sMxVScale: cute.Tensor,
++        sMxdOScale: cute.Tensor,
+         tmem_holding_buf: Int32,
+         iter_count: Int32,
+         # (load_mma_Q_pipeline, mma_compute_S_pipeline, load_mma_dO_pipeline, mma_compute_dP_pipeline, mma_reduce_dQ_pipeline, compute_mma_P_pipeline, compute_mma_dS_pipeline, mma_compute_dKdV_pipeline)
+@@ -2853,6 +3135,17 @@
+         tmem_alloc_cols = cutlass.Int32(self.tmem_alloc_cols)
+         cute.arch.alloc_tmem(tmem_alloc_cols, tmem_holding_buf)
+         self.tmem_alloc_barrier.arrive_and_wait()
++        if cutlass.const_expr(self.use_d128_mxfp4_v_dp):
++            s2t_sfa, s_sfa, t_sfa = (
++                self.d128_mx_s2t_copy_and_partition(
++                    sMxVScale, tMxSFA
++                )
++            )
++            s2t_sfb, s_sfb, t_sfb = (
++                self.d128_mx_s2t_copy_and_partition(
++                    sMxdOScale, tMxSFB
++                )
++            )
+         load_mma_Q_consumer_state = pipeline.make_pipeline_state(
+             pipeline.PipelineUserType.Consumer, self.load_mma_Q_stage
+         )
+@@ -2867,6 +3160,9 @@
+         mma_compute_dP_producer_state = pipeline.make_pipeline_state(
+             pipeline.PipelineUserType.Producer, self.mma_compute_dP_stage
+         )
++        d128_mx_dP_shadow_consumer_state = pipeline.make_pipeline_state(
++            pipeline.PipelineUserType.Consumer, self.mma_compute_dP_stage
++        )
+         mma_reduce_dQ_producer_state = pipeline.make_pipeline_state(
+             pipeline.PipelineUserType.Producer, self.mma_reduce_dQ_stage
+         )
+@@ -2899,14 +3195,35 @@
+         mma_compute_S_pipeline.producer_commit(mma_compute_S_producer_state)
+         mma_compute_S_producer_state.advance()
+ 
++        if cutlass.const_expr(self.use_d128_mxfp4_v_dp):
++            # The scale tensors alias otherwise-live score TMEM columns.
++            # Reacquiring the one-stage score slab proves compute has copied
++            # P and released S before the S2T scale publication overwrites it.
++            mma_compute_S_pipeline.producer_acquire(
++                mma_compute_S_producer_state
++            )
++
+         load_mma_dO_pipeline.consumer_wait(load_mma_dO_consumer_state)
+ 
+         mma_compute_dP_pipeline.producer_acquire(mma_compute_dP_producer_state)
+         mma_reduce_dQ_pipeline.producer_acquire(mma_reduce_dQ_producer_state)
+ 
++        if cutlass.const_expr(self.use_d128_mxfp4_v_dp):
++            cute.copy(s2t_sfa, s_sfa[(None, None, None, None, 0)], t_sfa)
++            cute.copy(s2t_sfb, s_sfb[(None, None, None, None, 0)], t_sfb)
++
+         # dP = V * dO
+         VdO_tiled_mma.set(tcgen05.Field.ACCUMULATE, False)
+         for k_block in cutlass.range(0, cute.size(tdPTrV, mode=[2]), unroll_full=True):
++            if cutlass.const_expr(self.use_d128_mxfp4_v_dp):
++                VdO_tiled_mma.set(
++                    tcgen05.Field.SFA,
++                    tMxSFA[(None, None, k_block)].iterator,
++                )
++                VdO_tiled_mma.set(
++                    tcgen05.Field.SFB,
++                    tMxSFB[(None, None, k_block)].iterator,
++                )
+             cute.gemm(
+                 VdO_tiled_mma,
+                 tdPTtdPT,
+@@ -2942,7 +3259,18 @@
+ 
+         while iter_count > 0:
+             load_mma_Q_pipeline.consumer_wait(load_mma_Q_consumer_state)
+-            mma_compute_S_pipeline.producer_acquire(mma_compute_S_producer_state)
++            if cutlass.const_expr(self.use_d128_mxfp4_v_dp):
++                # The scale tensors alias the score slab, but dV does not.
++                # Defer this proof until immediately before the next score
++                # MMA so the preceding dP can overlap the independent dV MMA.
++                mma_compute_dP_pipeline.consumer_wait(
++                    d128_mx_dP_shadow_consumer_state
++                )
++                d128_mx_dP_shadow_consumer_state.advance()
++            if cutlass.const_expr(not self.use_d128_mxfp4_v_dp):
++                mma_compute_S_pipeline.producer_acquire(
++                    mma_compute_S_producer_state
++                )
+ 
+             # S = K * Q
+             KQ_tiled_mma.set(tcgen05.Field.ACCUMULATE, False)
+@@ -3017,11 +3345,35 @@
+             mma_reduce_dQ_pipeline.producer_acquire(mma_reduce_dQ_producer_state)
+             load_mma_dO_pipeline.consumer_wait(load_mma_dO_consumer_state)
+ 
++            if cutlass.const_expr(self.use_d128_mxfp4_v_dp):
++                mma_compute_S_pipeline.producer_acquire(
++                    mma_compute_S_producer_state
++                )
++                cute.copy(
++                    s2t_sfa,
++                    s_sfa[(None, None, None, None, 0)],
++                    t_sfa,
++                )
++                cute.copy(
++                    s2t_sfb,
++                    s_sfb[(None, None, None, None, 0)],
++                    t_sfb,
++                )
++
+             # dP = V * dO
+             VdO_tiled_mma.set(tcgen05.Field.ACCUMULATE, False)
+             for k_block in cutlass.range(
+                 0, cute.size(tdPTrV, mode=[2]), unroll_full=True
+             ):
++                if cutlass.const_expr(self.use_d128_mxfp4_v_dp):
++                    VdO_tiled_mma.set(
++                        tcgen05.Field.SFA,
++                        tMxSFA[(None, None, k_block)].iterator,
++                    )
++                    VdO_tiled_mma.set(
++                        tcgen05.Field.SFB,
++                        tMxSFB[(None, None, k_block)].iterator,
++                    )
+                 cute.gemm(
+                     VdO_tiled_mma,
+                     tdPTtdPT,
+@@ -3288,6 +3640,20 @@
+             # Compute P from the normal-K score fragment owned by this warp.
+             cute.copy(tiled_t2r, tTR_tST, tTR_rST)
+ 
++            if cutlass.const_expr(self.use_d128_mxfp4_v_dp):
++                # Each of the 256 score consumers first completes its own
++                # asynchronous TMEM load, then arrives on the score pipeline's
++                # consumer-release mbarrier.  The MMA producer cannot reacquire
++                # the one-stage score slab until every consumer has arrived,
++                # so this proves all aliased score reads dead without adding a
++                # second CTA-wide named-barrier phase.  The register-resident
++                # score remains valid for the long mask/exp2/P path below.
++                cute.arch.fence_view_async_tmem_load()
++                mma_compute_S_pipeline.consumer_release(
++                    mma_compute_S_consumer_state
++                )
++                mma_compute_S_consumer_state.advance()
++
+             if is_masked_tile:
+                 fmha_utils.FusedMask.apply_mask(
+                     self.mask_type,
+@@ -3575,7 +3941,8 @@
+                 )
+             tRT_rST = self.quantize(tTR_rST, 4, p_dv_lift)
+ 
+-            cute.arch.fence_view_async_tmem_load()
++            if cutlass.const_expr(not self.use_d128_mxfp4_v_dp):
++                cute.arch.fence_view_async_tmem_load()
+             if cutlass.const_expr(self.element_dtype == Float8E4M3FN):
+                 # Reuse the score TMEM-load thread/value mapping for a
+                 # coordinate-preserving vector R2S publication.
+@@ -3595,9 +3962,14 @@
+             compute_mma_P_pipeline.producer_commit(compute_mma_P_producer_state)
+             compute_mma_P_producer_state.advance()
+ 
+-            # Release S
+-            mma_compute_S_pipeline.consumer_release(mma_compute_S_consumer_state)
+-            mma_compute_S_consumer_state.advance()
++            # Release S.  The MX-V route retires the aliased score slab right
++            # after all per-thread T2R waits above, allowing same-warp S2T and
++            # dP work to overlap probability computation.
++            if cutlass.const_expr(not self.use_d128_mxfp4_v_dp):
++                mma_compute_S_pipeline.consumer_release(
++                    mma_compute_S_consumer_state
++                )
++                mma_compute_S_consumer_state.advance()
+ 
+             # Release LSE
+             load_compute_LSE_pipeline.consumer_release(load_compute_LSE_consumer_state)
+@@ -3624,19 +3996,31 @@
+                 )
+ 
+             for i in cutlass.range(0, cute.size(tTR_rdPT), 2, unroll_full=True):
+-                tTR_rdPT[i], tTR_rdPT[i + 1] = cute.arch.add_packed_f32x2(
+-                    (tTR_rdPT[i], tTR_rdPT[i + 1]),
+-                    (
+-                        sSum_OdO[
+-                            cute.get(tTR_cdPT[i], mode=[1]),
+-                            load_compute_sum_OdO_consumer_state.index,
+-                        ],
+-                        sSum_OdO[
+-                            cute.get(tTR_cdPT[i + 1], mode=[1]),
+-                            load_compute_sum_OdO_consumer_state.index,
+-                        ],
+-                    ),
++                sum_odo_pair = (
++                    sSum_OdO[
++                        cute.get(tTR_cdPT[i], mode=[1]),
++                        load_compute_sum_OdO_consumer_state.index,
++                    ],
++                    sSum_OdO[
++                        cute.get(tTR_cdPT[i + 1], mode=[1]),
++                        load_compute_sum_OdO_consumer_state.index,
++                    ],
+                 )
++                if cutlass.const_expr(self.use_d128_mxfp4_v_dp):
++                    tTR_rdPT[i], tTR_rdPT[i + 1] = (
++                        cute.arch.fma_packed_f32x2(
++                            (tTR_rdPT[i], tTR_rdPT[i + 1]),
++                            (TK_D128_MXFP4_DP_RAW_TO_X16,) * 2,
++                            sum_odo_pair,
++                        )
++                    )
++                else:
++                    tTR_rdPT[i], tTR_rdPT[i + 1] = (
++                        cute.arch.add_packed_f32x2(
++                            (tTR_rdPT[i], tTR_rdPT[i + 1]),
++                            sum_odo_pair,
++                        )
++                    )
+                 if cutlass.const_expr(
+                     self.element_dtype == Float8E4M3FN and self.reuse_quantized_p
+                 ):
+@@ -3687,10 +4071,7 @@
+             cute.autovec_copy(tTR_rdST, sdS_slice)
+ 
+             # Notify for dS
+-            cute.arch.fence_proxy(
+-                cute.arch.ProxyKind.async_shared,
+-                space=cute.arch.SharedSpace.shared_cta,
+-            )
++            cute.arch.fence_proxy("async.shared", space="cta")
+             compute_mma_dS_pipeline.producer_commit(compute_mma_dS_producer_state)
+             compute_mma_dS_producer_state.advance()
+ 
+@@ -3909,10 +4290,7 @@
+                             ],
+                         )
+ 
+-                        cute.arch.fence_proxy(
+-                            cute.arch.ProxyKind.async_shared,
+-                            space=cute.arch.SharedSpace.shared_cta,
+-                        )
++                        cute.arch.fence_proxy("async.shared", space="cta")
+                         self.reduce_sync_barrier.arrive_and_wait()
+ 
+                         if warp_idx == 0:
+@@ -3955,10 +4333,7 @@
+                         ],
+                     )
+ 
+-                    cute.arch.fence_proxy(
+-                        cute.arch.ProxyKind.async_shared,
+-                        space=cute.arch.SharedSpace.shared_cta,
+-                    )
++                    cute.arch.fence_proxy("async.shared", space="cta")
+                     self.reduce_sync_barrier.arrive_and_wait()
+ 
+                     if warp_idx == 0:
+@@ -4269,10 +4644,7 @@
+             if cutlass.const_expr(chunk + 1 < owner_chunks):
+                 self.compute_sync_barrier.arrive_and_wait()
+ 
+-        cute.arch.fence_proxy(
+-            cute.arch.ProxyKind.async_shared,
+-            space=cute.arch.SharedSpace.shared_cta,
+-        )
++        cute.arch.fence_proxy("async.shared", space="cta")
+         self.compute_sync_barrier.arrive_and_wait()
+         if compute_thread == 0:
+             cute.copy(
+@@ -4822,6 +5194,27 @@
+             consumer_group=mma_compute_S_consumer_group,
+         )
+ 
++    def d128_mx_s2t_copy_and_partition(
++        self,
++        sSF: cute.Tensor,
++        tSF: cute.Tensor,
++    ):
++        """Build the canonical SM100 scale-factor SMEM-to-TMEM copy."""
++        s_compact = cute.filter_zeros(sSF)
++        t_compact = cute.filter_zeros(tSF)
++        copy_atom = cute.make_copy_atom(
++            tcgen05.Cp4x32x128bOp(tcgen05.CtaGroup.ONE),
++            Float8E8M0FNU,
++        )
++        tiled_copy = tcgen05.make_s2t_copy(copy_atom, t_compact)
++        thr_copy = tiled_copy.get_slice(0)
++        s_partition = thr_copy.partition_S(s_compact)
++        s_desc = tcgen05.get_s2t_smem_desc_tensor(
++            tiled_copy, s_partition
++        )
++        t_partition = thr_copy.partition_D(t_compact)
++        return tiled_copy, s_desc, t_partition
++
+     def make_and_init_mma_compute_dP_pipeline(self, mma_compute_dP_mbar_ptr):
+         mma_compute_dP_producer_group = pipeline.CooperativeGroup(
+             pipeline.Agent.Thread,

@@ -1,0 +1,219 @@
+\section{Backward Equations and Represented Formats}
+
+\subsection{Exact attention backward}
+
+For one batch/head, let
+\begin{align}
+  Z &= \alpha QK^\mathsf{T}, &
+  P &= \softmax(Z+M), &
+  O &= PV,
+  \label{eq:exact-forward}
+\end{align}
+where $M_{ij}=0$ for legal entries and $-\infty$ for masked entries.  Given
+the upstream gradient $G=\partial\mathcal L/\partial O$, exact backward is
+\begin{align}
+  dV &= P^\mathsf{T}G, \label{eq:exact-dv}\\
+  dP &= GV^\mathsf{T}, \label{eq:exact-dp}\\
+  r_i &= \sum_j P_{ij}dP_{ij}
+       = \langle O_i,G_i\rangle, \label{eq:exact-row-dot}\\
+  dS &= P\odot(dP-r\mathbf 1^\mathsf{T}), \label{eq:exact-ds}\\
+  dQ &= \alpha dS K, \label{eq:exact-dq}\\
+  dK &= \alpha dS^\mathsf{T}Q. \label{eq:exact-dk}
+\end{align}
+The identity in Equation~\ref{eq:exact-row-dot} lets the kernel compute the
+row correction from saved O and $G$ before score reconstruction.  Causal
+masking zeros all $j>i$ entries in P and therefore in $dS$.
+
+As in FlashAttention, the implementation tiles the sequence dimensions and
+recomputes scores and probabilities from Q, K, and the saved log-sum-exp
+$L_i$; no $S\times S$ matrix is materialized in HBM
+\cite{dao2022flashattention,zadouri2026flashattention4}.
+
+\subsection{Quantizer notation}
+
+Let $Q_F(x)$ be round-to-nearest, saturating conversion to format $F$.  For a
+positive encode multiplier $m$, define
+\begin{equation}
+  \bar x_F = Q_F(mx),\qquad
+  \widehat x_F=m^{-1}\bar x_F.
+  \label{eq:quantizer-notation}
+\end{equation}
+An overbar denotes the stored code interpreted as its small floating value;
+a hat denotes the decoded represented value.  E2M1 has the nonnegative
+magnitudes
+\begin{equation}
+  \mathcal F_{\mathrm{E2M1}}^+
+  =\left\{0,\tfrac12,1,\tfrac32,2,3,4,6\right\},
+  \label{eq:e2m1-values}
+\end{equation}
+plus sign.  E4M3 is used both as a payload format and as the scale format for
+NVFP4.  MXFP4 instead pairs E2M1 blocks of 32 values with E8M0 power-of-two
+scales \cite{ocp2023mx,nvidia2025nvfp4}.
+
+\subsection{Robust per-head FP4 Q/K}
+
+For batch/head index $h$, define
+\begin{align}
+  a_h &=
+    \max\!\left(\lVert Q_h\rVert_\infty,\lVert K_h\rVert_\infty\right),\\
+  \rho_h &=
+    \max\!\left(
+      \sqrt{\frac{\lVert Q_h\rVert_F^2}{S d}},
+      \sqrt{\frac{\lVert K_h\rVert_F^2}{S d}}
+    \right).
+  \label{eq:head-stats}
+\end{align}
+The retained clipping magnitude is
+\begin{equation}
+  c_h=\max(0.325\,a_h,\;2.75\,\rho_h).
+  \label{eq:robust-clip}
+\end{equation}
+With implementation bounds $m_{\min}$ and $m_{\max}$, the target multiplier
+is
+\begin{equation}
+  m_h^\star=
+  \begin{cases}
+    \operatorname{clip}\!\left(6/c_h,m_{\min},m_{\max}\right),
+      &c_h>0,\\
+    m_{\max},&c_h=0.
+  \end{cases}
+  \label{eq:target-multiplier}
+\end{equation}
+The tensor instruction consumes an E4M3 dequantizer.  The producer therefore
+snaps the reciprocal first,
+\begin{equation}
+  \delta_h=Q_{\mathrm{E4M3}}\!\left((m_h^\star)^{-1}\right),
+  \qquad m_h=\delta_h^{-1},
+  \label{eq:snap-dequantizer}
+\end{equation}
+then packs
+\begin{align}
+  \bar Q_h &= Q_{\mathrm{E2M1}}(m_hQ_h),&
+  \bar K_h &= Q_{\mathrm{E2M1}}(m_hK_h),\\
+  \widehat Q_h &= \delta_h\bar Q_h,&
+  \widehat K_h &= \delta_h\bar K_h.
+  \label{eq:adaptive-qk}
+\end{align}
+Q and K deliberately share $m_h$.  Separate multipliers would require more
+score scale state and a different instruction-facing layout.
+
+\subsection{Full-rank FP4 score reconstruction}
+
+$D_{QK}=192$ is split into three K64 chunks.  The represented base-two score
+is
+\begin{equation}
+  \widetilde Z_2 =
+  \alpha\log_2(e)
+  \sum_{c=0}^{2}
+  \mma_{\mathrm{NV4}}\!\left(
+    \bar Q_{h,c},\bar K_{h,c}^{\mathsf T};
+    \delta_h,\delta_h
+  \right),
+  \label{eq:represented-score}
+\end{equation}
+where the semicolon denotes the E4M3 scale page consumed by the block-scaled
+instruction.  All three chunks are retained.  The two-command D128
+approximation is disabled.
+
+Let $L_i$ be the log-sum-exp saved by the forward that produced O.  The
+backward probability used by the represented operator is
+\begin{equation}
+  \widetilde P_{ij}
+  =2^{\widetilde Z_{2,ij}-L_i\log_2(e)}\,\mathbf 1_{\{j\le i\}}.
+  \label{eq:represented-p}
+\end{equation}
+Because $L_i$ belongs to the forward operator while the score is reconstructed
+from represented Q/K, Equation~\ref{eq:represented-p} is not, in general,
+the exact softmax of $\widehat Q\widehat K^\mathsf T$.  This is the ordinary
+saved-LSE backward contract, now evaluated with low-precision Q/K.
+
+\subsection{Fixed-power E4M3 path}
+
+The retained producer uses exact powers of two so scale work becomes exponent
+adjustment.  Define
+\begin{align}
+  \bar G_4 &= Q_{\mathrm{E4M3}}(2^2G),&
+  \bar V_4 &= Q_{\mathrm{E4M3}}(2^2V),&
+  \bar P_8 &= Q_{\mathrm{E4M3}}(2^8\widetilde P).
+  \label{eq:fp8-operands}
+\end{align}
+The subscripts 4 and 8 indicate the power-of-two multiplier, not bit width.
+The $dP$ tensor instruction produces
+\begin{equation}
+  D_P=\mma_{\mathrm{E4M3}}(\bar G_4,\bar V_4^\mathsf T)
+  \approx 2^4\,dP.
+  \label{eq:scaled-dp}
+\end{equation}
+The mandatory statistics pass publishes the matching row term directly:
+\begin{equation}
+  R_i=2^4\langle O_i,G_i\rangle.
+  \label{eq:scaled-row-term}
+\end{equation}
+Thus $D_P-R\mathbf1^\mathsf T$ can be centered without first dequantizing the
+whole $dP$ tile.
+
+For $dV$, the same $2^2$ E4M3 $G$ operand is reused:
+\begin{equation}
+  \widetilde{dV}
+  =2^{-10}\,
+    \mma_{\mathrm{E4M3}}(\bar P_8^\mathsf T,\bar G_4).
+  \label{eq:represented-dv}
+\end{equation}
+The $2^{-10}$ correction is exactly $2^{-(8+2)}$.  This is why the retained
+path does not need a second $2^8G$ representation.
+
+\subsection{Fused E4M3 dS and mixed FP8-by-FP4 gradients}
+
+E4M3 P is unpacked to FP16 pairs, while scaled $dP$ and $R$ are centered in
+FP16.  Abstracting that local rounding as $\operatorname{fl}_{16}$, the
+published dS code is
+\begin{equation}
+  \overline{dS}_{12}
+  =Q_{\mathrm{E4M3}}\!\left(
+    \operatorname{fl}_{16}(\bar P_8)\odot
+    \operatorname{fl}_{16}(D_P-R\mathbf1^\mathsf T)
+  \right)
+  \approx Q_{\mathrm{E4M3}}(2^{12}dS).
+  \label{eq:fused-ds}
+\end{equation}
+The factors $2^8$ and $2^4$ multiply to the required fixed dS scale
+$s_{dS}=2^{12}=4096$.  Conversion is performed quarter by quarter from the
+FP32 producer fragment into both instruction-facing orientations.  No
+complete BF16 dS tile exists.
+
+Finally,
+\begin{align}
+  \widetilde{dQ}
+  &=\frac{\alpha}{2^{12}m_h}\,
+    \mma_{\mathrm{E4M3}\times\mathrm{E2M1}}
+    (\overline{dS}_{12},\bar K_h),
+    \label{eq:represented-dq}\\
+  \widetilde{dK}
+  &=\frac{\alpha}{2^{12}m_h}\,
+    \mma_{\mathrm{E4M3}\times\mathrm{E2M1}}
+    (\overline{dS}_{12}^{\mathsf T},\bar Q_h).
+    \label{eq:represented-dk}
+\end{align}
+The scalar corrections are fused into the existing dQ publication and dK
+epilogue.  FP32 tensor accumulation is preserved before BF16 publication.
+
+\subsection{Seven-word scale record}
+
+Each batch/head has one FP32 record:
+\begin{equation}
+  \mathcal M_h=
+  \left[
+  m_h,\ m_h,\
+  \frac{\alpha}{2^{12}m_h},\
+  \frac{\alpha}{2^{12}m_h},\
+  \frac{\alpha\log_2e}{m_h^2},\
+  u_h,\
+  \operatorname{bits}(\delta_h,\delta_h,\delta_h,\delta_h)
+  \right].
+  \label{eq:metadata-record}
+\end{equation}
+The first two words drive Q/K packing; words 2 and 3 are the live dQ/dK
+corrections; word 5 is producer completion scratch; word 6 is the repeated
+E4M3 scale-page byte pattern.  Word 4 keeps the explicit scalar score factor
+in the interface contract, while the current hot score path applies the
+equivalent $\delta_h$ scale page plus its ordinary $\alpha\log_2e$ factor.

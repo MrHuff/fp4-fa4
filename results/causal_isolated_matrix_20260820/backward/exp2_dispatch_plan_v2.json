@@ -1,0 +1,836 @@
+{
+  "command": [
+    "/workspace/codebases/pv/fp4_matmul_worktrees/causal_matrix_20260820/tk_fa4/lowp_fa4_bwd/benchmark_causal_backward_matrix.py",
+    "--dry-run",
+    "--sequences",
+    "4096,8192",
+    "--head-dims",
+    "64",
+    "--head-pairs",
+    "16/4,32/8,64/16",
+    "--routes",
+    "retained_lowp,retained_lowp_native_exp2",
+    "--output",
+    "results/causal_isolated_matrix_20260820/backward/exp2_dispatch_plan_v2.json"
+  ],
+  "created_utc": "2026-08-20T12:35:49.623780+00:00",
+  "device": null,
+  "host": {
+    "platform": "Linux-6.12.68-92.122.amzn2023.aarch64-aarch64-with-glibc2.39",
+    "python": "3.12.3"
+  },
+  "planned_cases": [
+    {
+      "available": true,
+      "route": "retained_lowp",
+      "route_policy": {
+        "direct_tma_dkdv": true,
+        "exp2_degree": 1,
+        "exp2_period": 2,
+        "exp2_policy": {
+          "effective": {
+            "degree": 1,
+            "period": 2
+          },
+          "mode": "auto_verified_shape",
+          "reason": "this measured D64 sequence/head shape uses the degree-1/period-2 selective packed-ALU EX2 path",
+          "requested": {
+            "degree": 2,
+            "period": null
+          },
+          "version": "d64_verified_shape_selective_exp2_v2"
+        },
+        "fp8_ds_lift": 16,
+        "lowp_do_stages": 1,
+        "probability_lift": 256,
+        "probability_storage": "tmem",
+        "retained_source": "0db D64 coherent training policy with sequence-resolved EX2",
+        "reuse_quantized_p": false,
+        "workspace_stats": true
+      },
+      "shape": {
+        "batch": 1,
+        "gqa_ratio": 4,
+        "head_dim": 64,
+        "kv_heads": 4,
+        "q_heads": 16,
+        "sequence": 4096
+      }
+    },
+    {
+      "available": true,
+      "route": "retained_lowp_native_exp2",
+      "route_policy": {
+        "direct_tma_dkdv": true,
+        "exp2_degree": 2,
+        "exp2_period": 0,
+        "exp2_policy": {
+          "effective": {
+            "degree": 2,
+            "period": 0
+          },
+          "mode": "explicit",
+          "reason": "an explicit period overrides automatic sequence dispatch",
+          "requested": {
+            "degree": 2,
+            "period": 0
+          },
+          "version": "d64_verified_shape_selective_exp2_v2"
+        },
+        "fp8_ds_lift": 16,
+        "lowp_do_stages": 1,
+        "probability_lift": 256,
+        "probability_storage": "tmem",
+        "retained_source": "0db D64 coherent training policy with sequence-resolved EX2",
+        "reuse_quantized_p": false,
+        "workspace_stats": true
+      },
+      "shape": {
+        "batch": 1,
+        "gqa_ratio": 4,
+        "head_dim": 64,
+        "kv_heads": 4,
+        "q_heads": 16,
+        "sequence": 4096
+      }
+    },
+    {
+      "available": true,
+      "route": "retained_lowp",
+      "route_policy": {
+        "direct_tma_dkdv": true,
+        "exp2_degree": 1,
+        "exp2_period": 2,
+        "exp2_policy": {
+          "effective": {
+            "degree": 1,
+            "period": 2
+          },
+          "mode": "auto_verified_shape",
+          "reason": "this measured D64 sequence/head shape uses the degree-1/period-2 selective packed-ALU EX2 path",
+          "requested": {
+            "degree": 2,
+            "period": null
+          },
+          "version": "d64_verified_shape_selective_exp2_v2"
+        },
+        "fp8_ds_lift": 16,
+        "lowp_do_stages": 1,
+        "probability_lift": 256,
+        "probability_storage": "tmem",
+        "retained_source": "0db D64 coherent training policy with sequence-resolved EX2",
+        "reuse_quantized_p": false,
+        "workspace_stats": true
+      },
+      "shape": {
+        "batch": 1,
+        "gqa_ratio": 4,
+        "head_dim": 64,
+        "kv_heads": 8,
+        "q_heads": 32,
+        "sequence": 4096
+      }
+    },
+    {
+      "available": true,
+      "route": "retained_lowp_native_exp2",
+      "route_policy": {
+        "direct_tma_dkdv": true,
+        "exp2_degree": 2,
+        "exp2_period": 0,
+        "exp2_policy": {
+          "effective": {
+            "degree": 2,
+            "period": 0
+          },
+          "mode": "explicit",
+          "reason": "an explicit period overrides automatic sequence dispatch",
+          "requested": {
+            "degree": 2,
+            "period": 0
+          },
+          "version": "d64_verified_shape_selective_exp2_v2"
+        },
+        "fp8_ds_lift": 16,
+        "lowp_do_stages": 1,
+        "probability_lift": 256,
+        "probability_storage": "tmem",
+        "retained_source": "0db D64 coherent training policy with sequence-resolved EX2",
+        "reuse_quantized_p": false,
+        "workspace_stats": true
+      },
+      "shape": {
+        "batch": 1,
+        "gqa_ratio": 4,
+        "head_dim": 64,
+        "kv_heads": 8,
+        "q_heads": 32,
+        "sequence": 4096
+      }
+    },
+    {
+      "available": true,
+      "route": "retained_lowp",
+      "route_policy": {
+        "direct_tma_dkdv": true,
+        "exp2_degree": 1,
+        "exp2_period": 2,
+        "exp2_policy": {
+          "effective": {
+            "degree": 1,
+            "period": 2
+          },
+          "mode": "auto_verified_shape",
+          "reason": "this measured D64 sequence/head shape uses the degree-1/period-2 selective packed-ALU EX2 path",
+          "requested": {
+            "degree": 2,
+            "period": null
+          },
+          "version": "d64_verified_shape_selective_exp2_v2"
+        },
+        "fp8_ds_lift": 16,
+        "lowp_do_stages": 1,
+        "probability_lift": 256,
+        "probability_storage": "tmem",
+        "retained_source": "0db D64 coherent training policy with sequence-resolved EX2",
+        "reuse_quantized_p": false,
+        "workspace_stats": true
+      },
+      "shape": {
+        "batch": 1,
+        "gqa_ratio": 4,
+        "head_dim": 64,
+        "kv_heads": 16,
+        "q_heads": 64,
+        "sequence": 4096
+      }
+    },
+    {
+      "available": true,
+      "route": "retained_lowp_native_exp2",
+      "route_policy": {
+        "direct_tma_dkdv": true,
+        "exp2_degree": 2,
+        "exp2_period": 0,
+        "exp2_policy": {
+          "effective": {
+            "degree": 2,
+            "period": 0
+          },
+          "mode": "explicit",
+          "reason": "an explicit period overrides automatic sequence dispatch",
+          "requested": {
+            "degree": 2,
+            "period": 0
+          },
+          "version": "d64_verified_shape_selective_exp2_v2"
+        },
+        "fp8_ds_lift": 16,
+        "lowp_do_stages": 1,
+        "probability_lift": 256,
+        "probability_storage": "tmem",
+        "retained_source": "0db D64 coherent training policy with sequence-resolved EX2",
+        "reuse_quantized_p": false,
+        "workspace_stats": true
+      },
+      "shape": {
+        "batch": 1,
+        "gqa_ratio": 4,
+        "head_dim": 64,
+        "kv_heads": 16,
+        "q_heads": 64,
+        "sequence": 4096
+      }
+    },
+    {
+      "available": true,
+      "route": "retained_lowp",
+      "route_policy": {
+        "direct_tma_dkdv": true,
+        "exp2_degree": 2,
+        "exp2_period": 0,
+        "exp2_policy": {
+          "effective": {
+            "degree": 2,
+            "period": 0
+          },
+          "mode": "auto_unverified_shape",
+          "reason": "selective EX2 is not yet verified for this long-sequence D64 sequence/head shape",
+          "requested": {
+            "degree": 2,
+            "period": null
+          },
+          "version": "d64_verified_shape_selective_exp2_v2"
+        },
+        "fp8_ds_lift": 16,
+        "lowp_do_stages": 1,
+        "probability_lift": 256,
+        "probability_storage": "tmem",
+        "retained_source": "0db D64 coherent training policy with sequence-resolved EX2",
+        "reuse_quantized_p": false,
+        "workspace_stats": true
+      },
+      "shape": {
+        "batch": 1,
+        "gqa_ratio": 4,
+        "head_dim": 64,
+        "kv_heads": 4,
+        "q_heads": 16,
+        "sequence": 8192
+      }
+    },
+    {
+      "available": true,
+      "route": "retained_lowp_native_exp2",
+      "route_policy": {
+        "direct_tma_dkdv": true,
+        "exp2_degree": 2,
+        "exp2_period": 0,
+        "exp2_policy": {
+          "effective": {
+            "degree": 2,
+            "period": 0
+          },
+          "mode": "explicit",
+          "reason": "an explicit period overrides automatic sequence dispatch",
+          "requested": {
+            "degree": 2,
+            "period": 0
+          },
+          "version": "d64_verified_shape_selective_exp2_v2"
+        },
+        "fp8_ds_lift": 16,
+        "lowp_do_stages": 1,
+        "probability_lift": 256,
+        "probability_storage": "tmem",
+        "retained_source": "0db D64 coherent training policy with sequence-resolved EX2",
+        "reuse_quantized_p": false,
+        "workspace_stats": true
+      },
+      "shape": {
+        "batch": 1,
+        "gqa_ratio": 4,
+        "head_dim": 64,
+        "kv_heads": 4,
+        "q_heads": 16,
+        "sequence": 8192
+      }
+    },
+    {
+      "available": true,
+      "route": "retained_lowp",
+      "route_policy": {
+        "direct_tma_dkdv": true,
+        "exp2_degree": 1,
+        "exp2_period": 2,
+        "exp2_policy": {
+          "effective": {
+            "degree": 1,
+            "period": 2
+          },
+          "mode": "auto_verified_shape",
+          "reason": "this measured D64 sequence/head shape uses the degree-1/period-2 selective packed-ALU EX2 path",
+          "requested": {
+            "degree": 2,
+            "period": null
+          },
+          "version": "d64_verified_shape_selective_exp2_v2"
+        },
+        "fp8_ds_lift": 16,
+        "lowp_do_stages": 1,
+        "probability_lift": 256,
+        "probability_storage": "tmem",
+        "retained_source": "0db D64 coherent training policy with sequence-resolved EX2",
+        "reuse_quantized_p": false,
+        "workspace_stats": true
+      },
+      "shape": {
+        "batch": 1,
+        "gqa_ratio": 4,
+        "head_dim": 64,
+        "kv_heads": 8,
+        "q_heads": 32,
+        "sequence": 8192
+      }
+    },
+    {
+      "available": true,
+      "route": "retained_lowp_native_exp2",
+      "route_policy": {
+        "direct_tma_dkdv": true,
+        "exp2_degree": 2,
+        "exp2_period": 0,
+        "exp2_policy": {
+          "effective": {
+            "degree": 2,
+            "period": 0
+          },
+          "mode": "explicit",
+          "reason": "an explicit period overrides automatic sequence dispatch",
+          "requested": {
+            "degree": 2,
+            "period": 0
+          },
+          "version": "d64_verified_shape_selective_exp2_v2"
+        },
+        "fp8_ds_lift": 16,
+        "lowp_do_stages": 1,
+        "probability_lift": 256,
+        "probability_storage": "tmem",
+        "retained_source": "0db D64 coherent training policy with sequence-resolved EX2",
+        "reuse_quantized_p": false,
+        "workspace_stats": true
+      },
+      "shape": {
+        "batch": 1,
+        "gqa_ratio": 4,
+        "head_dim": 64,
+        "kv_heads": 8,
+        "q_heads": 32,
+        "sequence": 8192
+      }
+    },
+    {
+      "available": true,
+      "route": "retained_lowp",
+      "route_policy": {
+        "direct_tma_dkdv": true,
+        "exp2_degree": 2,
+        "exp2_period": 0,
+        "exp2_policy": {
+          "effective": {
+            "degree": 2,
+            "period": 0
+          },
+          "mode": "auto_unverified_shape",
+          "reason": "selective EX2 is not yet verified for this long-sequence D64 sequence/head shape",
+          "requested": {
+            "degree": 2,
+            "period": null
+          },
+          "version": "d64_verified_shape_selective_exp2_v2"
+        },
+        "fp8_ds_lift": 16,
+        "lowp_do_stages": 1,
+        "probability_lift": 256,
+        "probability_storage": "tmem",
+        "retained_source": "0db D64 coherent training policy with sequence-resolved EX2",
+        "reuse_quantized_p": false,
+        "workspace_stats": true
+      },
+      "shape": {
+        "batch": 1,
+        "gqa_ratio": 4,
+        "head_dim": 64,
+        "kv_heads": 16,
+        "q_heads": 64,
+        "sequence": 8192
+      }
+    },
+    {
+      "available": true,
+      "route": "retained_lowp_native_exp2",
+      "route_policy": {
+        "direct_tma_dkdv": true,
+        "exp2_degree": 2,
+        "exp2_period": 0,
+        "exp2_policy": {
+          "effective": {
+            "degree": 2,
+            "period": 0
+          },
+          "mode": "explicit",
+          "reason": "an explicit period overrides automatic sequence dispatch",
+          "requested": {
+            "degree": 2,
+            "period": 0
+          },
+          "version": "d64_verified_shape_selective_exp2_v2"
+        },
+        "fp8_ds_lift": 16,
+        "lowp_do_stages": 1,
+        "probability_lift": 256,
+        "probability_storage": "tmem",
+        "retained_source": "0db D64 coherent training policy with sequence-resolved EX2",
+        "reuse_quantized_p": false,
+        "workspace_stats": true
+      },
+      "shape": {
+        "batch": 1,
+        "gqa_ratio": 4,
+        "head_dim": 64,
+        "kv_heads": 16,
+        "q_heads": 64,
+        "sequence": 8192
+      }
+    }
+  ],
+  "planned_shapes": [
+    {
+      "batch": 1,
+      "gqa_ratio": 4,
+      "head_dim": 64,
+      "kv_heads": 4,
+      "q_heads": 16,
+      "sequence": 4096
+    },
+    {
+      "batch": 1,
+      "gqa_ratio": 4,
+      "head_dim": 64,
+      "kv_heads": 8,
+      "q_heads": 32,
+      "sequence": 4096
+    },
+    {
+      "batch": 1,
+      "gqa_ratio": 4,
+      "head_dim": 64,
+      "kv_heads": 16,
+      "q_heads": 64,
+      "sequence": 4096
+    },
+    {
+      "batch": 1,
+      "gqa_ratio": 4,
+      "head_dim": 64,
+      "kv_heads": 4,
+      "q_heads": 16,
+      "sequence": 8192
+    },
+    {
+      "batch": 1,
+      "gqa_ratio": 4,
+      "head_dim": 64,
+      "kv_heads": 8,
+      "q_heads": 32,
+      "sequence": 8192
+    },
+    {
+      "batch": 1,
+      "gqa_ratio": 4,
+      "head_dim": 64,
+      "kv_heads": 16,
+      "q_heads": 64,
+      "sequence": 8192
+    }
+  ],
+  "protocol": {
+    "accuracy_seeds": [
+      20260820
+    ],
+    "backward_exp2_dispatch": {
+      "default": {
+        "degree": 2,
+        "period": 0
+      },
+      "scope": "D64 B1 causal retained lowp",
+      "threshold_sequence": 4096,
+      "verified_shape_policy": {
+        "degree": 1,
+        "period": 2
+      },
+      "verified_shapes": [
+        {
+          "kv_heads": 4,
+          "q_heads": 16,
+          "sequence": 4096
+        },
+        {
+          "kv_heads": 8,
+          "q_heads": 32,
+          "sequence": 4096
+        },
+        {
+          "kv_heads": 16,
+          "q_heads": 64,
+          "sequence": 4096
+        },
+        {
+          "kv_heads": 8,
+          "q_heads": 32,
+          "sequence": 8192
+        }
+      ],
+      "version": "d64_verified_shape_selective_exp2_v2"
+    },
+    "causal": true,
+    "comparison": "CuTe BF16 and retained lowp backward on one exact E4M3-represented Q/K/V/dO state",
+    "fixed_length": true,
+    "forward_for_statistics": "CuTe BF16 causal flash attention",
+    "forward_timing_included": false,
+    "minimum_device_free_gib": 16.0,
+    "minimum_host_free_gib": 16.0,
+    "primary_timing_includes_required_clears": true,
+    "quantization_timing_included": false,
+    "samples": 41,
+    "timing_seed": 20260820,
+    "warmups": 9
+  },
+  "records": [],
+  "requested_routes": [
+    "retained_lowp",
+    "retained_lowp_native_exp2"
+  ],
+  "route_capabilities": {
+    "mx_exact_replay": {
+      "available": false,
+      "reason": "No retained callable adapter in the clean source line consumes the causal forward's published MXFP4 probability payload/E8M0 scale page at the CompiledGqaBackward boundary. Exploratory fp4_pv_experiments.py probes are not a production substitute.",
+      "required_adapter_contract": {
+        "inputs": [
+          "represented E4M3 Q/K/V/dO",
+          "forward MXFP4 probability payload or deterministic replay",
+          "forward-published E8M0 block32 probability scales",
+          "forward LSE/statistics"
+        ],
+        "outputs": [
+          "BF16 dQ",
+          "BF16 dK",
+          "BF16 dV"
+        ],
+        "required_methods": [
+          "reset",
+          "run"
+        ],
+        "timing_boundary": "replay/publication handoff plus every required clear and attention backward"
+      },
+      "scope": "route_complete_mxfp4_probability_replay_and_backward"
+    },
+    "retained_lowp": {
+      "available": true,
+      "d64_exp2_contract": "automatic d1/p2 only for measured S/Hq/Hkv shapes: 4096/16/4, 4096/32/8, 4096/64/16, and 8192/32/8; all other shapes retain native d2/p0",
+      "input_contract": "represented_e4m3_q_k_v_dout_x4",
+      "probability_contract": "score/LSE reconstruction with retained E4M3 probability path",
+      "scope": "isolated_attention_backward_shared_core",
+      "supported_head_dims": [
+        64,
+        128
+      ]
+    },
+    "retained_lowp_exp2_d1_p2": {
+      "available": true,
+      "comparison_control_for": "retained_lowp_native_exp2",
+      "explicit_exp2_policy": {
+        "degree": 1,
+        "period": 2
+      },
+      "input_contract": "represented_e4m3_q_k_v_dout_x4",
+      "only_policy_change": {
+        "exp2_degree": [
+          2,
+          1
+        ],
+        "exp2_period": [
+          0,
+          2
+        ]
+      },
+      "probability_contract": "score/LSE reconstruction with retained E4M3 probability path",
+      "reason_d64_only": "This is a controlled long-sequence D64 screen of the selective packed-ALU EX2 cadence; it is not a D128 policy.",
+      "scope": "isolated_attention_backward_shared_core",
+      "supported_head_dims": [
+        64
+      ]
+    },
+    "retained_lowp_exp2_d1_p3": {
+      "available": true,
+      "comparison_control_for": "retained_lowp_native_exp2",
+      "explicit_exp2_policy": {
+        "degree": 1,
+        "period": 3
+      },
+      "input_contract": "represented_e4m3_q_k_v_dout_x4",
+      "only_policy_change": {
+        "exp2_degree": [
+          2,
+          1
+        ],
+        "exp2_period": [
+          0,
+          3
+        ]
+      },
+      "probability_contract": "score/LSE reconstruction with retained E4M3 probability path",
+      "reason_d64_only": "This is a controlled long-sequence D64 screen of the selective packed-ALU EX2 cadence; it is not a D128 policy.",
+      "scope": "isolated_attention_backward_shared_core",
+      "supported_head_dims": [
+        64
+      ]
+    },
+    "retained_lowp_native_exp2": {
+      "available": true,
+      "comparison_control_for": "retained_lowp",
+      "explicit_exp2_policy": {
+        "degree": 2,
+        "period": 0
+      },
+      "input_contract": "represented_e4m3_q_k_v_dout_x4",
+      "probability_contract": "score/LSE reconstruction with retained E4M3 probability path",
+      "reason_d64_only": "This control forces the pre-dispatch native EX2 implementation.",
+      "scope": "isolated_attention_backward_shared_core",
+      "supported_head_dims": [
+        64
+      ]
+    },
+    "retained_lowp_no_direct_tma": {
+      "available": true,
+      "comparison_control_for": "retained_lowp",
+      "input_contract": "represented_e4m3_q_k_v_dout_x4",
+      "only_policy_change": {
+        "compiled_backward_direct_tma_dkdv": [
+          true,
+          false
+        ],
+        "control_module_direct_tma_dkdv": [
+          true,
+          false
+        ]
+      },
+      "probability_contract": "score/LSE reconstruction with retained E4M3 probability path",
+      "reason_d64_only": "D128 retained_lowp already uses direct_tma_dkdv=False; this control isolates the D64 direct-TMA dK/dV epilogue only.",
+      "scope": "isolated_attention_backward_shared_core",
+      "supported_head_dims": [
+        64
+      ]
+    }
+  },
+  "schema": "fp4_fa4_causal_backward_matrix_v2",
+  "source": {
+    "control_inputs": [
+      {
+        "exists": true,
+        "path": "qutlass/third_party/cutlass/examples/python/CuTeDSL/blackwell/fmha_bwd.py",
+        "sha256": "953b86a13cc64789052e9d1f8090c9562ac579ee903d275d78cf426780c09eff",
+        "size_bytes": 130976
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/backward_policy.py",
+        "sha256": "a3b1eca1ec53ce68539bb01ef357c1edd393f92e8c189cd97ef683438783692b",
+        "size_bytes": 4634
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/profile_gqa_d128_chain.py",
+        "sha256": "6d31bb8f8d8df7ce9504bc0c2f64b0f4affedbf796644481b3f8f6ff20646f02",
+        "size_bytes": 96405
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/tune_d64_gqa_cute.py",
+        "sha256": "b353d87ae3ca6ba5309f27ed75dc67512f968ac321df548d344f43963f93bc29",
+        "size_bytes": 27125
+      },
+      {
+        "exists": true,
+        "path": "flash-attention/flash_attn/cute/interface.py",
+        "sha256": "f62d3cc9ba70534fa36cb3300bcf87432c957289e53ef165ad79d247820016ca",
+        "size_bytes": 150840
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/d64_gqa_cute.patch",
+        "sha256": "51c7c733108b6a4547b00b560dfd0a827ec321733fae08fdb55ae5708598e487",
+        "size_bytes": 34748
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/d64_gqa_direct_tma_dkdv.patch",
+        "sha256": "948413fdd2e95c3844c2771222458d6bbe5d17a3c84b4f3d717a9797a1586b9e",
+        "size_bytes": 15482
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/d64_gqa_fp8_p_layout.patch",
+        "sha256": "4e9fbd7e5a2a291dd8965c17df5a1bb950d3c0a09276f9963ca5fea3ca45db34",
+        "size_bytes": 7705
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/d64_gqa_fp8_p_lift.patch",
+        "sha256": "39884efa3580ea6342730bdc817a83dfc6294235584e3482e67fe524ca948f1f",
+        "size_bytes": 6200
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/d64_gqa_fp8_p_tmem_coord.patch",
+        "sha256": "3533c0f0e20faaad2a9a59ac2286e21ba56f840c88848e8dd9b196f7e3cc879c",
+        "size_bytes": 5063
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/d64_gqa_fp8_p_tmem_wide_load.patch",
+        "sha256": "d1fd6695d181b475e1d9104f8adf292d06af2bdd6096dda38e494bf3389b7486",
+        "size_bytes": 328
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/d64_gqa_fused_probability_lift.patch",
+        "sha256": "af7adbc9dc0faf06d7ebeed206a891139efcc197f6671896b57da61f6791b8bd",
+        "size_bytes": 3697
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/d64_gqa_owner_d64.patch",
+        "sha256": "ec42e984a982b3e8608e9c3d4095b249bfec3bac0628c08e9d3730745e319b01",
+        "size_bytes": 7070
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/d64_gqa_owner_full_operand.patch",
+        "sha256": "2dc9455b7820f78e70744db83d6cb91c22214f8af665ba96e94ca371fa15b198",
+        "size_bytes": 1521
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/d64_gqa_owner_fused_dq_scale.patch",
+        "sha256": "96d97e96e8afc6d375a5ca361f339f7b353819de9a632834fca3e30b2b4a22e5",
+        "size_bytes": 3396
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/d64_gqa_owner_kv_no_materialize.patch",
+        "sha256": "14cfb0e5abe1d8d496594c0dc531079db3d9599c6a398bf34217b8e910ace63e",
+        "size_bytes": 4871
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/d64_gqa_owner_kv_quantize.patch",
+        "sha256": "b9b54388fe6b1b39dd3259391a8660405f0b7e2b57191ead9659563154432b84",
+        "size_bytes": 7939
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/d64_gqa_owner_quantize.patch",
+        "sha256": "fc03f81c1ac0fb325dfc0b517a096e0ab8fb60ce139ba10a1b4fdeffe73904d8",
+        "size_bytes": 34684
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/d64_gqa_reverse_query.patch",
+        "sha256": "7e8b469320c2c9e5350d6f6fa2014c30106c538e14fd9c1e84968d0a97586f23",
+        "size_bytes": 5047
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/d64_gqa_tile_ready.patch",
+        "sha256": "60cba7afbb40933ac9154f56a0761f87e6ed34f3d5925e4414f27e7a9c0637ba",
+        "size_bytes": 8042
+      }
+    ],
+    "git": {
+      "branch": "codex/causal-isolated-matrix-20260820",
+      "dirty": true,
+      "head": "4055ab6dbb7ae0bd97590e433e1c90fbdfe834f0"
+    },
+    "harness": {
+      "exists": true,
+      "path": "tk_fa4/lowp_fa4_bwd/benchmark_causal_backward_matrix.py",
+      "sha256": "53ecdeab6c2f0d0e169737c6908086181db0160acfabdd6bbd5c49546b8b7f10",
+      "size_bytes": 49671
+    },
+    "lowp_extension": null
+  },
+  "status": "planned",
+  "unavailable_routes": []
+}

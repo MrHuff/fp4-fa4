@@ -1,0 +1,122 @@
+\section{Why Full FP4 Is Difficult}
+
+\subsection{P lies on the critical path}
+
+For one query row, exact attention is
+\begin{equation}
+  O_i=\frac{\sum_j e^{z_{ij}}V_j}{\sum_j e^{z_{ij}}},
+  \qquad z_{ij}=Q_iK_j^\mathsf{T}/\sqrt d.
+  \label{eq:exact-attention}
+\end{equation}
+FlashAttention visits the keys in tiles. After a tile with maximum
+$\widetilde m_i$ arrives, it updates a running maximum $m_i$, denominator
+$\ell_i$, and output $o_i$:
+\begin{align}
+  m_i' &= \max(m_i,\widetilde m_i), \\
+  \ell_i' &= e^{m_i-m_i'}\ell_i+
+    \sum_{j\in B}e^{z_{ij}-m_i'}, \\
+  o_i' &= e^{m_i-m_i'}o_i+
+    \sum_{j\in B}e^{z_{ij}-m_i'}V_j.
+  \label{eq:online-recurrence}
+\end{align}
+This avoids storing full score and probability matrices in HBM, but it also
+means P is not an input. For full FP4 attention, the first useful PV command
+waits for
+\begin{equation}
+  S\rightarrow\text{maximum}\rightarrow\text{scale}
+  \rightarrow\text{probability}\rightarrow\text{E2M1 pack}
+  \rightarrow\text{publish}.
+  \label{eq:serial-p-path}
+\end{equation}
+Work removed after publication may not change latency. Work removed before
+the first legal P tile can.
+
+On data-center Blackwell GPUs, asynchronous \tcgen{} operations accumulate
+FP32 score and output tiles in TMEM. TMA supplies shared-memory operands, and
+specialized warps issue matrix operations, compute softmax, and correct the
+online output \cite{nvidia2026ptx,zadouri2026flashattention4}. Matrix
+throughput grew faster than score-load, exponential, and synchronization
+throughput. FP4 accelerates both matrix products while adding P conversion
+between them, so this imbalance is stronger than in BF16 FA4.
+
+\subsection{NVFP4 and MXFP4 solve different numerical problems}
+
+Both formats use signed E2M1 payload values
+\begin{equation}
+  \mathcal F_{\mathrm{E2M1}}=
+  \left\{0,\tfrac12,1,\tfrac32,2,3,4,6\right\}
+\end{equation}
+plus sign. Their scales differ:
+\begin{table}[htbp]
+\centering
+\caption{Block-scaled FP4 formats used in this work.}
+\label{tab:fp4-formats}
+\small
+\begin{tabularx}{\textwidth}{lcccX}
+\toprule
+Format & Block & Scale & Main strength & Retained use \\
+\midrule
+NVFP4 & 16 & E4M3, optional tensor scale & fine local placement & signed Q and K \\
+MXFP4 & 32 & E8M0 power of two & wide exponent range & nonnegative P and V \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+For an NVFP4 P block with maximum $a_B$ and global encode factor $G$, the
+decoded block scale is approximately
+\begin{equation}
+  \widehat s_{\mathrm{NV}}=
+  \frac{Q_{\mathrm{E4M3}}(G a_B/6)}{G}.
+  \label{eq:nv-scale}
+\end{equation}
+If the E4M3 scale rounds to zero, the entire block disappears. A row-level
+stabilizer fixes the range, but its scale and inverse correction add state to
+the online path. MXFP4 instead selects a nearby power of two,
+\begin{equation}
+  \widehat s_{\mathrm{MX}}\in
+  \left\{2^{\lfloor\log_2(a_B/6)\rfloor},
+          2^{\lceil\log_2(a_B/6)\rceil}\right\},
+  \label{eq:mx-scale}
+\end{equation}
+which folds naturally into a base-two score transform and matches one N32
+producer fragment. The choice is a latency--range trade-off, not a claim that
+E8M0 is intrinsically more accurate than E4M3.
+
+Table~\ref{tab:p-range} isolates that distinction from kernel scheduling. It
+forms exact Gaussian softmax probabilities, quantizes matched N32 blocks,
+renormalizes the represented P, and multiplies by the same FP32 V. Stabilized
+NVFP4 is the high-fidelity control; unscaled NVFP4 exposes underflow.
+
+\begin{table}[htbp]
+\centering
+\caption{Probability-format range at D128. ``Zero scales'' is the fraction
+of blocks whose scale encodes as zero; ``lost mass'' is exact probability
+mass mapped to zero. This is a numerical diagnostic, not a kernel timing.}
+\label{tab:p-range}
+\scriptsize
+\begin{adjustbox}{max width=\textwidth}
+\begin{tabular}{llrrrrrr}
+\toprule
+$S$ & Format & Zero scales & Zero payload & Lost mass & $P$ rel.-$L_2$
+& $PV$ cosine & $PV$ rel.-$L_2$ \\
+\midrule
+\input{../fp4_fa4_unified_20260801/tables/p_range_rows.tex}%
+\end{tabular}
+\end{adjustbox}
+\end{table}
+
+\subsection{Relation to prior low-precision attention}
+
+HAO's FP4 FA4 repository is the structural starting point of this work
+\cite{hao2026fp4flashattention}. It supports block-scaled FP4 QK with BF16 or
+FP8 PV and a stabilized full-NVFP4 path. Its implementation and the Attn-QAT
+study identify online P quantization and scale movement as the central cost
+\cite{zhang2026attnqat}.
+
+SageAttention3 contributes Q/K smoothing, two-level P scaling, and reuse of
+the block maximum during online softmax \cite{zhang2025sageattention3}. Its
+RTX 5090 target is SM120, which does not expose the data-center \tcgen{} TMEM
+family used by SM100 and SM103 \cite{nvidia2026ptx}. We therefore borrow its
+numerical lessons but use HAO and FA4 as the scheduling references. Our focus
+is forward kernel performance; we do not claim the training recovery shown by
+Attn-QAT.

@@ -1,0 +1,117 @@
+\documentclass[11pt]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{mathtools}
+\usepackage{array,booktabs,tabularx}
+\usepackage{adjustbox}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{xcolor}
+\usepackage{microtype}
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{tikz}
+\usepackage{placeins}
+\usepackage{needspace}
+\usepackage{graphcore_report}
+\usetikzlibrary{arrows.meta,positioning,fit}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.55em}
+\setlength{\emergencystretch}{2em}
+\renewcommand{\arraystretch}{1.14}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+
+\floatstyle{ruled}
+\newfloat{algorithm}{tbp}{loa}
+\floatname{algorithm}{Algorithm}
+\restylefloat{algorithm}
+
+\title{Hardware-Aware FP4 FlashAttention-4}
+\reportsubtitle{Full-FP4 forward inference, quantized causal backward, and transformer training}
+\author{Robert Hu}
+\date{September 2026}
+\hypersetup{
+  colorlinks=true,
+  linkcolor=GraphcoreInk,
+  citecolor=GraphcoreCoralDark,
+  urlcolor=GraphcoreCoralDark,
+  pdftitle={Hardware-Aware FP4 FlashAttention-4},
+  pdfauthor={Robert Hu},
+  pdfsubject={Hardware-aware FP4 FlashAttention-4 on NVIDIA GB200 and B300},
+  pdfkeywords={FlashAttention-4, FP4, NVFP4, MXFP4, Blackwell, tensor memory, softmax}
+}
+
+\definecolor{scoreblue}{HTML}{2A6FBB}
+\definecolor{outputgreen}{HTML}{28865D}
+\definecolor{probred}{HTML}{C83E4D}
+\definecolor{scaleyellow}{HTML}{D99B22}
+\definecolor{inkgray}{HTML}{3C4650}
+\definecolor{lightgray}{HTML}{EDF0F2}
+
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\Qe}{Q_{\mathrm{E2M1}}}
+\newcommand{\softmax}{\operatorname{softmax}}
+\newcommand{\code}[1]{\texttt{#1}}
+\newcommand{\us}{\ensuremath{\,\mu\mathrm{s}}}
+\newcommand{\tmem}{\textsc{tmem}}
+\newcommand{\smem}{\textsc{smem}}
+\newcommand{\hbm}{\textsc{hbm}}
+\newcommand{\tcgen}{\texttt{tcgen05}}
+\newcommand{\projectrepo}{\href{https://github.com/MrHuff/fp4-fa4}{\texttt{github.com/MrHuff/fp4-fa4}}}
+\newcommand{\reportplot}[2][0.20\textheight]{%
+  \IfFileExists{#2}{%
+    \includegraphics[width=\textwidth]{#2}%
+  }{%
+    \fbox{\parbox[c][#1][c]{0.94\textwidth}{\centering
+      \color{inkgray}\bfseries Plot placeholder\par\medskip
+      \normalfont\small Expected asset:\par
+      \texttt{\detokenize{#2}}}}%
+  }%
+}
+
+\input{../fp4_fa4_unified_20260801/tables/unified_macros.tex}
+\input{../fp4_fa4_unified_20260801/tables/downstream_margin_macros.tex}
+\input{../fp4_fa4_hao_table_gb200_20260802/tables/hao_grid_macros.tex}
+\input{../fp4_fa4_b300_tuning_20260802/tables/b300_tuning_macros.tex}
+
+\begin{document}
+
+\maketitle
+\input{sections/abstract.tex}
+
+\input{sections/01_summary.tex}
+\input{sections/03_architecture.tex}
+\input{sections/02_problem_formats.tex}
+\input{sections/04_retained_kernel.tex}
+\input{sections/05_method.tex}
+\input{sections/06_results.tex}
+\input{sections/08_causal_training.tex}
+\input{sections/07_profile.tex}
+\input{sections/09_conclusion.tex}
+
+\section*{Generative-AI Disclosure}
+Generative-AI tools assisted with code development, experiment orchestration,
+data analysis, figure generation, and manuscript drafting and editing.  The
+author reviewed the generated material, verified the reported measurements
+against the cited repository artifacts, and takes responsibility for the
+paper.
+
+\bibliographystyle{plainnat}
+\bibliography{main}
+
+\appendix
+\input{appendices/a_nvnv_history.tex}
+\input{appendices/b_rejected_experiments.tex}
+\input{appendices/d_accuracy_control.tex}
+\input{appendices/c_full_format_matrix.tex}
+\input{appendices/c_reproduction.tex}
+\input{appendices/f_causal_training_history.tex}
+\input{appendices/e_causal_training_provenance.tex}
+
+\end{document}

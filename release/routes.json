@@ -1,0 +1,1922 @@
+{
+  "$schema": "./routes.schema.json",
+  "schema_version": 1,
+  "catalog_date": "2026-09-03",
+  "catalog_scope": {
+    "definition": "Decision-relevant FA4 controls, paper routes, implementation precursors, numerical ablations, and fail-closed experiments. A catalog entry proves source availability and states the strongest evidence boundary; it does not promote a diagnostic into a training recipe. Uncatalogued intermediate native-backward revisions are accounted for by release/legacy_backward_makefiles.txt.",
+    "source_epochs": [
+      "The non-causal Direct-P routes use the claim-exact cfc06dad snapshot under reproduction/snapshots/forward_cfc06dad; that snapshot also preserves the backward prototypes and general development source from the same epoch.",
+      "The causal routes use the root causal export descended from fp4_matmul 4590537, plus explicit release portability changes that do not alter CUDA/C++ kernels.",
+      "The direct CuTe experiment is the durable b531f675 FlashAttention overlay; v510 is the separately materialized aa021504 snapshot.",
+      "The 1.2B real-token source delta is materialized from fp4_matmul cd59dda under reproduction/snapshots/d64_training_cd59dda; the native D64 v416 development delta is materialized from 713819d under reproduction/snapshots/d64_v416_713819d."
+    ],
+    "selection_rule": "Only reference_control and release_candidate entries may be selected by a normal release recipe. Historical, comparator, operator-only, diagnostic, disabled, and preserved-unpromoted entries require an explicitly named experiment and may not be substituted by shape alone."
+  },
+  "status_definitions": {
+    "reference_control": "Matched higher-precision control used to define the comparison boundary.",
+    "release_candidate": "Explicitly authenticated by the portable adapter, but still subject to the release blockers and evidence limits listed here.",
+    "historical_replay": "Claim-exact source for an earlier paper result; kept separate from the causal development tree.",
+    "pinned_comparator": "Third-party implementation pinned for a matched comparison, not a local method.",
+    "operator_only": "Kernel and measurement path are retained, but the portable TorchTitan training boundary is incomplete or does not admit the route.",
+    "diagnostic": "Runnable only as an explicitly selected ablation or investigation; not a recommended training route.",
+    "disabled_fail_closed": "Source is retained, but supported dispatch refuses the route because a correctness, liveness, numerical, or performance gate failed.",
+    "preserved_unpromoted": "A complete historical experiment overlay is preserved for continuation, but it is not merged into the current route tree and lacks the evidence needed for promotion."
+  },
+  "routes": [
+    {
+      "id": "bf16_fa4_control",
+      "human_name": "BF16 FA4 control",
+      "internal_family": {
+        "label": "FlashAttention CuTe-DSL BF16",
+        "version": "flash-attention b531f675"
+      },
+      "phase": "control",
+      "attention_mode": "causal",
+      "status": "reference_control",
+      "summary": "Matched causal BF16 forward and backward control. The CuTe runtime specializes the pinned implementation for the requested shape; it is not built by tools/build_fa4.py.",
+      "selection": {
+        "portable_build": true,
+        "torchtitan_dispatch": "matched_control",
+        "paper_use": "reference_control"
+      },
+      "shape_profiles": [
+        {
+          "label": "8B matched release control",
+          "constraint": "Exact paper and portable-training comparison geometry; the underlying CuTe implementation supports more shapes, which are outside this catalog claim.",
+          "batch": [1, 2, 4],
+          "sequence": [4096],
+          "query_heads": [32],
+          "key_value_heads": [8],
+          "head_dimension": [128]
+        },
+        {
+          "label": "1.2B D64 matched release control",
+          "constraint": "The portable D64 profile fixes B16/S4096/Hq32/Hkv8/D64; it is a distinct manifest profile from every D128 control.",
+          "batch": [16],
+          "sequence": [4096],
+          "query_heads": [32],
+          "key_value_heads": [8],
+          "head_dimension": [64]
+        }
+      ],
+      "precision": {
+        "summary": "BF16 attention inputs, probabilities, outputs, and gradients.",
+        "learned_projections": "BF16 in the matched control recipe.",
+        "qk": "BF16",
+        "pv": "BF16",
+        "gradient_operands": "BF16",
+        "dout": "BF16",
+        "outputs": "BF16 dQ/dK/dV"
+      },
+      "source_paths": [
+        "flash-attention/flash_attn/cute/interface.py",
+        "flash-attention/flash_attn/cute/flash_fwd.py",
+        "flash-attention/flash_attn/cute/flash_fwd_sm100.py",
+        "flash-attention/flash_attn/cute/flash_bwd.py",
+        "flash-attention/flash_attn/cute/flash_bwd_sm100.py",
+        "flash-attention/flash_attn/cute/flash_bwd_preprocess.py",
+        "flash-attention/flash_attn/cute/flash_bwd_postprocess.py",
+        "torchtitan/experiments/fa4/fa4_attention.py"
+      ],
+      "build_paths": [],
+      "benchmark_paths": [
+        "tk_fa4/lowp_fa4_bwd/benchmark_v509_report_boundaries.py",
+        "tk_fa4/lowp_fa4_bwd/benchmark_llama12b_e2e.py",
+        "tk_fa4/lowp_fa4_bwd/benchmark_b16_forward_factorial.py",
+        "tk_fa4/lowp_fa4_bwd/benchmark_llama12b_saturated.py"
+      ],
+      "test_paths": [
+        "tests/unit_tests/test_fa4_reproduction.py",
+        "tests/test_packed_bf16_qkv_control.py",
+        "tests/test_d64_release_recipe.py"
+      ],
+      "abi_and_numerics": [
+        "The control owns its own LSE and O*dO preprocessing; native-TK lifted statistics must not be passed to it.",
+        "The isolated report comparator decodes the represented low-precision operands to BF16. It is shape-matched but does not consume byte-identical score inputs to the saved-quantized-QK backward path.",
+        "Unsupported route labels and artifact mismatches must fail rather than silently select this control."
+      ],
+      "evidence": [
+        {
+          "path": "results/fp4_fa4_technical_report_v2_20260819/receipts/causal_d128_report_boundaries_20260901.json",
+          "supports": "B1/S4096 causal boundary timings and the exact construction of the isolated BF16 comparator.",
+          "limitations": [
+            "The isolated comparator uses BF16 decodes of represented operands, not byte-identical NVFP4 score inputs."
+          ]
+        },
+        {
+          "path": "results/tk_fa4_8b_batch_scaling_20260901/e2e_batch_scaling_summary.json",
+          "supports": "Single-GPU 8B B1/B2/B4 control timings used in the batch-scaling comparison.",
+          "limitations": [
+            "These are short performance gates, not long-horizon convergence runs."
+          ]
+        },
+        {
+          "path": "results/native_tk_d64_ptx_adaptation_20260829/v416_llama12b_saturated_receipt_20260829.json",
+          "supports": "Fixed-state packed-BF16 D64/B16 reference timing and held-out loss for the saturated v416 comparison.",
+          "limitations": [
+            "Twenty synthetic-token updates are a short smoke, not long-horizon convergence evidence."
+          ]
+        }
+      ],
+      "known_limits": [
+        "The clean-clone GB200 build and distributed checkpoint-resume audit remain release blockers."
+      ],
+      "promotion_criteria": [
+        "This entry remains the control. Any change to its source, precision, shape, or timing boundary requires a new matched receipt rather than promotion to a different status."
+      ]
+    },
+    {
+      "id": "direct_p_fast_nv_qk_mx_pv",
+      "human_name": "Direct-P Fast (NVFP4 Q/K, MXFP4 P/V)",
+      "internal_family": {
+        "label": "historical HAO-derived direct probability publication",
+        "version": "cfc06dad selector nvmx-fast"
+      },
+      "phase": "forward",
+      "attention_mode": "noncausal",
+      "status": "historical_replay",
+      "summary": "Non-causal inference route that constructs E2M1 probability codes directly from normalized log scores, then performs MXFP4 P/V. It is the speed-oriented Direct-P policy from the earlier forward study.",
+      "selection": {
+        "portable_build": true,
+        "torchtitan_dispatch": "not_connected",
+        "paper_use": "headline_method"
+      },
+      "shape_profiles": [
+        {
+          "label": "published unified D128 grid",
+          "constraint": "Exact measured (B,S,H,D) tuples are (1,256,16,128), (1,1024,24,128), (1,2048,24,128), (1,4096,24,128), (1,4096,64,128), and (1,8192,64,128); arrays below are not a Cartesian support claim.",
+          "batch": [1],
+          "sequence": [256, 1024, 2048, 4096, 8192],
+          "query_heads": [16, 24, 64],
+          "key_value_heads": [16, 24, 64],
+          "head_dimension": [128]
+        }
+      ],
+      "precision": {
+        "summary": "NVFP4 Q/K and direct MXFP4 probability/value multiplication with BF16 output.",
+        "qk": "NVFP4",
+        "pv": "Direct E2M1 P with MXFP4 V and E8M0 block scales.",
+        "outputs": "BF16"
+      },
+      "source_paths": [
+        "reproduction/snapshots/forward_cfc06dad/tk_fa4/fp4_fa4_fwd/hao_direct_fp4pv_candidate.cu",
+        "reproduction/snapshots/forward_cfc06dad/tk_fa4/fp4_fa4_fwd/hao_direct_fp4pv_config.inc",
+        "reproduction/snapshots/forward_cfc06dad/tk_fa4/fp4_fa4_fwd/hao_direct_fp4pv_kernel.inc",
+        "reproduction/snapshots/forward_cfc06dad/tk_fa4/fp4_fa4_fwd/hao_direct_fp4pv_softmax_reader.inc",
+        "reproduction/snapshots/forward_cfc06dad/tk_fa4/fp4_fa4_fwd/hao_direct_fp4pv_host.inc",
+        "reproduction/snapshots/forward_cfc06dad/TK_quantisation/mxfp4_v3/mxfp4_v3_quantize.cuh"
+      ],
+      "build_paths": [
+        "reproduction/snapshots/forward_cfc06dad/tk_fa4/fp4_fa4_fwd/Makefile.hao_direct_fp4pv",
+        "reproduction/snapshots/forward_cfc06dad/TK_quantisation/mxfp4_v3/Makefile"
+      ],
+      "benchmark_paths": [
+        "reproduction/snapshots/forward_cfc06dad/tk_fa4/fp4_fa4_fwd/hao_direct_fp4pv_benchmark.py",
+        "reproduction/snapshots/forward_cfc06dad/tk_fa4/fp4_fa4_fwd/hao_comprehensive_suite.py"
+      ],
+      "test_paths": [],
+      "abi_and_numerics": [
+        "The executable policy definition is the nvmx-fast selector in the historical suite; do not reconstruct its compile-time flags from the newer causal tree.",
+        "The direct probability-code conversion is an approximation and is assessed against the matched BF16 output for each input.",
+        "This route has no backward and is not a pre-training recipe."
+      ],
+      "evidence": [
+        {
+          "path": "results/fp4_fa4_unified_20260801/summary.json",
+          "supports": "Normalized non-causal shape-grid timing and accuracy records.",
+          "limitations": [
+            "Evidence belongs to the cfc06dad historical source epoch."
+          ]
+        },
+        {
+          "path": "results/fp4_fa4_hao_table_gb200_20260802/summary.json",
+          "supports": "Matched GB200 D128 comparison against pinned HAO routes.",
+          "limitations": []
+        }
+      ],
+      "known_limits": [
+        "Non-causal forward only.",
+        "The historical source snapshot must remain separate from the causal training tree."
+      ],
+      "promotion_criteria": [
+        "A modified Direct-P policy is a new route and needs a fresh matched shape-grid receipt; it must not replace this claim-exact historical selector."
+      ]
+    },
+    {
+      "id": "direct_p_accurate_nv_qk_mx_pv",
+      "human_name": "Direct-P Accurate (NVFP4 Q/K, MXFP4 P/V)",
+      "internal_family": {
+        "label": "historical HAO-derived anchored probability publication",
+        "version": "cfc06dad selector nvmx-accurate"
+      },
+      "phase": "forward",
+      "attention_mode": "noncausal",
+      "status": "historical_replay",
+      "summary": "Non-causal inference route that adds a row anchor and represented-probability normalization to Direct-P. It is the accuracy-oriented Direct-P policy from the earlier forward study.",
+      "selection": {
+        "portable_build": true,
+        "torchtitan_dispatch": "not_connected",
+        "paper_use": "headline_method"
+      },
+      "shape_profiles": [
+        {
+          "label": "published unified D128 grid",
+          "constraint": "Exact measured (B,S,H,D) tuples are (1,256,16,128), (1,1024,24,128), (1,2048,24,128), (1,4096,24,128), (1,4096,64,128), and (1,8192,64,128); arrays below are not a Cartesian support claim.",
+          "batch": [1],
+          "sequence": [256, 1024, 2048, 4096, 8192],
+          "query_heads": [16, 24, 64],
+          "key_value_heads": [16, 24, 64],
+          "head_dimension": [128]
+        }
+      ],
+      "precision": {
+        "summary": "NVFP4 Q/K and anchored direct MXFP4 probability/value multiplication with BF16 output.",
+        "qk": "NVFP4",
+        "pv": "Anchored E2M1 P with MXFP4 V and E8M0 block scales.",
+        "outputs": "BF16"
+      },
+      "source_paths": [
+        "reproduction/snapshots/forward_cfc06dad/tk_fa4/fp4_fa4_fwd/hao_direct_fp4pv_candidate.cu",
+        "reproduction/snapshots/forward_cfc06dad/tk_fa4/fp4_fa4_fwd/hao_direct_fp4pv_config.inc",
+        "reproduction/snapshots/forward_cfc06dad/tk_fa4/fp4_fa4_fwd/hao_direct_fp4pv_kernel.inc",
+        "reproduction/snapshots/forward_cfc06dad/tk_fa4/fp4_fa4_fwd/hao_direct_fp4pv_softmax_reader.inc",
+        "reproduction/snapshots/forward_cfc06dad/tk_fa4/fp4_fa4_fwd/hao_direct_fp4pv_host.inc",
+        "reproduction/snapshots/forward_cfc06dad/TK_quantisation/mxfp4_v3/mxfp4_v3_quantize.cuh"
+      ],
+      "build_paths": [
+        "reproduction/snapshots/forward_cfc06dad/tk_fa4/fp4_fa4_fwd/Makefile.hao_direct_fp4pv",
+        "reproduction/snapshots/forward_cfc06dad/TK_quantisation/mxfp4_v3/Makefile"
+      ],
+      "benchmark_paths": [
+        "reproduction/snapshots/forward_cfc06dad/tk_fa4/fp4_fa4_fwd/hao_direct_fp4pv_benchmark.py",
+        "reproduction/snapshots/forward_cfc06dad/tk_fa4/fp4_fa4_fwd/hao_comprehensive_suite.py"
+      ],
+      "test_paths": [],
+      "abi_and_numerics": [
+        "The executable policy definition is the nvmx-accurate selector in the historical suite.",
+        "A row anchor and represented-probability denominator reduce error relative to the fast policy at additional cost.",
+        "This route has no backward and is not a pre-training recipe."
+      ],
+      "evidence": [
+        {
+          "path": "results/fp4_fa4_unified_20260801/summary.json",
+          "supports": "Normalized non-causal shape-grid timing and accuracy records.",
+          "limitations": [
+            "Evidence belongs to the cfc06dad historical source epoch."
+          ]
+        },
+        {
+          "path": "results/fp4_fa4_hao_table_gb200_20260802/summary.json",
+          "supports": "Matched GB200 D128 comparison against pinned HAO routes.",
+          "limitations": []
+        }
+      ],
+      "known_limits": [
+        "Non-causal forward only.",
+        "The historical source snapshot must remain separate from the causal training tree."
+      ],
+      "promotion_criteria": [
+        "A modified Direct-P policy is a new route and needs a fresh matched shape-grid receipt; it must not replace this claim-exact historical selector."
+      ]
+    },
+    {
+      "id": "hao_nvfp4_qk_fp8_pv_comparator",
+      "human_name": "HAO NVFP4-QK / FP8-PV comparator",
+      "internal_family": {
+        "label": "HAO FlashAttention FP4",
+        "version": "9b0abef plus recorded compatibility patch"
+      },
+      "phase": "forward",
+      "attention_mode": "noncausal",
+      "status": "pinned_comparator",
+      "summary": "Pinned third-party non-causal NVFP4-QK/E4M3-PV implementation used as a matched comparator for Direct-P.",
+      "selection": {
+        "portable_build": true,
+        "torchtitan_dispatch": "not_connected",
+        "paper_use": "comparator"
+      },
+      "shape_profiles": [
+        {
+          "label": "published unified D128 grid",
+          "constraint": "The matched comparator records cover the same six exact D128 tuples listed for Direct-P; the arrays are not a Cartesian support claim.",
+          "batch": [1],
+          "sequence": [256, 1024, 2048, 4096, 8192],
+          "query_heads": [16, 24, 64],
+          "key_value_heads": [16, 24, 64],
+          "head_dimension": [128]
+        }
+      ],
+      "precision": {
+        "summary": "HAO NVFP4 Q/K and E4M3 FP8 P/V.",
+        "qk": "NVFP4",
+        "pv": "E4M3 FP8 P/V",
+        "outputs": "BF16"
+      },
+      "source_paths": [
+        "third_party/hao_flash_attention_fp4/flash_attn/cute/flash_fwd_sm100_fp4.py",
+        "third_party/hao_flash_attention_fp4/flash_attn/cute/interface.py",
+        "third_party/hao_flash_attention_fp4/flash_attn/cute/benchmarks/bench_fp4.py",
+        "patches/hao_flash_attention_fp4_9b0abef_compat.patch"
+      ],
+      "build_paths": [],
+      "benchmark_paths": [
+        "reproduction/snapshots/forward_cfc06dad/tk_fa4/fp4_fa4_fwd/hao_native_reference_benchmark.py",
+        "reproduction/snapshots/forward_cfc06dad/tk_fa4/fp4_fa4_fwd/hao_comprehensive_suite.py"
+      ],
+      "test_paths": [],
+      "abi_and_numerics": [
+        "The Direct-P suite passes the same HAO-created tensors to local and comparator paths.",
+        "This source is a comparator and is not a hidden runtime dependency of the Direct-P CUDA extension."
+      ],
+      "evidence": [
+        {
+          "path": "results/fp4_fa4_hao_table_gb200_20260802/published_hao_results.json",
+          "supports": "Pinned published HAO values incorporated into the matched table.",
+          "limitations": []
+        },
+        {
+          "path": "results/fp4_fa4_unified_20260801/references/b1_s4096_h24_d128.json",
+          "supports": "Representative same-input HAO NV/NV, NV/FP8, and BF16 reference record.",
+          "limitations": [
+            "This path is one shape; the aggregate summary contains the full six-shape matrix."
+          ]
+        }
+      ],
+      "known_limits": [
+        "Third-party comparator; no local training or backward claim."
+      ],
+      "promotion_criteria": [
+        "Changing the HAO pin or compatibility patch requires a fresh matched comparator run and a new catalog version."
+      ]
+    },
+    {
+      "id": "causal_nvfp4_qk_fp8_pv_v509",
+      "human_name": "Causal FP8-P/V with Saved-Quantized-QK Backward",
+      "internal_family": {
+        "label": "monolithic TK causal forward plus native TK backward",
+        "version": "row-K16 forward and v509 backward"
+      },
+      "phase": "forward_backward",
+      "attention_mode": "causal",
+      "status": "release_candidate",
+      "summary": "Primary low-precision training candidate: row-by-K16 NVFP4 Q/K, E4M3 P/V, and the v509 native-score backward with represented E4M3 Q/K/V and E5M2 dO.",
+      "selection": {
+        "portable_build": true,
+        "torchtitan_dispatch": "release_candidate",
+        "paper_use": "headline_method"
+      },
+      "shape_profiles": [
+        {
+          "label": "authenticated TorchTitan training batches",
+          "constraint": "B1 and B4 have explicit training-manifest admission at the exact D128/S4096 GQA geometry.",
+          "batch": [1, 4],
+          "sequence": [4096],
+          "query_heads": [32],
+          "key_value_heads": [8],
+          "head_dimension": [128]
+        },
+        {
+          "label": "operator-only compiled batch",
+          "constraint": "B2 is built and operator-tested but is not admitted by the portable training manifest.",
+          "batch": [2],
+          "sequence": [4096],
+          "query_heads": [32],
+          "key_value_heads": [8],
+          "head_dimension": [128]
+        }
+      ],
+      "precision": {
+        "summary": "NVFP4 Q/K score reconstruction, E4M3 FP8 P/V forward, represented E4M3 Q/K/V gradient operands, represented E5M2 dO, and BF16 gradients.",
+        "learned_projections": "NVFP4 Q/K/V/O in the candidate recipe, with explicit tensor/global and row-K16 scales.",
+        "qk": "Packed E2M1 NVFP4 with row-by-K16 two-dimensional E4M3 scale pages and per-head global scales.",
+        "pv": "E4M3 FP8 P/V.",
+        "gradient_operands": "Represented E4M3 Q/K/V encoded as 4*x.",
+        "dout": "Represented E5M2 encoded as 4*x and decoded by 0.25.",
+        "outputs": "Additive BF16 dQ/dK/dV encoded as 4*dX."
+      },
+      "source_paths": [
+        "tk_fa4/fp4_fa4_fwd/hao_direct_candidate.cu",
+        "tk_fa4/fp4_fa4_fwd/hao_direct_config.inc",
+        "tk_fa4/fp4_fa4_fwd/hao_direct_kernel.inc",
+        "tk_fa4/fp4_fa4_fwd/hao_direct_softmax_reader.inc",
+        "tk_fa4/lowp_fa4_bwd/causal_gqa_fp8pv_forward.patch",
+        "tk_fa4/lowp_fa4_bwd/lowp_fa4_bwd.cu",
+        "tk_fa4/lowp_fa4_bwd/projection_fp4_epilogue.cuh",
+        "tk_fa4/native_gqa_tk_bwd/v509_d128_gqa_nvfp4_score_e4m3_qkv_e5m2_dout_b1_exact_s4096_experimental_bshd.cu",
+        "tk_fa4/native_gqa_tk_bwd/v509_d128_gqa_nvfp4_score_e4m3_qkv_e5m2_dout_b1_exact_s4096_experimental_bshd.cuh",
+        "tk_fa4/lowp_fa4_bwd/native_tk_d128_nvfp4_score_e5m2_dout_backward.py",
+        "torchtitan/experiments/fa4/exact_lowp_attention.py",
+        "torchtitan/experiments/fa4/artifacts.py"
+      ],
+      "build_paths": [
+        "tools/build_fa4.py",
+        "tk_fa4/lowp_fa4_bwd/build_causal_gqa_fp8pv_forward.py",
+        "tk_fa4/lowp_fa4_bwd/Makefile",
+        "tk_fa4/native_gqa_tk_bwd/Makefile.v509",
+        "tk_fa4/native_gqa_tk_bwd/Makefile.v509_b2",
+        "tk_fa4/native_gqa_tk_bwd/Makefile.v509_b4"
+      ],
+      "benchmark_paths": [
+        "tk_fa4/lowp_fa4_bwd/benchmark_causal_forward_boundaries.py",
+        "tk_fa4/lowp_fa4_bwd/benchmark_v509_report_boundaries.py",
+        "tk_fa4/lowp_fa4_bwd/benchmark_llama12b_e2e.py"
+      ],
+      "test_paths": [
+        "tests/test_causal_gqa_fp8pv_forward_patch.py",
+        "tests/test_causal_forward_boundaries.py",
+        "tests/test_d128_forward_publication.py",
+        "tests/test_native_tk_d128_nvfp4_score_e5m2_dout_backward.py",
+        "tests/test_v509_e5m2_dout_source_contract.py",
+        "tests/test_v509_e5m2_runtime_wiring.py",
+        "tests/test_validate_v509_batched_isolation.py",
+        "tests/unit_tests/test_fa4_reproduction.py"
+      ],
+      "abi_and_numerics": [
+        "Forward Q/K scales are row-by-K16 two-dimensional pages. Fixed-head D128 scaling is not an interchangeable ABI.",
+        "v509 reconstructs scores from the exact forward NVFP4 Q/K bytes and scales; it does not requantize Q/K to plain E4M3 for score reconstruction.",
+        "The statistics ABI is lstat = 8 - LSE*log2(e), dstat = -16*sum(O*dO), with physical E5M2 form -4*sum(O*raw_E5M2_dO).",
+        "The +8 probability lift and the separate 1/256 gradient epilogue factor serve different contracts and must not be merged.",
+        "B1/B2/B4 use separately compiled and authenticated artifacts. Shape or source-identity mismatch is an error, not a fallback."
+      ],
+      "evidence": [
+        {
+          "path": "results/fp4_fa4_technical_report_v2_20260819/receipts/causal_d128_report_boundaries_20260901.json",
+          "supports": "B1 represented-equation, finite/nontrivial, exact-zero-dO, isolated backward, and projection-inclusive boundary evidence for v509.",
+          "limitations": [
+            "The receipt predates the final portable TorchTitan wiring and does not itself prove a clean-clone training run.",
+            "Its isolated BF16 denominator decodes represented operands rather than consuming byte-identical score inputs."
+          ]
+        },
+        {
+          "path": "results/tk_fa4_8b_batch_scaling_20260901/e2e_batch_scaling_summary.json",
+          "supports": "Short single-GPU 8B B1/B2/B4 end-to-end timing comparison.",
+          "limitations": [
+            "Performance and short numerical gate only; not convergence evidence."
+          ]
+        },
+        {
+          "path": "results/fp4_fa4_technical_report_v2_20260819/receipts/llama8b_b4_matched_snapshot_20260902T1358Z.json",
+          "supports": "Interim matched distributed BF16 and FP8-P/V trajectory snapshot.",
+          "limitations": [
+            "The long-horizon run was incomplete and the historical data ordering is not yet reproducible byte for byte."
+          ]
+        }
+      ],
+      "known_limits": [
+        "The backward remains a one-CTA-per-SM, schedule- and dependency-limited implementation.",
+        "The FP8-P/V trajectory is stable and descending through the retained interim horizon, but retains a measurable loss gap from BF16 and is not a completed convergence study.",
+        "Fresh-clone GB200 build, numerical gates, distributed checkpoint resume, and exact data-order publication remain pending."
+      ],
+      "promotion_criteria": [
+        "Pass clean-clone B1/B2/B4 build, liveness, represented-equation, exact-zero-dO, and performance gates on SM100.",
+        "Pass a distributed save/fresh-resume test with authenticated artifacts.",
+        "Complete a token- and data-matched long-horizon comparison against BF16 with published data and tokenizer identities."
+      ]
+    },
+    {
+      "id": "causal_nvfp4_qk_safe_mxfp4_pv_v509",
+      "human_name": "Causal Anchored MXFP4-P/V with Saved-Quantized-QK Backward",
+      "internal_family": {
+        "label": "safe anchored D128 MX forward plus native TK backward",
+        "version": "max-safe selector 4, anchor32, shift32, v509"
+      },
+      "phase": "forward_backward",
+      "attention_mode": "causal",
+      "status": "diagnostic",
+      "summary": "Safe causal MXFP4 forward route paired with the same v509 backward used by FP8-P/V. It remains a training diagnostic because retained 8B MX trajectories diverged and its end-to-end timing was tied with FP8-P/V.",
+      "selection": {
+        "portable_build": true,
+        "torchtitan_dispatch": "diagnostic_only",
+        "paper_use": "diagnostic_or_ablation"
+      },
+      "shape_profiles": [
+        {
+          "label": "diagnostic TorchTitan batches",
+          "constraint": "B1 and B4 are explicitly authenticated at D128/S4096/Hq32/Hkv8; selection is diagnostic, not recommended training.",
+          "batch": [1, 4],
+          "sequence": [4096],
+          "query_heads": [32],
+          "key_value_heads": [8],
+          "head_dimension": [128]
+        },
+        {
+          "label": "operator-only compiled batch",
+          "constraint": "B2 is built and operator-tested but not admitted by the portable training manifest.",
+          "batch": [2],
+          "sequence": [4096],
+          "query_heads": [32],
+          "key_value_heads": [8],
+          "head_dimension": [128]
+        }
+      ],
+      "precision": {
+        "summary": "NVFP4 Q/K, direct E2M1 P with MXFP4 V and E8M0 block-32 scales, represented E4M3 Q/K/V plus E5M2 dO in backward, and BF16 gradients.",
+        "learned_projections": "NVFP4 Q/K/V/O in the cataloged diagnostic recipe.",
+        "qk": "Packed E2M1 NVFP4 with row-by-K16 two-dimensional E4M3 scale pages and per-head global scales.",
+        "pv": "Direct E2M1 P and MXFP4 V with E8M0 block-32 scales.",
+        "gradient_operands": "Represented E4M3 Q/K/V. A separate E4M3 V view is published for v509.",
+        "dout": "Represented E5M2 encoded as 4*x.",
+        "outputs": "Additive BF16 dQ/dK/dV encoded as 4*dX."
+      },
+      "source_paths": [
+        "tk_fa4/fp4_fa4_fwd/hao_direct_fp4pv_candidate.cu",
+        "tk_fa4/fp4_fa4_fwd/hao_direct_fp4pv_config.inc",
+        "tk_fa4/fp4_fa4_fwd/hao_direct_fp4pv_kernel.inc",
+        "tk_fa4/fp4_fa4_fwd/hao_direct_fp4pv_softmax_reader.inc",
+        "tk_fa4/lowp_fa4_bwd/build_causal_gqa_d128_mxfp4pv_forward.py",
+        "tk_fa4/lowp_fa4_bwd/lowp_fa4_bwd.cu",
+        "tk_fa4/lowp_fa4_bwd/projection_fp4_epilogue.cuh",
+        "TK_quantisation/mxfp4_v3/mxfp4_v3_quantize.cuh",
+        "tk_fa4/native_gqa_tk_bwd/v509_d128_gqa_nvfp4_score_e4m3_qkv_e5m2_dout_b1_exact_s4096_experimental_bshd.cu",
+        "tk_fa4/lowp_fa4_bwd/native_tk_d128_nvfp4_score_e5m2_dout_backward.py",
+        "torchtitan/experiments/fa4/exact_lowp_attention.py",
+        "torchtitan/experiments/fa4/artifacts.py"
+      ],
+      "build_paths": [
+        "tools/build_fa4.py",
+        "tk_fa4/fp4_fa4_fwd/Makefile.hao_direct_fp4pv",
+        "tk_fa4/lowp_fa4_bwd/Makefile",
+        "TK_quantisation/mxfp4_v3/Makefile",
+        "tk_fa4/native_gqa_tk_bwd/Makefile.v509",
+        "tk_fa4/native_gqa_tk_bwd/Makefile.v509_b2",
+        "tk_fa4/native_gqa_tk_bwd/Makefile.v509_b4"
+      ],
+      "benchmark_paths": [
+        "tk_fa4/lowp_fa4_bwd/benchmark_causal_forward_boundaries.py",
+        "tk_fa4/lowp_fa4_bwd/benchmark_v509_report_boundaries.py",
+        "tk_fa4/lowp_fa4_bwd/benchmark_llama12b_e2e.py"
+      ],
+      "test_paths": [
+        "tests/test_mxfp4_forward_artifact_authentication.py",
+        "tests/test_causal_forward_boundaries.py",
+        "tests/test_d128_forward_publication.py",
+        "tests/test_build_fa4.py",
+        "tests/test_v509_e5m2_runtime_wiring.py",
+        "tests/unit_tests/test_fa4_reproduction.py"
+      ],
+      "abi_and_numerics": [
+        "The safe forward policy is selector 4, anchor32, margin-log2 64, stored-scale shift 32, folded-K64 disabled, preload mask 3, and represented-denominator saved LSE.",
+        "The route must publish a separate represented E4M3 V view for v509; the forward MXFP4 V payload is not consumed by this backward.",
+        "The v509 statistics and gradient ABI is identical to the FP8-P/V route.",
+        "The safe production artifact was bitwise equal to its audited candidate and produced no nonfinite output or LSE values on the retained payload."
+      ],
+      "evidence": [
+        {
+          "path": "results/dolma3_saturated_perblock_e2e_20260827/summary.json",
+          "supports": "Safe-policy topology, audited-payload finiteness, oracle error, isolated forward timing, and short 8B gate.",
+          "limitations": [
+            "Short, single-GPU gate; it does not establish long-horizon convergence.",
+            "The unsafe shift16 timing used a different payload and is not a paired policy-cost measurement."
+          ]
+        },
+        {
+          "path": "results/tk_fa4_8b_batch_scaling_20260901/e2e_batch_scaling_summary.json",
+          "supports": "B1/B2/B4 performance comparison showing FP8-P/V and MXFP4-P/V tied at the whole-step boundary.",
+          "limitations": [
+            "Performance gate only."
+          ]
+        },
+        {
+          "path": "results/fp4_fa4_technical_report_v2_20260819/receipts/llama8b_b4_matched_snapshot_20260902T1358Z.json",
+          "supports": "Retained interim 8B B4 trajectory evidence that keeps the MX arm outside convergence claims.",
+          "limitations": [
+            "Historical arms used more than one learned-projection policy; inspect the receipt before attributing divergence to P/V alone.",
+            "The historical data order is not yet reproducible byte for byte."
+          ]
+        }
+      ],
+      "known_limits": [
+        "Longer retained 8B MXFP4-P/V trajectories diverged; forward P/V alone has not been isolated as the sole cause.",
+        "Isolated MXFP4 P/V can be faster, but extra MX plus E4M3 V publication and integration overhead erase most or all whole-step gain.",
+        "This route is not advertised as a convergent pre-training recipe."
+      ],
+      "promotion_criteria": [
+        "Identify and correct the MX trajectory divergence with a matched checkpoint/batch and per-layer diagnostic receipt.",
+        "Retain zero-nonfinite and represented-oracle gates on natural payloads at every admitted batch.",
+        "Demonstrate a material, repeated whole-step gain and complete a matched long-horizon convergence run before recommending training use."
+      ]
+    },
+    {
+      "id": "causal_e4m3_projection_fp8_pv_v509",
+      "human_name": "E4M3-Projection FP8-P/V Numerical Control",
+      "internal_family": {
+        "label": "E4M3 learned projections plus monolithic TK causal attention",
+        "version": "row-K16 forward and v509 backward"
+      },
+      "phase": "forward_backward",
+      "attention_mode": "causal",
+      "status": "diagnostic",
+      "summary": "Projection-accuracy control that combines E4M3 learned QKV/O projections with row-by-K16 NVFP4 attention Q/K, E4M3 FP8 P/V, and v509 backward. Its retained B1 trajectory remained stable through the common 55.5-billion-token diagnostic horizon, but it was not a completed convergence run or a matched BF16 comparison.",
+      "selection": {
+        "portable_build": true,
+        "torchtitan_dispatch": "diagnostic_only",
+        "paper_use": "comparator"
+      },
+      "shape_profiles": [
+        {
+          "label": "retained distributed numerical-control trajectory",
+      "constraint": "The retained long-curve evidence is exact B1/S4096/Hq32/Hkv8/D128. The portable builder and config renderer also expose authenticated B1/B4 manifests; those new paths still require clean-clone GPU validation.",
+          "batch": [1],
+          "sequence": [4096],
+          "query_heads": [32],
+          "key_value_heads": [8],
+          "head_dimension": [128]
+        }
+      ],
+      "precision": {
+        "summary": "E4M3 learned projections, NVFP4 Q/K, E4M3 FP8 P/V, represented E4M3 Q/K/V plus E5M2 dO in backward, and BF16 gradients.",
+        "learned_projections": "E4M3 QKV and output projections with rowwise activation decode, per-output-channel weight decode, and FP32 accumulation.",
+        "qk": "Packed E2M1 NVFP4 with row-by-K16 two-dimensional E4M3 scale pages and per-head global scales.",
+        "pv": "E4M3 FP8 P/V.",
+        "gradient_operands": "Direct projection-accumulator represented E4M3 Q/K/V encoded as 4*x.",
+        "dout": "Represented E5M2 encoded as 4*x and decoded by 0.25.",
+        "outputs": "Additive BF16 dQ/dK/dV encoded as 4*dX."
+      },
+      "source_paths": [
+        "tk_fa4/fp4_fa4_fwd/hao_direct_candidate.cu",
+        "tk_fa4/fp4_fa4_fwd/hao_direct_config.inc",
+        "tk_fa4/fp4_fa4_fwd/hao_direct_kernel.inc",
+        "tk_fa4/fp4_fa4_fwd/hao_direct_softmax_reader.inc",
+        "tk_fa4/lowp_fa4_bwd/causal_gqa_fp8pv_forward.patch",
+        "tk_fa4/lowp_fa4_bwd/lowp_fa4_bwd.cu",
+        "tk_fa4/lowp_fa4_bwd/projection_fp4_epilogue.cuh",
+        "tk_fa4/native_gqa_tk_bwd/v509_d128_gqa_nvfp4_score_e4m3_qkv_e5m2_dout_b1_exact_s4096_experimental_bshd.cu",
+        "tk_fa4/native_gqa_tk_bwd/v509_d128_gqa_nvfp4_score_e4m3_qkv_e5m2_dout_b1_exact_s4096_experimental_bshd.cuh",
+        "tk_fa4/lowp_fa4_bwd/native_tk_d128_nvfp4_score_e5m2_dout_backward.py",
+        "torchtitan/experiments/fa4/exact_lowp_attention.py",
+        "torchtitan/experiments/fa4/artifacts.py"
+      ],
+      "build_paths": [
+        "tools/build_fa4.py",
+        "tk_fa4/lowp_fa4_bwd/build_causal_gqa_fp8pv_forward.py",
+        "tk_fa4/lowp_fa4_bwd/Makefile",
+        "tk_fa4/native_gqa_tk_bwd/Makefile.v509",
+        "tk_fa4/native_gqa_tk_bwd/Makefile.v509_b4"
+      ],
+      "benchmark_paths": [
+        "tk_fa4/lowp_fa4_bwd/benchmark_causal_forward_boundaries.py",
+        "tk_fa4/lowp_fa4_bwd/benchmark_v509_report_boundaries.py",
+        "tk_fa4/lowp_fa4_bwd/benchmark_llama12b_e2e.py"
+      ],
+      "test_paths": [
+        "tests/test_d128_e4m3_qkv_out_abi.py",
+        "tests/test_e4m3_output_projection.py",
+        "tests/test_e4m3_output_projection_e2e_wiring.py",
+        "tests/test_d128_forward_publication.py",
+        "tests/test_v509_e5m2_runtime_wiring.py",
+        "tests/unit_tests/test_fa4_reproduction.py"
+      ],
+      "abi_and_numerics": [
+        "The checked projection symbol is project_qkv_gqa_d128_unified_fp8_e4m3_rope_packed_clustered_fp8_forward_out; the corresponding unchecked symbol has the _unchecked suffix.",
+        "The E4M3 projection epilogue publishes dynamic row-K16 NVFP4 Q/K for forward and distinct direct-accumulator E4M3 Q/K/V views for v509 backward.",
+        "v509 reconstructs scores from the saved NVFP4 operands and uses lstat = 8 - LSE*log2(e), dstat = -16*sum(O*dO), and the separate 1/256 gradient epilogue factor.",
+      "The artifact route identity fixes exact_learned_projection_format=e4m3; the renderer must derive this value from the manifest rather than treating an NVFP4 recipe as equivalent."
+      ],
+      "evidence": [
+        {
+          "path": "results/fp4_fa4_technical_report_v2_20260819/receipts/llama8b_training_curves_20260901.json",
+          "supports": "Retained B1/S4096 four-arm curves in which the E4M3-projection plus FP8-P/V arm remained non-divergent through the common 55.5-billion-token horizon.",
+          "limitations": [
+            "This is one trajectory, not repeated trials or completed convergence.",
+            "The historical BF16 trajectory used a different topology, global batch, and data order and is not a paired quality control."
+          ]
+        },
+        {
+          "path": "results/fp4_fa4_technical_report_v2_20260819/receipts/v509_four_arm_cutoff_20260831T2209Z.json",
+          "supports": "Exact route identity, shared B1 distributed recipe, matched early E4M3-projection observation, and stable-through-cutoff status.",
+          "limitations": [
+            "The job endpoints are not token aligned and the receipt excludes instantaneous throughput from matched speed claims.",
+            "Stable through the cutoff does not establish completed convergence."
+          ]
+        },
+        {
+          "path": "results/fp4_fa4_technical_report_v2_20260819/receipts/causal_d128_report_boundaries_20260901.json",
+          "supports": "B1 projection-inclusive numerical-control boundary using E4M3 QKV/O projections, FP8-P/V forward, and v509 backward.",
+          "limitations": [
+            "Operator-boundary evidence only; it does not establish the final distributed training trajectory or a clean-clone release run."
+          ]
+        }
+      ],
+      "known_limits": [
+      "The E4M3 route is now exposed by the portable builder and renderer, but has not passed a clean-clone GPU or distributed-resume gate.",
+        "The retained B1 trajectory is a numerical control, not a completed, repeated, BF16-matched convergence study.",
+        "This control does not establish a throughput advantage for E4M3 learned projections."
+      ],
+      "promotion_criteria": [
+      "Build and authenticate the explicit E4M3 learned-projection manifest on a clean SM100 checkout.",
+        "Pass a clean-clone distributed save/fresh-resume test at the selected batch.",
+        "Complete a token-, data-, topology-, and optimizer-matched long-horizon comparison against BF16 before making convergence or quality-equivalence claims."
+      ]
+    },
+    {
+      "id": "causal_e4m3_projection_mxfp4_pv_v509",
+      "human_name": "E4M3-Projection MXFP4-P/V Diagnostic",
+      "internal_family": {
+        "label": "E4M3 learned projections plus safe anchored MXFP4 causal attention",
+        "version": "max-safe selector 4, anchor32, shift32, v509"
+      },
+      "phase": "forward_backward",
+      "attention_mode": "causal",
+      "status": "diagnostic",
+      "summary": "Crossed numerical diagnostic that combines E4M3 learned QKV/O projections with safe anchored MXFP4 P/V and v509 backward. Retained B1 and B4 8B trajectories diverged, so this is preserved to reproduce and localize the failure rather than as a training recommendation.",
+      "selection": {
+        "portable_build": true,
+        "torchtitan_dispatch": "diagnostic_only",
+        "paper_use": "diagnostic_or_ablation"
+      },
+      "shape_profiles": [
+        {
+          "label": "retained distributed divergence diagnostics",
+          "constraint": "B1 and B4 evidence is exact S4096/Hq32/Hkv8/D128. The two batches belong to distinct historical experiments and must not be pooled as repeated trials.",
+          "batch": [1, 4],
+          "sequence": [4096],
+          "query_heads": [32],
+          "key_value_heads": [8],
+          "head_dimension": [128]
+        }
+      ],
+      "precision": {
+        "summary": "E4M3 learned projections, NVFP4 Q/K, direct E2M1 P with MXFP4 V, represented E4M3 Q/K/V plus E5M2 dO in backward, and BF16 gradients.",
+        "learned_projections": "E4M3 QKV and output projections with rowwise activation decode, per-output-channel weight decode, and FP32 accumulation.",
+        "qk": "Packed E2M1 NVFP4 with row-by-K16 two-dimensional E4M3 scale pages and per-head global scales.",
+        "pv": "Safe anchored direct E2M1 P and MXFP4 V with E8M0 block-32 scales.",
+        "gradient_operands": "Direct projection-accumulator represented E4M3 Q/K/V. A separate E4M3 V view is retained for v509 rather than using the MXFP4 V payload in backward.",
+        "dout": "Represented E5M2 encoded as 4*x and decoded by 0.25.",
+        "outputs": "Additive BF16 dQ/dK/dV encoded as 4*dX."
+      },
+      "source_paths": [
+        "tk_fa4/fp4_fa4_fwd/hao_direct_fp4pv_candidate.cu",
+        "tk_fa4/fp4_fa4_fwd/hao_direct_fp4pv_config.inc",
+        "tk_fa4/fp4_fa4_fwd/hao_direct_fp4pv_kernel.inc",
+        "tk_fa4/fp4_fa4_fwd/hao_direct_fp4pv_softmax_reader.inc",
+        "tk_fa4/lowp_fa4_bwd/build_causal_gqa_d128_mxfp4pv_forward.py",
+        "tk_fa4/lowp_fa4_bwd/lowp_fa4_bwd.cu",
+        "tk_fa4/lowp_fa4_bwd/projection_fp4_epilogue.cuh",
+        "TK_quantisation/mxfp4_v3/mxfp4_v3_quantize.cuh",
+        "tk_fa4/native_gqa_tk_bwd/v509_d128_gqa_nvfp4_score_e4m3_qkv_e5m2_dout_b1_exact_s4096_experimental_bshd.cu",
+        "tk_fa4/native_gqa_tk_bwd/v509_d128_gqa_nvfp4_score_e4m3_qkv_e5m2_dout_b1_exact_s4096_experimental_bshd.cuh",
+        "tk_fa4/lowp_fa4_bwd/native_tk_d128_nvfp4_score_e5m2_dout_backward.py",
+        "torchtitan/experiments/fa4/exact_lowp_attention.py",
+        "torchtitan/experiments/fa4/artifacts.py"
+      ],
+      "build_paths": [
+        "tools/build_fa4.py",
+        "tk_fa4/fp4_fa4_fwd/Makefile.hao_direct_fp4pv",
+        "tk_fa4/lowp_fa4_bwd/Makefile",
+        "TK_quantisation/mxfp4_v3/Makefile",
+        "tk_fa4/native_gqa_tk_bwd/Makefile.v509",
+        "tk_fa4/native_gqa_tk_bwd/Makefile.v509_b4"
+      ],
+      "benchmark_paths": [
+        "tk_fa4/lowp_fa4_bwd/benchmark_causal_forward_boundaries.py",
+        "tk_fa4/lowp_fa4_bwd/benchmark_v509_report_boundaries.py",
+        "tk_fa4/lowp_fa4_bwd/benchmark_llama12b_e2e.py"
+      ],
+      "test_paths": [
+        "tests/test_d128_e4m3_qkv_out_abi.py",
+        "tests/test_e4m3_output_projection.py",
+        "tests/test_e4m3_output_projection_e2e_wiring.py",
+        "tests/test_mxfp4_forward_artifact_authentication.py",
+        "tests/test_d128_forward_publication.py",
+        "tests/test_v509_e5m2_runtime_wiring.py",
+        "tests/unit_tests/test_fa4_reproduction.py"
+      ],
+      "abi_and_numerics": [
+        "The checked projection symbol is project_qkv_gqa_d128_unified_fp8_e4m3_rope_packed_clustered_mx_forward_out; the corresponding unchecked symbol has the _unchecked suffix.",
+        "The projection epilogue publishes dynamic row-K16 NVFP4 Q/K, safe MXFP4 V for forward, and distinct direct-accumulator E4M3 Q/K/V views for v509 backward.",
+        "The safe forward policy remains selector 4, anchor32, margin-log2 64, stored-scale shift 32, folded-K64 disabled, preload mask 3, and represented-denominator saved LSE.",
+        "v509 uses the same score-reconstruction, E5M2-dO, statistics, and gradient-output ABI as the FP8-P/V route.",
+      "The artifact route identity fixes exact_learned_projection_format=e4m3; the renderer must derive this value from the manifest rather than editing an NVFP4 recipe."
+      ],
+      "evidence": [
+        {
+          "path": "results/fp4_fa4_technical_report_v2_20260819/receipts/llama8b_training_curves_20260901.json",
+          "supports": "Retained B1/S4096 four-arm curves showing divergence for the E4M3-projection plus MXFP4-P/V arm while the E4M3-projection plus FP8-P/V arm remained non-divergent through the common horizon.",
+          "limitations": [
+            "The crossed trajectories implicate MXFP4 P/V or model state induced by it, but do not identify a single kernel or exact causal mechanism.",
+            "One trajectory per arm is not a repeated statistical study."
+          ]
+        },
+        {
+          "path": "results/fp4_fa4_technical_report_v2_20260819/receipts/v509_four_arm_cutoff_20260831T2209Z.json",
+          "supports": "Exact B1 route identity, shared recipe, initially matched E4M3-projection observation, and later divergent status with large pre-clip gradient norms.",
+          "limitations": [
+            "The first retained bad observation is not the exact causal onset.",
+            "The job endpoints are not token aligned and the receipt excludes instantaneous throughput from matched speed claims."
+          ]
+        },
+        {
+          "path": "results/fp4_fa4_technical_report_v2_20260819/receipts/llama8b_b4_matched_snapshot_20260902T1358Z.json",
+          "supports": "B4/S4096 E4M3-projection plus MXFP4-P/V failure diagnostic and its last retained completed validation update.",
+          "limitations": [
+            "This is a failed/cancelled trajectory, not a healthy throughput comparison.",
+            "The historical data order is not reproducible byte for byte from the retained receipt."
+          ]
+        }
+      ],
+      "known_limits": [
+        "Both retained B1 and B4 E4M3-projection plus MXFP4-P/V trajectories diverged.",
+        "The common MXFP4-P/V outcome across E4M3 and NVFP4 learned projections is a strong separator, but it does not prove that the forward payload alone is the root cause.",
+      "The E4M3 route is now exposed by the portable builder and renderer, but has not passed a clean-clone GPU or distributed-resume gate.",
+        "No throughput claim is attached to the historical distributed diagnostic."
+      ],
+      "promotion_criteria": [
+        "Reproduce the departure from a saved pre-divergence checkpoint and fixed batch, then localize it with per-layer activation, gradient, and optimizer-state diagnostics.",
+        "Correct the identified cause while retaining represented-oracle, finite-output/LSE, exact-zero-dO, and checkpoint-resume gates.",
+        "Complete a token-, data-, topology-, and optimizer-matched long-horizon run before any training recommendation."
+      ]
+    },
+    {
+      "id": "causal_d64_e4m3_projection_fp8_pv_v416",
+      "human_name": "D64 E4M3-Projection FP8-P/V Training Route",
+      "internal_family": {
+        "label": "monolithic TK D64 causal forward plus native TK backward",
+        "version": "row-K16 forward and v416 backward"
+      },
+      "phase": "forward_backward",
+      "attention_mode": "causal",
+      "status": "release_candidate",
+      "summary": "Portable 1.2B low-precision candidate: E4M3 learned projections, row-by-K16 NVFP4 Q/K, E4M3 FP8 P/V, and the native v416 represented-E4M3 backward.",
+      "selection": {
+        "portable_build": true,
+        "torchtitan_dispatch": "release_candidate",
+        "paper_use": "headline_method"
+      },
+      "shape_profiles": [
+        {
+          "label": "1.2B matched release profile",
+          "constraint": "The schema-v3 manifest and TorchTitan adapter admit exactly B16/S4096/Hq32/Hkv8/D64 under profile llama1p2b-d64-b16.",
+          "batch": [16],
+          "sequence": [4096],
+          "query_heads": [32],
+          "key_value_heads": [8],
+          "head_dimension": [64]
+        }
+      ],
+      "precision": {
+        "summary": "E4M3 learned projections, NVFP4 Q/K and E4M3 FP8 P/V forward, represented E4M3 Q/K/V/dO backward, and BF16 gradients.",
+        "learned_projections": "E4M3 Q/K/V/O with two-dimensional learned-weight scaling and rowwise activation scaling.",
+        "qk": "Packed E2M1 NVFP4 with row-by-K16 two-dimensional E4M3 scale pages and per-head global scales.",
+        "pv": "E4M3 FP8 probabilities and value operands.",
+        "gradient_operands": "Contiguous BSHD represented E4M3 Q/K/V/dO encoded as 4*x.",
+        "dout": "Represented E4M3 encoded as 4*x.",
+        "outputs": "BF16 dQ/dK/dV encoded as 4*dX."
+      },
+      "source_paths": [
+        "tk_fa4/fp4_fa4_fwd/hao_direct_candidate.cu",
+        "tk_fa4/fp4_fa4_fwd/hao_direct_config.inc",
+        "tk_fa4/fp4_fa4_fwd/hao_direct_kernel.inc",
+        "tk_fa4/fp4_fa4_fwd/hao_direct_softmax_reader.inc",
+        "tk_fa4/lowp_fa4_bwd/lowp_fa4_bwd.cu",
+        "tk_fa4/lowp_fa4_bwd/projection_fp4_epilogue.cuh",
+        "tk_fa4/native_gqa_tk_bwd/v416_d64_gqa_e4m3_production_bshd_dq_first_vec2_ds.cu",
+        "tk_fa4/native_gqa_tk_bwd/v416_d64_gqa_e4m3_production_bshd_dq_first_vec2_ds.cuh",
+        "tk_fa4/lowp_fa4_bwd/native_tk_d64_backward.py",
+        "torchtitan/experiments/fa4/exact_lowp_attention.py",
+        "torchtitan/experiments/fa4/artifacts.py"
+      ],
+      "build_paths": [
+        "tools/build_fa4.py",
+        "tk_fa4/lowp_fa4_bwd/build_causal_gqa_fp8pv_forward.py",
+        "tk_fa4/lowp_fa4_bwd/Makefile",
+        "tk_fa4/native_gqa_tk_bwd/Makefile.v416"
+      ],
+      "benchmark_paths": [
+        "tk_fa4/lowp_fa4_bwd/benchmark_b16_forward_factorial.py",
+        "tk_fa4/lowp_fa4_bwd/benchmark_llama12b_saturated.py",
+        "tools/plan_fa4_measurements.py"
+      ],
+      "test_paths": [
+        "tests/test_causal_gqa_fp8pv_forward_patch.py",
+        "tests/test_native_tk_d64_backward_runner.py",
+        "tests/unit_tests/test_fa4_d64_runtime_profile.py",
+        "tests/test_d64_release_recipe.py"
+      ],
+      "abi_and_numerics": [
+        "Forward Q/K scales are row-by-K16 two-dimensional pages; a fixed-head substitute is not the same route.",
+        "v416 consumes the publisher's E4M3 Q/K/V/dO views, lstat = 8 - LSE*log2(e), and dstat = -16*sum(O*dO).",
+        "The v416 gradient epilogue scale is 1/256 and remains distinct from the +8 probability lift.",
+        "The exact profile, shape, module identity, byte count, and SHA256 are checked before dispatch; D128 v509 is rejected."
+      ],
+      "evidence": [
+        {
+          "path": "results/llama12b_b16_forward_factorial_20260826.json",
+          "supports": "Two-process B16 forward timing and bounded one-layer error for E4M3 projections plus FP8 P/V.",
+          "limitations": [
+            "Forward-only synthetic-input comparison; no backward or optimizer update."
+          ]
+        },
+        {
+          "path": "results/native_tk_d64_ptx_adaptation_20260829/v416_llama12b_saturated_receipt_20260829.json",
+          "supports": "Authenticated FP8-P/V plus v416 full-model binding, finite short trajectory, held-out-loss comparison, and 1.098x fixed-state speedup over packed BF16.",
+          "limitations": [
+            "Twenty synthetic-token updates are a smoke test, not convergence evidence.",
+            "The runs are fixed-state comparable but not a contemporaneous rotated process bracket."
+          ]
+        },
+        {
+          "path": "results/dolma3_causal_training_20260821/raw/1p2b/llama1p2b-matched.json",
+          "supports": "Historical 256-update real-token evidence that the predecessor FP8-P/V forward route tracked BF16 closely.",
+          "limitations": [
+            "This trajectory used the older cd57 CuTe backward, ordinary AdamW, and local batch one; it is not evidence for v416 or the new DDP16 recipe.",
+            "The tokenizer and Dolma3 input bytes are not redistributed."
+          ]
+        }
+      ],
+      "known_limits": [
+        "No completed DDP16 save/fresh-resume or long-horizon public-data trajectory is retained.",
+        "The exact historical SlimPajama MDS shard and row ordering are unavailable.",
+        "The isolated v416 receipt cannot be reproduced byte-identically because its exact driver and cd57 control source are absent."
+      ],
+      "promotion_criteria": [
+        "Pass a fresh-clone B16 build plus forward, represented-equation, exact-zero-dO, liveness, saturated-update, and performance gates.",
+        "Pass DDP16 save/fresh-resume using authenticated data and tokenizer assets.",
+        "Complete a token- and data-matched long-horizon comparison against BF16."
+      ]
+    },
+    {
+      "id": "causal_d64_e4m3_projection_mxfp4_pv_v416",
+      "human_name": "D64 E4M3-Projection MXFP4-P/V Ablation",
+      "internal_family": {
+        "label": "anchored D64 MX causal forward plus native TK backward",
+        "version": "d4q01 anchored forward and v416 backward"
+      },
+      "phase": "forward_backward",
+      "attention_mode": "causal",
+      "status": "diagnostic",
+      "summary": "Portable 1.2B numerical ablation: E4M3 learned projections, row-by-K16 NVFP4 Q/K, anchored MXFP4 P/V, and the same native v416 backward as the FP8-P/V route.",
+      "selection": {
+        "portable_build": true,
+        "torchtitan_dispatch": "diagnostic_only",
+        "paper_use": "diagnostic_or_ablation"
+      },
+      "shape_profiles": [
+        {
+          "label": "1.2B matched release profile",
+          "constraint": "The schema-v3 manifest and TorchTitan adapter admit exactly B16/S4096/Hq32/Hkv8/D64 under profile llama1p2b-d64-b16.",
+          "batch": [16],
+          "sequence": [4096],
+          "query_heads": [32],
+          "key_value_heads": [8],
+          "head_dimension": [64]
+        }
+      ],
+      "precision": {
+        "summary": "E4M3 learned projections, NVFP4 Q/K and anchored MXFP4 P/V forward, represented E4M3 Q/K/V/dO backward, and BF16 gradients.",
+        "learned_projections": "E4M3 Q/K/V/O with two-dimensional learned-weight scaling and rowwise activation scaling.",
+        "qk": "Packed E2M1 NVFP4 with row-by-K16 two-dimensional E4M3 scale pages and per-head global scales.",
+        "pv": "Direct E2M1 probabilities and MXFP4 V with E8M0 block-32 scales under the D64 d4q01 anchored policy.",
+        "gradient_operands": "The publisher retains a distinct contiguous BSHD represented-E4M3 V view; v416 does not consume the forward MXFP4 V payload.",
+        "dout": "Represented E4M3 encoded as 4*x.",
+        "outputs": "BF16 dQ/dK/dV encoded as 4*dX."
+      },
+      "source_paths": [
+        "tk_fa4/fp4_fa4_fwd/hao_direct_fp4pv_candidate.cu",
+        "tk_fa4/fp4_fa4_fwd/hao_direct_fp4pv_config.inc",
+        "tk_fa4/fp4_fa4_fwd/hao_direct_fp4pv_kernel.inc",
+        "tk_fa4/fp4_fa4_fwd/hao_direct_fp4pv_softmax_reader.inc",
+        "tk_fa4/lowp_fa4_bwd/lowp_fa4_bwd.cu",
+        "tk_fa4/lowp_fa4_bwd/projection_fp4_epilogue.cuh",
+        "tk_fa4/native_gqa_tk_bwd/v416_d64_gqa_e4m3_production_bshd_dq_first_vec2_ds.cu",
+        "tk_fa4/native_gqa_tk_bwd/v416_d64_gqa_e4m3_production_bshd_dq_first_vec2_ds.cuh",
+        "tk_fa4/lowp_fa4_bwd/native_tk_d64_backward.py",
+        "torchtitan/experiments/fa4/exact_lowp_attention.py",
+        "torchtitan/experiments/fa4/artifacts.py"
+      ],
+      "build_paths": [
+        "tools/build_fa4.py",
+        "tk_fa4/lowp_fa4_bwd/build_causal_gqa_mxfp4pv_forward.py",
+        "tk_fa4/lowp_fa4_bwd/Makefile",
+        "tk_fa4/native_gqa_tk_bwd/Makefile.v416"
+      ],
+      "benchmark_paths": [
+        "tk_fa4/lowp_fa4_bwd/benchmark_b16_forward_factorial.py",
+        "tk_fa4/lowp_fa4_bwd/benchmark_llama12b_saturated.py",
+        "tools/plan_fa4_measurements.py"
+      ],
+      "test_paths": [
+        "tests/test_causal_forward_fixed_route_fastpath.py",
+        "tests/test_native_tk_d64_backward_runner.py",
+        "tests/unit_tests/test_fa4_d64_runtime_profile.py",
+        "tests/test_d64_release_recipe.py"
+      ],
+      "abi_and_numerics": [
+        "Forward Q/K uses the same row-K16 NVFP4 score representation as the D64 FP8-P/V route.",
+        "The anchored d4q01 MX policy is distinct from the rejected D128 shift-16 policy.",
+        "v416 consumes the retained represented-E4M3 V view, so the backward kernel and dO format are identical to the D64 FP8-P/V route.",
+        "The exact profile, shape, module identity, byte count, and SHA256 are checked before dispatch."
+      ],
+      "evidence": [
+        {
+          "path": "results/llama12b_b16_forward_factorial_20260826.json",
+          "supports": "Two-process B16 forward timing and bounded one-layer error for E4M3 projections plus MXFP4 P/V; the full combined forward boundary was tied with the E4M3-projection FP8 route.",
+          "limitations": [
+            "Forward-only synthetic-input comparison; no backward or optimizer update.",
+            "The faster native-NVFP4-projection MX arm is a different learned-projection route."
+          ]
+        },
+        {
+          "path": "results/dolma3_causal_training_20260821/raw/1p2b/llama1p2b-matched.json",
+          "supports": "Historical 256-update real-token evidence that the predecessor MXFP4-P/V forward route remained close to BF16 at 1.2B scale.",
+          "limitations": [
+            "This trajectory used the older cd57 CuTe backward, ordinary AdamW, and local batch one; it is not evidence for v416 or the new DDP16 recipe.",
+            "The tokenizer and Dolma3 input bytes are not redistributed."
+          ]
+        }
+      ],
+      "known_limits": [
+        "There is no retained saturated full-model receipt pairing this exact E4M3-projection MX forward with v416.",
+        "No completed DDP16 save/fresh-resume or long-horizon public-data trajectory is retained.",
+        "Longer D128/8B MXFP4-P/V trajectories diverged; that does not prove D64 failure, but it prevents a training recommendation without a matched long run.",
+        "MXFP4 P/V requires a distinct E4M3 V publication for v416 and has no demonstrated whole-step throughput advantage over the D64 FP8-P/V route."
+      ],
+      "promotion_criteria": [
+        "Pass fresh-clone B16 forward, represented-equation, exact-zero-dO, liveness, saturated-update, and matched performance gates with v416.",
+        "Pass DDP16 save/fresh-resume using authenticated data and tokenizer assets.",
+        "Complete a token- and data-matched long-horizon comparison against BF16 and FP8-P/V without divergence."
+      ]
+    },
+    {
+      "id": "causal_mxfp4_pv_shift16_unsafe",
+      "human_name": "Unanchored shift-16 MXFP4-P/V forward",
+      "internal_family": {
+        "label": "historical fast causal MX policy",
+        "version": "stored-scale shift16 candidate"
+      },
+      "phase": "forward",
+      "attention_mode": "causal",
+      "status": "disabled_fail_closed",
+      "summary": "Faster historical causal MXFP4 P/V policy retained only to explain the safety boundary. It generated nonfinite output values and is rejected by the safe release builder and adapter.",
+      "selection": {
+        "portable_build": false,
+        "torchtitan_dispatch": "not_connected",
+        "paper_use": "excluded_from_claims"
+      },
+      "shape_profiles": [
+        {
+          "label": "audited failure payload",
+          "constraint": "The recorded failure is B1/S4096/Hq32/Hkv8/D128 causal; no broader failure claim is inferred.",
+          "batch": [1],
+          "sequence": [4096],
+          "query_heads": [32],
+          "key_value_heads": [8],
+          "head_dimension": [128]
+        }
+      ],
+      "precision": {
+        "summary": "NVFP4 Q/K with the historical shift-16 direct MXFP4 P/V policy.",
+        "qk": "NVFP4",
+        "pv": "Direct E2M1 P and MXFP4 V with E8M0 scales and stored-scale shift 16.",
+        "outputs": "BF16, with observed nonfinite values on the audited payload."
+      },
+      "source_paths": [
+        "tk_fa4/fp4_fa4_fwd/hao_direct_fp4pv_config.inc",
+        "tk_fa4/fp4_fa4_fwd/hao_direct_fp4pv_kernel.inc",
+        "tk_fa4/fp4_fa4_fwd/hao_direct_fp4pv_softmax_reader.inc",
+        "tk_fa4/lowp_fa4_bwd/authenticate_causal_gqa_mxfp4pv_forward.py"
+      ],
+      "build_paths": [
+        "tk_fa4/fp4_fa4_fwd/Makefile.hao_direct_fp4pv"
+      ],
+      "benchmark_paths": [
+        "tk_fa4/lowp_fa4_bwd/benchmark_llama12b_e2e.py"
+      ],
+      "test_paths": [
+        "tests/test_llama12b_saturated_harness.py",
+        "tests/test_causal_forward_fixed_route_fastpath.py"
+      ],
+      "abi_and_numerics": [
+        "This policy is not the safe selector-4, anchor32, shift32 route.",
+        "On the audited B1 payload it produced 370900 nonfinite outputs out of 16777216 values.",
+        "Its recorded timing used a different payload from the safe route, so the reported latency difference is not a paired policy-cost estimate."
+      ],
+      "evidence": [
+        {
+          "path": "results/dolma3_saturated_perblock_e2e_20260827/summary.json",
+          "supports": "Exact nonfinite count, payload identity, and unpaired timing record for the rejected shift16 policy.",
+          "limitations": [
+            "One audited trained payload; no claim is made about every possible input."
+          ]
+        }
+      ],
+      "known_limits": [
+        "Numerically unsafe on the audited natural payload.",
+        "No supported builder or TorchTitan selector may emit this policy."
+      ],
+      "promotion_criteria": [
+        "Remain disabled unless a newly named policy passes adversarial and natural-payload finite-output/LSE gates, represented-oracle checks, matched timing, and training stability. A fix must not silently reuse this route identifier."
+      ]
+    },
+    {
+      "id": "v416_d64_represented_e4m3_backward",
+      "human_name": "D64 Represented-E4M3 Backward",
+      "internal_family": {
+        "label": "native TK D64 owner schedule",
+        "version": "v416"
+      },
+      "phase": "backward",
+      "attention_mode": "causal",
+      "status": "release_candidate",
+      "summary": "Native-TK D64 backward for the portable 1.2B profile. It consumes represented E4M3 Q/K/V/dO at the exact B16/S4096 GQA shape and is bound as the profile-specific native consumer; it is not interchangeable with D128 v509.",
+      "selection": {
+        "portable_build": true,
+        "torchtitan_dispatch": "release_candidate",
+        "paper_use": "headline_method"
+      },
+      "shape_profiles": [
+        {
+          "label": "measured production shape",
+          "constraint": "The retained receipt measures exactly B16/S4096/Hq32/Hkv8/D64; source metadata permits positive sequences divisible by 128, which is not a portable-release support claim.",
+          "batch": [16],
+          "sequence": [4096],
+          "query_heads": [32],
+          "key_value_heads": [8],
+          "head_dimension": [64]
+        }
+      ],
+      "precision": {
+        "summary": "Represented E4M3 Q/K/V/dO and BF16 dQ/dK/dV.",
+        "qk": "Represented E4M3 encoded as 4*x.",
+        "pv": "Represented E4M3 V in backward.",
+        "gradient_operands": "Represented E4M3 Q/K/V/dO.",
+        "dout": "Represented E4M3 encoded as 4*x.",
+        "outputs": "BF16 encoded as 4*dX."
+      },
+      "source_paths": [
+        "tk_fa4/native_gqa_tk_bwd/v416_d64_gqa_e4m3_production_bshd_dq_first_vec2_ds.cu",
+        "tk_fa4/native_gqa_tk_bwd/v416_d64_gqa_e4m3_production_bshd_dq_first_vec2_ds.cuh",
+        "tk_fa4/native_gqa_tk_bwd/native_gqa_tk_bwd_pipelined.cuh",
+        "tk_fa4/lowp_fa4_bwd/native_tk_d64_backward.py",
+        "torchtitan/experiments/fa4/exact_lowp_attention.py",
+        "torchtitan/experiments/fa4/artifacts.py",
+        "reproduction/snapshots/d64_v416_713819d/manifest.json"
+      ],
+      "build_paths": [
+        "tools/build_fa4.py",
+        "tk_fa4/native_gqa_tk_bwd/Makefile.v416"
+      ],
+      "benchmark_paths": [
+        "tk_fa4/lowp_fa4_bwd/benchmark_causal_backward_matrix.py",
+        "tk_fa4/lowp_fa4_bwd/benchmark_llama12b_saturated.py"
+      ],
+      "test_paths": [
+        "tests/test_native_tk_d64_backward_runner.py",
+        "tests/test_causal_backward_matrix.py",
+        "tests/unit_tests/test_fa4_d64_runtime_profile.py",
+        "tests/test_d64_release_recipe.py"
+      ],
+      "abi_and_numerics": [
+        "Contiguous BSHD E4M3 operands use encoding scale 4.",
+        "Statistics are lstat = 8 - LSE*log2(e) and dstat = -16*sum(O*dO).",
+        "The gradient epilogue scale is 1/256; outputs are BF16 representations of 4*dX.",
+        "v416 changes the dS shared publication to adjacent packed v2 stores without changing attention math."
+      ],
+      "evidence": [
+        {
+          "path": "results/native_tk_d64_ptx_adaptation_20260829/v416_production_vec2_ds_receipt_20260829.json",
+          "supports": "B16 isolated correctness, exact-zero-dO, finiteness, source hashes, and timing against v414 and CuTe controls.",
+          "limitations": [
+            "Isolated D64 backward only; not an end-to-end transformer result.",
+            "The exact acquisition driver and 220876-byte cd57 CuTe control source are unavailable, so this is historical receipt evidence rather than a byte-identical reproduction path."
+          ]
+        },
+        {
+          "path": "results/native_tk_d64_ptx_adaptation_20260829/v416_llama12b_saturated_receipt_20260829.json",
+          "supports": "Authenticated v416 full-model binding, 20 finite updates, BF16-like held-out loss, and a 1.098x short full-update speedup over its fixed packed-BF16 reference.",
+          "limitations": [
+            "Short synthetic-token smoke with a fixed-state reference; not long-horizon convergence evidence.",
+            "The reported useful MFU is a model-FLOP estimate, not a hardware-counter measurement."
+          ]
+        }
+      ],
+      "known_limits": [
+        "The exact historical isolated acquisition driver and cd57 CuTe control bytes are unavailable.",
+        "The public DDP16 save/fresh-resume smoke and long-horizon real-data comparison have not yet been run.",
+        "The retained 256-update Dolma3 comparison used an older CuTe backward, not v416."
+      ],
+      "promotion_criteria": [
+        "Pass fresh-clone B16 build, represented-equation, liveness, exact-zero-dO, performance, and full-update gates from schema-v3 artifacts.",
+        "Pass a DDP16 save/fresh-resume test with authenticated tokenizer and data manifests.",
+        "Complete a token- and data-matched long-horizon comparison against BF16."
+      ]
+    },
+    {
+      "id": "v501_represented_e4m3_backward",
+      "human_name": "Represented-FP8 Backward Precursor",
+      "internal_family": {
+        "label": "native TK D128 backward over represented E4M3 operands",
+        "version": "v501"
+      },
+      "phase": "backward",
+      "attention_mode": "causal",
+      "status": "diagnostic",
+      "summary": "Historical D128 native-TK backward that reconstructs both scores and gradient products from represented E4M3 Q/K/V/dO. It established the schedule and ABI later inherited by native-score routes, but a natural capture exposed destructive second quantization of Q/K for score reconstruction.",
+      "selection": {
+        "portable_build": false,
+        "torchtitan_dispatch": "not_connected",
+        "paper_use": "diagnostic_or_ablation"
+      },
+      "shape_profiles": [
+        {
+          "label": "exact optimized shapes",
+          "constraint": "B1 and B2 at S4096/Hq32/Hkv8/D128 have exact dispatches; source metadata has nonexact B1/B2 fallbacks for positive sequence multiples of 128.",
+          "batch": [1, 2],
+          "sequence": [4096],
+          "query_heads": [32],
+          "key_value_heads": [8],
+          "head_dimension": [128]
+        }
+      ],
+      "precision": {
+        "summary": "Represented E4M3 Q/K/V/dO and additive BF16 gradients.",
+        "qk": "Plain represented E4M3 Q/K encoded as 4*x for score reconstruction.",
+        "pv": "Represented E4M3 V in backward.",
+        "gradient_operands": "Represented E4M3 Q/K/V/dO.",
+        "dout": "Represented E4M3 encoded as 4*x.",
+        "outputs": "Additive BF16 encoded as 4*dX."
+      },
+      "source_paths": [
+        "tk_fa4/native_gqa_tk_bwd/v501_d128_gqa_e4m3_unified_best_route_production_bshd.cu",
+        "tk_fa4/native_gqa_tk_bwd/v501_d128_gqa_e4m3_unified_best_route_production_bshd.cuh",
+        "tk_fa4/lowp_fa4_bwd/native_tk_d128_backward.py",
+        "tk_fa4/lowp_fa4_bwd/validate_native_tk_d128_backward.py"
+      ],
+      "build_paths": [
+        "tk_fa4/native_gqa_tk_bwd/Makefile.v501"
+      ],
+      "benchmark_paths": [
+        "tk_fa4/lowp_fa4_bwd/benchmark_llama12b_e2e.py"
+      ],
+      "test_paths": [
+        "tests/test_native_tk_d128_backward_runner.py",
+        "tests/test_validate_native_tk_d128_backward.py"
+      ],
+      "abi_and_numerics": [
+        "Statistics are lstat = 8 - LSE*log2(e) and dstat = -16*sum(O*dO). Omitting +8 scales reconstructed probability by 1/256.",
+        "The gradient epilogue has a separate 1/256 factor and must not be conflated with the lstat lift.",
+        "Exact B2/S4096 dispatch uses the v490 owner4 path: dK/dV are complete unique-writer outputs, while dQ remains additive and must be cleared.",
+        "Requantizing block-scaled NVFP4 Q/K into one plain E4M3 value per element discarded the score-scale structure on the retained natural capture."
+      ],
+      "evidence": [
+        {
+          "path": "results/tk_fa4_d128_v501_corrected_20260829/README.md",
+          "supports": "Corrected statistics ABI, B2 clear policy, isolated gates, 8B short timing, and schedule/resource analysis.",
+          "limitations": [
+            "Short synthetic model gates are not convergence evidence."
+          ]
+        },
+        {
+          "path": "results/llama8b_nvfp4_qk_backward_reconstruction_20260831/summary.json",
+          "supports": "Natural-capture diagnosis of second-Q/K-quantization score error and the comparison to v508/v509.",
+          "limitations": [
+            "Read-only diagnostic evaluation, not an optimizer trajectory."
+          ]
+        }
+      ],
+      "known_limits": [
+        "Plain E4M3 Q/K does not preserve the forward NVFP4 row-K16 score representation.",
+        "Superseded for the release candidate by v509 native NVFP4 score reconstruction."
+      ],
+      "promotion_criteria": [
+        "Do not promote this ABI for NVFP4-forward training. A new use would need a matched forward representation, natural-capture score/LSE gates, and long-horizon evidence under a new route identity."
+      ]
+    },
+    {
+      "id": "v503_common_row_mxfp4_v_backward",
+      "human_name": "Common-Row MXFP4-V Backward",
+      "internal_family": {
+        "label": "native TK D128 direct-MX V consumer",
+        "version": "v503"
+      },
+      "phase": "backward",
+      "attention_mode": "causal",
+      "status": "diagnostic",
+      "summary": "B2 diagnostic that consumes a backward-oriented MXFP4 V payload. It collapses four D32 tile anchors to a common row maximum and requantizes during the shared-memory restage.",
+      "selection": {
+        "portable_build": false,
+        "torchtitan_dispatch": "diagnostic_only",
+        "paper_use": "diagnostic_or_ablation"
+      },
+      "shape_profiles": [
+        {
+          "label": "exact diagnostic shape",
+          "constraint": "Strict B2/S4096/Hq32/Hkv8/D128 only.",
+          "batch": [2],
+          "sequence": [4096],
+          "query_heads": [32],
+          "key_value_heads": [8],
+          "head_dimension": [128]
+        }
+      ],
+      "precision": {
+        "summary": "Represented E4M3 Q/K/dO, packed row-major E2M1 MXFP4 V with E8M0 pages, and BF16 gradients.",
+        "qk": "Represented E4M3 Q/K.",
+        "pv": "Backward dP consumes row-major MXFP4 V; dV follows the inherited E4M3-dO path.",
+        "gradient_operands": "E4M3 Q/K/dO plus common-row requantized MXFP4 V.",
+        "dout": "Represented E4M3 encoded as 4*x.",
+        "outputs": "BF16 dQ/dK/dV."
+      },
+      "source_paths": [
+        "tk_fa4/native_gqa_tk_bwd/v503_d128_gqa_mxfp4v_rowscale_e4m3do_b2_s4096_owner4_experimental_bshd.cu",
+        "tk_fa4/native_gqa_tk_bwd/v503_d128_gqa_mxfp4v_rowscale_e4m3do_b2_s4096_owner4_experimental_bshd.cuh",
+        "tk_fa4/lowp_fa4_bwd/native_tk_d128_mxfp4_v_backward.py",
+        "tk_fa4/lowp_fa4_bwd/projection_fp4_epilogue.cuh"
+      ],
+      "build_paths": [
+        "tk_fa4/native_gqa_tk_bwd/Makefile.v503"
+      ],
+      "benchmark_paths": [
+        "tk_fa4/lowp_fa4_bwd/benchmark_llama12b_e2e.py"
+      ],
+      "test_paths": [
+        "tests/test_native_tk_d128_mxfp4_v_backward_runner.py",
+        "tests/test_d128_mxfp4_v_e2e_wiring.py",
+        "tests/test_d128_mxfp4_v_backward_abi.py",
+        "tests/test_mxfp4_shared_tile_transpose_contract.py"
+      ],
+      "abi_and_numerics": [
+        "The accepted producer quantizes each D32xS32 V tile once and publishes the same code matrix in both physical orientations.",
+        "v503 reduces four D32 E8M0 anchors to their common maximum; it is not an exact four-anchor consumer.",
+        "The runtime authenticates the named shared-tile producer and refuses v502/v507 binaries despite shape-compatible tensors.",
+        "The represented-gradient oracle and exact-zero-dO gates passed; dV remained bitwise equal to the v501 control in the retained gate."
+      ],
+      "evidence": [
+        {
+          "path": "results/tk_fa4_d128_shared_tile_mx_20260830/shared_tile_mx_gate_summary_20260830.json",
+          "supports": "Shared-tile producer identity, common-row represented-oracle checks, exact-zero-dO, composed-slice timing, and short 8B full-step gate.",
+          "limitations": [
+            "The full-step advantage over FP8-P/V plus v501 was repeatable but not material.",
+            "Short synthetic diagnostic, not convergence evidence."
+          ]
+        },
+        {
+          "path": "results/tk_fa4_d128_v501_corrected_20260829/v503_rowscale_e2e_bracket_receipt_20260830.json",
+          "supports": "B2 v503 end-to-end bracket and route authentication.",
+          "limitations": []
+        }
+      ],
+      "known_limits": [
+        "Only B2/S4096 is implemented by the retained runtime.",
+        "Whole-step performance is tied with the simpler retained E4M3-V backward route.",
+        "No long-horizon training evidence."
+      ],
+      "promotion_criteria": [
+        "Show a material repeated whole-step benefit over the v509 candidate while retaining producer/consumer ABI authentication.",
+        "Pass matched real-data optimizer trajectory, checkpoint resume, and long-horizon convergence gates before any training promotion."
+      ]
+    },
+    {
+      "id": "v506_direct_common_row_mxfp4_v_publication",
+      "human_name": "Direct Common-Row MXFP4-V Publication",
+      "internal_family": {
+        "label": "native TK D128 direct-common producer/consumer",
+        "version": "v506"
+      },
+      "phase": "forward_backward",
+      "attention_mode": "causal",
+      "status": "disabled_fail_closed",
+      "summary": "B2 experiment that publishes the common-row MXFP4 V representation directly, avoiding v503's two-stage D32 quantize/re-anchor sequence. Its numerical gates passed, but it missed the explicit producer performance gate.",
+      "selection": {
+        "portable_build": false,
+        "torchtitan_dispatch": "not_connected",
+        "paper_use": "excluded_from_claims"
+      },
+      "shape_profiles": [
+        {
+          "label": "exact diagnostic shape",
+          "constraint": "Strict B2/S4096/Hq32/Hkv8/D128 with hidden size 4096.",
+          "batch": [2],
+          "sequence": [4096],
+          "query_heads": [32],
+          "key_value_heads": [8],
+          "head_dimension": [128]
+        }
+      ],
+      "precision": {
+        "summary": "Direct common-row E2M1 MXFP4 V publication with E8M0 scales for a v506 native-TK backward consumer.",
+        "qk": "Route-neutral NVFP4 forward Q/K and represented E4M3 backward Q/K.",
+        "pv": "MXFP4 V with one common row scale representation.",
+        "gradient_operands": "Common-row MXFP4 V with the inherited represented-E4M3 operands.",
+        "dout": "Represented E4M3.",
+        "outputs": "BF16 dQ/dK/dV."
+      },
+      "source_paths": [
+        "tk_fa4/native_gqa_tk_bwd/v506_d128_gqa_mxfp4v_commonrow_e4m3do_b2_s4096_owner4_experimental_bshd.cu",
+        "tk_fa4/native_gqa_tk_bwd/v506_d128_gqa_mxfp4v_commonrow_e4m3do_b2_s4096_owner4_experimental_bshd.cuh",
+        "tk_fa4/lowp_fa4_bwd/projection_fp4_epilogue.cuh",
+        "tk_fa4/lowp_fa4_bwd/authenticate_d128_mx_backward_v_publication.py"
+      ],
+      "build_paths": [
+        "tk_fa4/native_gqa_tk_bwd/Makefile.v506",
+        "tk_fa4/lowp_fa4_bwd/Makefile"
+      ],
+      "benchmark_paths": [
+        "tk_fa4/lowp_fa4_bwd/authenticate_d128_mx_backward_v_publication.py"
+      ],
+      "test_paths": [
+        "tests/test_experimental_d128_direct_common_rowscale_contract.py"
+      ],
+      "abi_and_numerics": [
+        "The direct common-row payload and scales matched their explicit oracle byte for byte in the retained gate.",
+        "All Q/K and route-neutral publication tensors remained bitwise equal in that gate.",
+        "The candidate producer median was 237.568 us against an acceptance threshold of at most 209.0 us."
+      ],
+      "evidence": [
+        {
+          "path": "results/tk_fa4_d128_v501_corrected_20260829/v506_direct_common_rowscale_producer_gate_receipt_20260830.json",
+          "supports": "Exact direct-common oracle, route-neutral bitwise checks, numerical comparisons, and the failed producer timing gate.",
+          "limitations": [
+            "Producer-level B2 gate only."
+          ]
+        }
+      ],
+      "known_limits": [
+        "Failed the <=209 us producer performance requirement.",
+        "Not connected to the portable builder or training adapter."
+      ],
+      "promotion_criteria": [
+        "Meet the recorded <=209 us producer median under a matched rotated protocol while retaining byte-exact oracle and route-neutral checks.",
+        "Then pass composed backward, full-step, optimizer-trajectory, and convergence gates under a new authenticated selector."
+      ]
+    },
+    {
+      "id": "v507_four_anchor_mxfp4_v_backward",
+      "human_name": "Four-Anchor Shared-Tile MXFP4-V Backward",
+      "internal_family": {
+        "label": "native TK D128 exact shared-tile MX consumer",
+        "version": "v507"
+      },
+      "phase": "backward",
+      "attention_mode": "causal",
+      "status": "diagnostic",
+      "summary": "Exact four-D32-anchor consumer for the shared-tile MXFP4 V publication. It passed its represented oracle but was substantially slower than v501 and v503.",
+      "selection": {
+        "portable_build": false,
+        "torchtitan_dispatch": "not_connected",
+        "paper_use": "diagnostic_or_ablation"
+      },
+      "shape_profiles": [
+        {
+          "label": "exact diagnostic shape",
+          "constraint": "Strict B2/S4096/Hq32/Hkv8/D128 only.",
+          "batch": [2],
+          "sequence": [4096],
+          "query_heads": [32],
+          "key_value_heads": [8],
+          "head_dimension": [128]
+        }
+      ],
+      "precision": {
+        "summary": "Four D32 E8M0 anchors with the shared packed E2M1 V code matrix, represented E4M3 companion operands, and BF16 gradients.",
+        "qk": "Represented E4M3 Q/K in this historical backward family.",
+        "pv": "Backward dP consumes exact four-anchor MXFP4 V.",
+        "gradient_operands": "Four-anchor MXFP4 V plus represented E4M3 Q/K/dO.",
+        "dout": "Represented E4M3.",
+        "outputs": "BF16 dQ/dK/dV."
+      },
+      "source_paths": [
+        "tk_fa4/native_gqa_tk_bwd/v507_d128_gqa_mxfp4v_sharedtile_e4m3do_b2_s4096_owner4_experimental_bshd.cu",
+        "tk_fa4/native_gqa_tk_bwd/v507_d128_gqa_mxfp4v_sharedtile_e4m3do_b2_s4096_owner4_experimental_bshd.cuh",
+        "tk_fa4/lowp_fa4_bwd/authenticate_d128_shared_tile_mx_publication.py"
+      ],
+      "build_paths": [
+        "tk_fa4/native_gqa_tk_bwd/Makefile.v507"
+      ],
+      "benchmark_paths": [
+        "tk_fa4/lowp_fa4_bwd/authenticate_d128_shared_tile_mx_publication.py"
+      ],
+      "test_paths": [
+        "tests/test_native_tk_d128_v507_source_contract.py",
+        "tests/test_d128_shared_tile_mx_interface.py",
+        "tests/test_mxfp4_shared_tile_transpose_contract.py"
+      ],
+      "abi_and_numerics": [
+        "Consumes the four D32 anchors exactly rather than reducing them to one row maximum.",
+        "Matched the represented-gradient oracle, preserved dV bitwise, and passed exact-zero-dO in the retained gate.",
+        "Measured 581.632 us without clears versus 485.376 us for v501 in the retained paired receipt."
+      ],
+      "evidence": [
+        {
+          "path": "results/tk_fa4_d128_shared_tile_mx_20260830/shared_tile_mx_gate_summary_20260830.json",
+          "supports": "Four-anchor correctness and negative performance result against v501.",
+          "limitations": [
+            "B2 operator diagnostic only."
+          ]
+        }
+      ],
+      "known_limits": [
+        "Scale-TMEM restage and alias scheduling make it too slow for the release recipe.",
+        "The v503 runtime intentionally rejects this binary."
+      ],
+      "promotion_criteria": [
+        "Retain exact four-anchor represented-oracle behavior while removing the measured performance deficit.",
+        "Add a separately named authenticated runtime and pass whole-step and convergence gates; never substitute it into the v503 ABI by shape."
+      ]
+    },
+    {
+      "id": "v508_native_score_e4m3_dout_backward",
+      "human_name": "Native-QK Backward with E4M3 dO",
+      "internal_family": {
+        "label": "native TK D128 NVFP4-score hybrid",
+        "version": "v508"
+      },
+      "phase": "backward",
+      "attention_mode": "causal",
+      "status": "disabled_fail_closed",
+      "summary": "First D128 backward to reuse exact forward NVFP4 Q/K bytes and row-K16 scales for score reconstruction. It exposed a separate E4M3 dO range failure and was superseded by E5M2-dO v509.",
+      "selection": {
+        "portable_build": false,
+        "torchtitan_dispatch": "not_connected",
+        "paper_use": "diagnostic_or_ablation"
+      },
+      "shape_profiles": [
+        {
+          "label": "exact fail-closed shape",
+          "constraint": "Strict B1/S4096/Hq32/Hkv8/D128 only.",
+          "batch": [1],
+          "sequence": [4096],
+          "query_heads": [32],
+          "key_value_heads": [8],
+          "head_dimension": [128]
+        }
+      ],
+      "precision": {
+        "summary": "Exact NVFP4 Q/K score reconstruction, represented E4M3 Q/K/V/dO gradient products, and BF16 gradients.",
+        "qk": "Packed NVFP4 Q/K and row-K16 scales for scores; represented E4M3 Q/K for gradient products.",
+        "pv": "Represented E4M3 V in backward.",
+        "gradient_operands": "Represented E4M3 Q/K/V/dO.",
+        "dout": "Represented E4M3 encoded as 4*x.",
+        "outputs": "Additive BF16 dQ/dK/dV."
+      },
+      "source_paths": [
+        "tk_fa4/native_gqa_tk_bwd/v508_d128_gqa_nvfp4_score_e4m3_gradient_b1_exact_s4096_experimental_bshd.cu",
+        "tk_fa4/native_gqa_tk_bwd/v508_d128_gqa_nvfp4_score_e4m3_gradient_b1_exact_s4096_experimental_bshd.cuh",
+        "tk_fa4/lowp_fa4_bwd/native_tk_d128_nvfp4_score_backward.py"
+      ],
+      "build_paths": [
+        "tk_fa4/native_gqa_tk_bwd/Makefile.v508"
+      ],
+      "benchmark_paths": [
+        "results/llama8b_nvfp4_qk_backward_reconstruction_20260831/validate_v508_native_score_hybrid_step5000_v3.py"
+      ],
+      "test_paths": [
+        "tests/test_native_tk_d128_nvfp4_score_backward_runner.py"
+      ],
+      "abi_and_numerics": [
+        "Score reconstruction consumes the exact forward NVFP4 Q/K payload, row-K16 scale pages, and per-head global scales.",
+        "Gradient matrix products retain represented E4M3 Q/K/V/dO.",
+        "On the retained full-model natural-input evaluation, fixed-x4 E4M3 dO was 97.084 percent zero on average and all-zero in eight layers; this exposed local gradient extinction after the false v501 score signal was removed.",
+        "The strict runtime always uses the clearing output wrapper and rejects every non-B1/S4096 shape."
+      ],
+      "evidence": [
+        {
+          "path": "results/llama8b_nvfp4_qk_backward_reconstruction_20260831/summary.json",
+          "supports": "Natural-capture score reconstruction, represented-equation accuracy, exact-zero-dO, full-model binding, and E4M3-dO extinction evidence.",
+          "limitations": [
+            "Read-only backward evaluation without optimizer update or convergence claim."
+          ]
+        }
+      ],
+      "known_limits": [
+        "E4M3 dO loses too much small-gradient signal for the retained 8B natural capture.",
+        "No production dispatcher or portable build selection.",
+        "The diagnostic driver is path-portable and authenticates every input, but its exact historical capture tensors and binary remain external."
+      ],
+      "promotion_criteria": [
+        "Remain superseded for training. Any reconsideration requires a new dO representation that clears natural-capture nonextinction, optimizer-trajectory, performance, and convergence gates under a new route identity."
+      ]
+    },
+    {
+      "id": "v509_quantized_qk_replay",
+      "human_name": "Saved-Quantized-QK Backward",
+      "internal_family": {
+        "label": "native TK D128 NVFP4-score E5M2-dO backward",
+        "version": "v509"
+      },
+      "phase": "backward",
+      "attention_mode": "causal",
+      "status": "release_candidate",
+      "summary": "Retained D128 backward method. It reconstructs scores from exact forward NVFP4 Q/K bytes and scales, uses represented E4M3 Q/K/V for gradient products, and widens dO to E5M2.",
+      "selection": {
+        "portable_build": true,
+        "torchtitan_dispatch": "release_candidate",
+        "paper_use": "headline_method"
+      },
+      "shape_profiles": [
+        {
+          "label": "separately compiled exact batches",
+          "constraint": "B1, B2, and B4 each have an exact S4096/Hq32/Hkv8/D128 artifact; portable training admission is B1/B4 while B2 remains operator-only.",
+          "batch": [1, 2, 4],
+          "sequence": [4096],
+          "query_heads": [32],
+          "key_value_heads": [8],
+          "head_dimension": [128]
+        }
+      ],
+      "precision": {
+        "summary": "NVFP4 score Q/K, represented E4M3 gradient Q/K/V, represented E5M2 dO, and additive BF16 gradients.",
+        "qk": "Packed E2M1 Q/K with forward row-K16 E4M3 scale pages and per-head global scales for score reconstruction; E4M3 Q/K for gradient products.",
+        "pv": "Represented E4M3 V participates in dP; probability is reconstructed from native NVFP4 scores and lstat.",
+        "gradient_operands": "Represented E4M3 Q/K/V encoded as 4*x.",
+        "dout": "Represented E5M2 encoded as 4*x and decoded by 0.25.",
+        "outputs": "Additive BF16 dQ/dK/dV encoded as 4*dX."
+      },
+      "source_paths": [
+        "tk_fa4/native_gqa_tk_bwd/v509_d128_gqa_nvfp4_score_e4m3_qkv_e5m2_dout_b1_exact_s4096_experimental_bshd.cu",
+        "tk_fa4/native_gqa_tk_bwd/v509_d128_gqa_nvfp4_score_e4m3_qkv_e5m2_dout_b1_exact_s4096_experimental_bshd.cuh",
+        "tk_fa4/native_gqa_tk_bwd/e5m2_dout_mixed_mma_microgate_20260831.cuh",
+        "tk_fa4/native_gqa_tk_bwd/native_gqa_tk_bwd_pipelined.cuh",
+        "tk_fa4/lowp_fa4_bwd/native_tk_d128_nvfp4_score_e5m2_dout_backward.py",
+        "tk_fa4/lowp_fa4_bwd/lowp_fa4_bwd.cu",
+        "tk_fa4/lowp_fa4_bwd/projection_fp4_epilogue.cuh",
+        "torchtitan/experiments/fa4/exact_lowp_attention.py"
+      ],
+      "build_paths": [
+        "tools/build_fa4.py",
+        "tk_fa4/native_gqa_tk_bwd/Makefile.v509",
+        "tk_fa4/native_gqa_tk_bwd/Makefile.v509_b2",
+        "tk_fa4/native_gqa_tk_bwd/Makefile.v509_b4",
+        "tk_fa4/lowp_fa4_bwd/Makefile"
+      ],
+      "benchmark_paths": [
+        "tk_fa4/lowp_fa4_bwd/benchmark_v509_report_boundaries.py",
+        "tk_fa4/native_gqa_tk_bwd/validate_v509_batched_isolation.py",
+        "tk_fa4/native_gqa_tk_bwd/validate_v509_fused_projection_publisher.py",
+        "tk_fa4/native_gqa_tk_bwd/validate_e5m2_dout_mixed_mma_microgate_20260831.py",
+        "tk_fa4/native_gqa_tk_bwd/validate_e5m2_dout_producer_microgate_20260831.py"
+      ],
+      "test_paths": [
+        "tests/test_native_tk_d128_nvfp4_score_e5m2_dout_backward.py",
+        "tests/test_v509_e5m2_dout_source_contract.py",
+        "tests/test_v509_e5m2_runtime_wiring.py",
+        "tests/test_v509_e5m2_dout_fused_publication.py",
+        "tests/test_validate_v509_batched_isolation.py"
+      ],
+      "abi_and_numerics": [
+        "lstat = 8 - LSE*log2(e); dstat = -16*sum(O*dO); the physical E5M2 dstat is -4*sum(O*raw_E5M2_dO).",
+        "E5M2 dO is encoded by x4 and decoded by x0.25. dP and dV use the authenticated E4M3-A by E5M2-B descriptor; dQ and dK retain E4M3 gradient operands.",
+        "The standalone output wrapper clears dQ/dK/dV. The fused publisher clears dQ while producing dO/statistics, so the paired wrapper clears dK/dV only.",
+        "The runtime binds exact tensor pointer, shape, dtype, device, source identity, and workspace ownership; execution performs no allocation or wrapper creation.",
+        "The source and extension retain historical experimental labels, but the current TorchTitan adapter selects v509 only through an explicit authenticated route. There is no permissive generic production fallback."
+      ],
+      "evidence": [
+        {
+          "path": "results/fp4_fa4_technical_report_v2_20260819/receipts/causal_d128_report_boundaries_20260901.json",
+          "supports": "Isolated B1 v509 timing, represented-equation numerics, exact-zero-dO behavior, ABI metadata, and module boundaries.",
+          "limitations": [
+            "Historical receipt used a separately authenticated publisher composition and does not replace clean-clone validation of the final fused adapter."
+          ]
+        },
+        {
+          "path": "results/llama8b_nvfp4_qk_backward_reconstruction_20260831/summary.json",
+          "supports": "Natural-capture evidence that E5M2 dO removes the local gradient extinction seen in v508.",
+          "limitations": [
+            "Read-only full-model backward evaluation; no optimizer step."
+          ]
+        }
+      ],
+      "known_limits": [
+        "One CTA per SM and a dependency-heavy schedule limit utilization; the current route is not at the tensor-core or DRAM ceiling.",
+        "B2 is operator-only in the portable training manifest.",
+        "Clean-clone GPU validation and long-horizon convergence remain pending."
+      ],
+      "promotion_criteria": [
+        "Pass fresh-clone B1/B2/B4 source build, represented-oracle, exact-zero-dO, liveness, and performance gates.",
+        "Pass the fused publisher/backward pointer and statistics ABI gate at every training-admitted batch.",
+        "Complete matched optimizer trajectory, distributed save/fresh-resume, and long-horizon convergence evidence."
+      ]
+    },
+    {
+      "id": "v510_dense_e4m3_score_e5m2_dout_snapshot",
+      "human_name": "Dense-Score E4M3/E5M2 Backward Snapshot",
+      "internal_family": {
+        "label": "local-only native TK dense-score experiment",
+        "version": "v510 commit aa021504"
+      },
+      "phase": "backward",
+      "attention_mode": "causal",
+      "status": "preserved_unpromoted",
+      "summary": "Complete materialized overlay for a local-only B1 dense-E4M3-score experiment. It is preserved so development can resume without reconstructing the branch, but it must be ported onto the current tree rather than copied over it.",
+      "selection": {
+        "portable_build": false,
+        "torchtitan_dispatch": "not_connected",
+        "paper_use": "excluded_from_claims"
+      },
+      "shape_profiles": [
+        {
+          "label": "snapshot shape",
+          "constraint": "Strict B1/S4096/Hq32/Hkv8/D128 only.",
+          "batch": [1],
+          "sequence": [4096],
+          "query_heads": [32],
+          "key_value_heads": [8],
+          "head_dimension": [128]
+        }
+      ],
+      "precision": {
+        "summary": "Dense represented E4M3 score Q/K, represented E4M3 gradient Q/K/V, represented E5M2 dO, and BF16 gradients.",
+        "qk": "Dense E4M3 score Q/K rather than native NVFP4 score reconstruction.",
+        "pv": "Represented E4M3 V in backward.",
+        "gradient_operands": "Represented E4M3 Q/K/V.",
+        "dout": "Represented E5M2 with the recorded x4 scale ABI.",
+        "outputs": "BF16 dQ/dK/dV."
+      },
+      "source_paths": [
+        "reproduction/snapshots/v510_aa021504/tk_fa4/native_gqa_tk_bwd/v510_d128_gqa_e4m3_score_qkv_e5m2_dout_b1_exact_s4096_experimental_bshd.cu",
+        "reproduction/snapshots/v510_aa021504/tk_fa4/native_gqa_tk_bwd/v510_d128_gqa_e4m3_score_qkv_e5m2_dout_b1_exact_s4096_experimental_bshd.cuh",
+        "reproduction/snapshots/v510_aa021504/tk_fa4/lowp_fa4_bwd/native_tk_d128_dense_score_e5m2_dout_backward.py",
+        "reproduction/snapshots/v510_aa021504/tk_fa4/lowp_fa4_bwd/lowp_fa4_bwd.cu",
+        "reproduction/snapshots/v510_aa021504/aa021504.patch"
+      ],
+      "build_paths": [
+        "reproduction/snapshots/v510_aa021504/tk_fa4/native_gqa_tk_bwd/Makefile.v510"
+      ],
+      "benchmark_paths": [
+        "reproduction/snapshots/v510_aa021504/tk_fa4/native_gqa_tk_bwd/validate_v510_dense_score_e5m2_dout.py",
+        "reproduction/snapshots/v510_aa021504/tk_fa4/lowp_fa4_bwd/benchmark_llama12b_e2e.py"
+      ],
+      "test_paths": [
+        "reproduction/snapshots/v510_aa021504/tests/test_native_tk_d128_dense_score_e5m2_dout_backward.py",
+        "reproduction/snapshots/v510_aa021504/tests/test_v510_dense_e5m2_runtime_wiring.py",
+        "reproduction/snapshots/v510_aa021504/tests/test_v510_dense_score_e5m2_dout_source_contract.py",
+        "reproduction/snapshots/v510_aa021504/tests/test_v510_e5m2_dout_fused_publication.py"
+      ],
+      "abi_and_numerics": [
+        "The snapshot contains every file changed by aa021504 plus the one-commit patch and SHA256 manifest.",
+        "It uses dense E4M3 scores, represented E4M3 gradient Q/K/V, and represented E5M2 dO with the recorded scale ABI.",
+        "The branch diverged before later v509 correctness, batching, and release changes. Its modified integration files must not overwrite the current root.",
+        "No portable result receipt survives that establishes the precise numerical or performance rejection."
+      ],
+      "evidence": [
+        {
+          "path": "reproduction/snapshots/v510_aa021504/README.md",
+          "supports": "Commit/tree identity, exact preserved scope, safe continuation procedure, and explicit evidence limitation.",
+          "limitations": [
+            "Provenance and source-closure record, not a performance or correctness result."
+          ]
+        },
+        {
+          "path": "reproduction/snapshots/v510_aa021504/SHA256SUMS",
+          "supports": "Byte authentication for the materialized overlay and patch.",
+          "limitations": []
+        }
+      ],
+      "known_limits": [
+        "Not integrated into the current route tree or TorchTitan adapter.",
+        "Classified by its historical branch as a negative result, but the exact rejection reason is unresolved in the portable evidence."
+      ],
+      "promotion_criteria": [
+        "Port only v510-specific changes onto a disposable branch based on the current source, preserving later v509 fixes.",
+        "Keep strict B1/S4096 shape and separate publisher/consumer authentication.",
+        "Pass natural-capture represented-equation, exact-zero-dO, liveness, timing, optimizer-trajectory, and checkpoint gates before any dispatch connection."
+      ]
+    },
+    {
+      "id": "historical_cfc06dad_backward_prototypes",
+      "human_name": "Historical Monolithic FP4 Backward Prototypes",
+      "internal_family": {
+        "label": "early monolithic FP4 FA4 backward experiments",
+        "version": "cfc06dad fp4_fa4_bwd snapshot"
+      },
+      "phase": "backward",
+      "attention_mode": "causal",
+      "status": "preserved_unpromoted",
+      "summary": "The complete backward prototype family that coexisted with the historical non-causal forward study. It is retained as an exact source epoch for continued investigation, but it predates the represented-E4 and saved-quantized-QK backward route and has no portable result receipt supporting a paper claim.",
+      "selection": {
+        "portable_build": false,
+        "torchtitan_dispatch": "not_connected",
+        "paper_use": "excluded_from_claims"
+      },
+      "shape_profiles": [
+        {
+          "label": "historical experimental shapes",
+          "constraint": "The family contains multiple compile-time experiments rather than one authenticated support matrix. Recover an exact target from its host dispatch and build file; do not infer support from this catalog entry."
+        }
+      ],
+      "precision": {
+        "summary": "A heterogeneous early FP4 backward research family containing score quantization, streaming, transposition, key-owned dK/dV, and MXFP4 scheduling experiments. Each compile-time path is authoritative for its own operand contract."
+      },
+      "source_paths": [
+        "reproduction/snapshots/forward_cfc06dad/tk_fa4/fp4_fa4_bwd/fp4_fa4_bwd.cu",
+        "reproduction/snapshots/forward_cfc06dad/tk_fa4/fp4_fa4_bwd/bwd_experiment_common.inc",
+        "reproduction/snapshots/forward_cfc06dad/tk_fa4/fp4_fa4_bwd/bwd_experiment_score_quant.inc",
+        "reproduction/snapshots/forward_cfc06dad/tk_fa4/fp4_fa4_bwd/bwd_experiment_streaming_live.inc",
+        "reproduction/snapshots/forward_cfc06dad/tk_fa4/fp4_fa4_bwd/bwd_experiment_transpose_delta.inc",
+        "reproduction/snapshots/forward_cfc06dad/tk_fa4/fp4_fa4_bwd/bwd_full_mxfp4_live_tensorcore.inc",
+        "reproduction/snapshots/forward_cfc06dad/tk_fa4/fp4_fa4_bwd/bwd_host_dispatch.inc",
+        "reproduction/snapshots/forward_cfc06dad/tk_fa4/fp4_fa4_bwd/bwd_key_owned_dkdv_fused_probe.inc",
+        "reproduction/snapshots/forward_cfc06dad/tk_fa4/fp4_fa4_bwd/bwd_key_owned_mxfp4_schedule.inc",
+        "reproduction/snapshots/forward_cfc06dad/tk_fa4/fp4_fa4_bwd/bwd_pybind.inc",
+        "reproduction/snapshots/forward_cfc06dad/tk_fa4/fp4_fa4_bwd/bwd_shared_host_helpers.inc",
+        "reproduction/snapshots/forward_cfc06dad/tk_fa4/b300_bwd_fa4.cuh",
+        "reproduction/snapshots/forward_cfc06dad/tk_fa4/b300_causal/bf16_b300_mha_causal_fp4.cu",
+        "reproduction/snapshots/forward_cfc06dad/tk_fa4/b300_common.cuh"
+      ],
+      "build_paths": [
+        "reproduction/snapshots/forward_cfc06dad/tk_fa4/fp4_fa4_bwd/Makefile"
+      ],
+      "benchmark_paths": [
+        "reproduction/snapshots/forward_cfc06dad/tk_fa4/direct_bwd_probe.py"
+      ],
+      "test_paths": [
+        "reproduction/snapshots/forward_cfc06dad/tk_fa4/test_tk_fa4.py"
+      ],
+      "abi_and_numerics": [
+        "The 12-file fp4_fa4_bwd subtree is byte-exact to Git tree dd35ecca9db03cdbb063af7e4b3762438b9d5cca.",
+        "The source is intentionally isolated from the later causal root; mixing its includes or dispatch with v509 would create an unauthenticated implementation.",
+        "No surviving portable receipt establishes a correctness, liveness, or performance result for the family as a whole."
+      ],
+      "evidence": [],
+      "known_limits": [
+        "No clean release build target or TorchTitan connection.",
+        "Historical scratch harnesses may require portability work before they run on a new machine.",
+        "No paper claim depends on this route family."
+      ],
+      "promotion_criteria": [
+        "Select one exact compile-time experiment, give it a descriptive route identity, and port it without modifying the preserved snapshot.",
+        "Add a clean external build target and explicit operand/layout/scale ABI tests.",
+        "Pass represented-reference, zero-input, liveness, and matched timing gates before connecting it to a training adapter."
+      ]
+    },
+    {
+      "id": "direct_cute_fp4_qk_backward_d128",
+      "human_name": "Direct CuTe FP4-QK Backward",
+      "internal_family": {
+        "label": "FlashAttention CuTe native FP4-QK experiment",
+        "version": "b531f675 overlay on 9743edaf"
+      },
+      "phase": "backward",
+      "attention_mode": "causal_and_noncausal",
+      "status": "disabled_fail_closed",
+      "summary": "Separate CuTe experiment for native FP4-QK backward, including FP8 dS by MXFP4 Q/K machinery. Public D128 dispatch is deliberately routed to the verified BF16 bridge because the native two-CTA schedule can fail to make progress.",
+      "selection": {
+        "portable_build": false,
+        "torchtitan_dispatch": "forced_safe_fallback",
+        "paper_use": "excluded_from_claims"
+      },
+      "shape_profiles": [
+        {
+          "label": "disabled full D128 path",
+          "constraint": "Dense fixed-length MHA with D128 reaches an unconditional safety guard before the native launch; GQA is not accepted by the full experimental interface.",
+          "head_dimension": [128]
+        },
+        {
+          "label": "isolated MXFP4 dP smoke geometry",
+          "constraint": "The separate dP microkernel test covers B1/B2, S128, Hq8/Hkv2, D128. It validates a narrow operand/layout component, not the full two-CTA backward.",
+          "batch": [1, 2],
+          "sequence": [128],
+          "query_heads": [8],
+          "key_value_heads": [2],
+          "head_dimension": [128]
+        }
+      ],
+      "precision": {
+        "summary": "Packed NVFP4 forward Q/K plus prebuilt MXFP4 column metadata for FP8-dS by FP4-Q/K, with BF16 V in the full experimental interface and BF16 gradients.",
+        "qk": "Packed E2M1 NVFP4 inputs with E4M3 row scales and separately supplied MXFP4 column metadata for backward MMAs.",
+        "pv": "The full experimental backward currently requires BF16 V; the isolated dP prototype separately tests MXFP4 dO and V operands.",
+        "gradient_operands": "FP8 dS by MXFP4 Q/K in the native experimental lane.",
+        "dout": "BF16 in the full interface; the isolated dP prototype uses packed MXFP4 operands.",
+        "outputs": "BF16 gradients through the existing backward plumbing."
+      },
+      "source_paths": [
+        "flash-attention/flash_attn/cute/fp4_flash_bwd_sm100.py",
+        "flash-attention/flash_attn/cute/interface.py",
+        "flash-attention/flash_attn/cute/mma_sm100_desc.py",
+        "tk_fa4/lowp_fa4_bwd/cute_d128_mxfp4_dp_prototype.py",
+        "tk_fa4/lowp_fa4_bwd/d128_gqa_mxfp4_v_dp.patch",
+        "patches/flash_attention_fp4_runtime_overlay_9743edaf_20260831.patch"
+      ],
+      "build_paths": [],
+      "benchmark_paths": [],
+      "test_paths": [
+        "tests/test_cute_d128_mxfp4_dp_prototype.py",
+        "tests/test_d128_gqa_mxfp4_v_dp_patch.py"
+      ],
+      "abi_and_numerics": [
+        "The native FP4 backward is not the saved-quantized-QK backward method and is not used by a reported D128 training result.",
+        "The D128 full path uses a two-CTA schedule that may hang. The public interface rejects it even if the native-enable environment override is set.",
+        "External Q/K column payloads and scale tensors must be supplied together and authenticated; diagnostic synthesis is separately gated.",
+        "The isolated dP prototype establishes its raw width-six E2M1 scaling contract only; it does not clear full-backward liveness or numerics."
+      ],
+      "evidence": [
+        {
+          "path": "patches/flash_attention_fp4_runtime_overlay_9743edaf_20260831.manifest.json",
+          "supports": "Base commit, exact overlay file hashes, and the D128 fail-closed liveness constraint.",
+          "limitations": [
+            "Source/provenance receipt; it is not a successful full D128 run."
+          ]
+        }
+      ],
+      "known_limits": [
+        "Native D128 two-CTA schedule can fail to make progress.",
+        "The full interface is dense MHA-only and requires BF16 V.",
+        "No supported training dispatch or performance claim."
+      ],
+      "promotion_criteria": [
+        "Repair the two-CTA progress dependency and pass bounded timeout/stress liveness tests before removing the public D128 guard.",
+        "Pass full-backward represented-reference, finite/nontrivial, exact-zero-dO, layout/scale, and matched performance gates on a fresh build.",
+        "Add an explicit authenticated route identity; never replace the saved-quantized-QK backward method by editing a generic dispatch condition."
+      ]
+    }
+  ]
+}

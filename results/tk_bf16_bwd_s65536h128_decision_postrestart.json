@@ -1,0 +1,167 @@
+{
+  "artifact": {
+    "path": "results/.artifacts/tk_fa4_s65536h128_exact_C.cpython-312-aarch64-linux-gnu.so",
+    "sha256": "5035be0988dd4f30cd64676fed58f5db548425664d2997ffa7044e5e2efdd96a",
+    "size_bytes": 10305616
+  },
+  "decision": {
+    "objective_beats_cute": false,
+    "retention_pass": true,
+    "retention_reason": "The exact route is numerically valid and about 9.5x faster than the invalid legacy parent, but remains about 1.35x slower than CuTe.",
+    "status": "validated_private_baseline_not_objective_win"
+  },
+  "dispatch_audit": {
+    "public_default_changed": false,
+    "shared_launcher_guard_scope": "The audit covers the currently exposed wrappers. Both shared templated launchers broadly admit B1/S65536/H128, while only the private all-true wrapper is validated.",
+    "validated_specialization": "Only the private all-true exact specialization b300_mha_bwd_hot_cute16_candidate_s65536h128_branchless_do_base_select_internal was validated.",
+    "wrapper_containment": "The currently exposed wrappers select the exact specialization and prevent other H128 template combinations from leaking into active dispatch; this is not a claim that the shared launchers themselves are narrowly guarded."
+  },
+  "harness": {
+    "current_schema_v2_sha256": "63e19fde901d714168c663ecee7f11d65081d903541d3871c1c8b52f79431db3",
+    "current_schema_v2_snapshot": "results/tk_bf16_bwd_s65536h128_harness_63e19fde901d714168c663ecee7f11d65081d903541d3871c1c8b52f79431db3.py",
+    "historical_a4a90275_snapshot": "results/tk_bf16_bwd_s65536h128_harness_a4a90275abfb7bb18169fd5c09401124b5b02cdcf8b36445005834ce60552f21.py",
+    "validated_gate_sha256": "f229f69b9746f91a8beff2bf5ea489d8ff487138d90908fa6b30591c852d087c",
+    "validated_gate_source": "e013cf114c4daa1909df7e10e39ff821010a4545:results/tk_bf16_bwd_s65536h128_harness.py",
+    "gate_semantics_by_harness": [
+      {
+        "applies_to_sha256": "f229f69b9746f91a8beff2bf5ea489d8ff487138d90908fa6b30591c852d087c",
+        "schema_version": 1,
+        "exit_status_contract": "No explicit exit-2 enforcement is claimed.",
+        "retention_semantics": "Derive child_over_parent < 1.0 from the recorded ratio.",
+        "objective_semantics": "No explicit objective field; derive child_over_cute < 1.0 from the recorded ratio."
+      },
+      {
+        "applies_to_sha256": "63e19fde901d714168c663ecee7f11d65081d903541d3871c1c8b52f79431db3",
+        "schema_version": 2,
+        "exit_status_contract": "Exit status 2 when the backward-compatible mode-local gate_pass is false.",
+        "retention_semantics": "Explicit retention_evaluated and retention_pass fields.",
+        "objective_semantics": "Explicit objective_evaluated, objective_beats_cute, and overall_contract_pass fields; objective does not alter mode-local gate_pass."
+      }
+    ]
+  },
+  "immutable_evidence": {
+    "validated_harness_sha256": "f229f69b9746f91a8beff2bf5ea489d8ff487138d90908fa6b30591c852d087c",
+    "onecall": {
+      "path": "results/tk_bf16_bwd_s65536h128_onecall_seed20261280_postrestart.json",
+      "size_bytes": 3990,
+      "sha256": "cfd0737736bea4b9dec9e3d006d3457516f844dd03ed41ec6abd1cbd59e6a661",
+      "harness_sha256": "f229f69b9746f91a8beff2bf5ea489d8ff487138d90908fa6b30591c852d087c",
+      "seed": 20261280,
+      "gate_pass": true
+    },
+    "stress50": {
+      "path": "results/tk_bf16_bwd_s65536h128_stress50_seed20261281_postrestart.json",
+      "size_bytes": 3523,
+      "sha256": "a7dae7590a5c0242ce99385f9ef4aaee830f6c820ac29882a06173512208055b",
+      "harness_sha256": "f229f69b9746f91a8beff2bf5ea489d8ff487138d90908fa6b30591c852d087c",
+      "seed": 20261281,
+      "gate_pass": true
+    },
+    "stress2000": {
+      "path": "results/tk_bf16_bwd_s65536h128_stress2000_seed20260768_postrestart.json",
+      "size_bytes": 3533,
+      "sha256": "9d7bfd7d2e7859704487d92131c9b9eaf1156c049c3fc649f8d4a0f70d98b7b0",
+      "harness_sha256": "f229f69b9746f91a8beff2bf5ea489d8ff487138d90908fa6b30591c852d087c",
+      "seed": 20260768,
+      "gate_pass": true
+    },
+    "failed_gate_selftest": {
+      "path": "results/tk_bf16_bwd_s65536h128_failed_gate_selftest_seed20261292.json",
+      "size_bytes": 4492,
+      "sha256": "11dcb26bb1a50da4a54bee0bf3dc3320ee2bf5c8d7f3efd7d5e896ed2658b41c",
+      "harness_sha256": "a4a90275abfb7bb18169fd5c09401124b5b02cdcf8b36445005834ce60552f21",
+      "evidence_scope": "Historical a4a90275 harness hardening selftest; numerical gate false and process exit status 2. It does not describe f229 semantics.",
+      "seed": 20261292,
+      "gate_pass": false
+    },
+    "schema_v2_failed_gate_selftest": {
+      "path": "results/tk_bf16_bwd_s65536h128_schema_v2_failed_gate_selftest_seed20261300.json",
+      "size_bytes": 5715,
+      "sha256": "4823a2aa0bddd99124faf65d7d58584c529090c38ec2c504d8598dee47a1e449",
+      "harness_sha256": "63e19fde901d714168c663ecee7f11d65081d903541d3871c1c8b52f79431db3",
+      "evidence_scope": "Current schema-v2 negative-path control using the known-invalid generic H128 child; process exit status 2 with complete=true, gate_scope=correctness, gate_pass=false, correctness_pass=false, objective_evaluated=false, and overall_contract_pass=null.",
+      "seed": 20261300,
+      "gate_pass": false
+    },
+    "static_gate": {
+      "harness_sha256": null,
+      "harness_applicability": "Static cubin inspection is independent of the Python harness and is bound to artifact SHA256 5035be0988dd4f30cd64676fed58f5db548425664d2997ffa7044e5e2efdd96a.",
+      "resources": {
+        "path": "results/.artifacts/tk_fa4_s65536h128_exact.res.txt",
+        "size_bytes": 70253,
+        "sha256": "960c1f08f9acc3df4d1f967a83580d2c798eb8ba1570f405751544bd98603040"
+      },
+      "exact_symbol_sass": {
+        "path": "results/.artifacts/tk_fa4_s65536h128_exact.symbol.sass",
+        "size_bytes": 1534046,
+        "sha256": "defa7c7cb344c27a36bf5017dc4827f5664702d21fe8229ada289d5ce97c3472"
+      },
+      "exact_symbol": {
+        "path": "results/.artifacts/tk_fa4_s65536h128_exact.symbol.txt",
+        "size_bytes": 412,
+        "sha256": "b97dc944ad537f99f50fcd3e815dcba0c720e5ffead6dd917947058ea9b91e42"
+      }
+    },
+    "ncu_child": {
+      "manifest_path": "results/tk_bf16_bwd_s65536h128_ncu_child_seed20261284_postrestart.json",
+      "manifest_size_bytes": 2837,
+      "manifest_sha256": "bad1e512f9bf3d466a7bc1575b3e50bd138f8b5c635e601137bd1296b1baf3cd",
+      "report_path": "results/.artifacts/tk_s65536h128_child_seed20261284.ncu-rep",
+      "report_size_bytes": 78529531,
+      "report_sha256": "cbb078bf77a825056f56c050691795740dfa9101787c5f9b2d916401c5dd332d",
+      "harness_sha256": "f229f69b9746f91a8beff2bf5ea489d8ff487138d90908fa6b30591c852d087c",
+      "seed": 20261284
+    },
+    "ncu_cute": {
+      "manifest_path": "results/tk_bf16_bwd_s65536h128_ncu_cute_seed20261284_postrestart.json",
+      "manifest_size_bytes": 2834,
+      "manifest_sha256": "fd42873eca2259c9afc4e72718bce5622bbeedf3eef4163bb63a07e5fb151787",
+      "report_path": "results/.artifacts/tk_s65536h128_cute_seed20261284.ncu-rep",
+      "report_size_bytes": 1627998,
+      "report_sha256": "bea48d18f0623c9f327b66cf341d23184f86a5ecb73a7c28ac8c58f361f67130",
+      "harness_sha256": "f229f69b9746f91a8beff2bf5ea489d8ff487138d90908fa6b30591c852d087c",
+      "seed": 20261284
+    }
+  },
+  "provenance": {
+    "cutlass_dsl": {
+      "loaded_module_path": "/workspace/codebases/pv/fp4_matmul/results/.artifacts/python/nvidia_cutlass_dsl/python_packages/cutlass/__init__.py",
+      "loaded_module_version": "4.4.1",
+      "local_artifact_distribution_version": "4.4.1",
+      "local_artifact_libs_base_distribution_version": "4.4.1",
+      "python_environment_distribution_version": "4.5.2",
+      "python_environment_libs_base_distribution_version": "4.5.2"
+    },
+    "flash_attn_cute_interface": {
+      "module_path": "/workspace/codebases/pv/fp4_matmul/flash-attention/flash_attn/cute/interface.py",
+      "repository_head": "9743edaf3227a25f6afc4fa7be8b5e8498610553",
+      "repository_head_tree": "903da6ff2647802b00ac4962a8bcd19e3da60214",
+      "tracked_worktree_dirty": false
+    },
+    "local_commit": "e013cf114c4daa1909df7e10e39ff821010a4545",
+    "source_parent": "5ad0404f343f93f945cd74f22a1940e073c2564b"
+  },
+  "rotations": [
+    {
+      "child_over_cute": 1.3524366045680736,
+      "child_over_parent": 0.10498504114503981,
+      "manifest": "results/tk_bf16_bwd_s65536h128_timing201_seed20261282_postrestart.json",
+      "manifest_sha256": "399927ae52c3778584c8ad9f3a3957a85472f5af89118ff608b26cf100b43d72",
+      "harness_sha256": "f229f69b9746f91a8beff2bf5ea489d8ff487138d90908fa6b30591c852d087c",
+      "objective_beats_cute": false,
+      "retention_pass": true,
+      "seed": 20261282
+    },
+    {
+      "child_over_cute": 1.3527429108056825,
+      "child_over_parent": 0.10497053226630157,
+      "manifest": "results/tk_bf16_bwd_s65536h128_timing201_seed20261283_postrestart.json",
+      "manifest_sha256": "689e37a714ada10e7e4335941940ec587c07edd93f1fa4a14ab9777828095f65",
+      "harness_sha256": "f229f69b9746f91a8beff2bf5ea489d8ff487138d90908fa6b30591c852d087c",
+      "objective_beats_cute": false,
+      "retention_pass": true,
+      "seed": 20261283
+    }
+  ],
+  "schema_version": 2
+}

@@ -1,0 +1,4170 @@
+{
+  "schema": "tk_fp4_bert_sequence_classification_eval_v1",
+  "model": "textattack/bert-base-uncased-SST-2",
+  "dataset": "glue",
+  "dataset_config": "sst2",
+  "split": "validation",
+  "seed": 20260728,
+  "extension": "/tmp/tk_hao_unified_g0/b1_s256_h16_d128_nv-nv.so",
+  "protocol": {
+    "sequence_length": 256,
+    "samples": 872,
+    "right_padding": true,
+    "full_noncausal_attention": true,
+    "global_anchor_kv": false,
+    "global_anchor_samples": 32,
+    "timing_scope": "accuracy only; dynamic Q/K/V quantization is not timed",
+    "requested_samples": 872,
+    "stop_on_nonfinite": true
+  },
+  "classification": {
+    "samples": 1,
+    "baseline_accuracy": 1.0,
+    "fp4_accuracy": 0.0,
+    "top1_agreement": 0.0,
+    "logit_error": {
+      "cosine": NaN,
+      "rmse": NaN,
+      "reference_rms": 4.174244403839111,
+      "relative_l2": NaN,
+      "max_abs": NaN
+    },
+    "mean_kl_fp4_vs_baseline": NaN,
+    "all_baseline_logits_finite": true,
+    "all_fp4_logits_finite": false
+  },
+  "attention": {
+    "attention_backend": "tk",
+    "topology": {
+      "schema": "tk_hao_direct_pipeline_v1",
+      "valid": 0,
+      "route": "real_fwd_tk_hao_direct_nvfp4_nvfp4pv",
+      "batch": 1,
+      "heads": 16,
+      "seqlen": 256,
+      "dqk": 128,
+      "dvo": 128,
+      "logical_jobs": 0,
+      "physical_grid_ctas": 0,
+      "threads_per_cta": 0,
+      "query_stages": 2,
+      "kv_stages": 0,
+      "tmem_columns": 0,
+      "dynamic_smem_bytes": 0,
+      "persistent": true,
+      "p_first_chunks": 1,
+      "early_p_k64": true,
+      "sparse_pv": false,
+      "sparse_pattern": "dense",
+      "sparse_selector_mode": 0,
+      "sparse_fixed_selector": 0,
+      "sparse_split_k128": false,
+      "sparse_issue_count": 0,
+      "sparse_logical_k_per_issue": 0,
+      "sparse_early_half": false,
+      "mx_disjoint_scale_handoff": false,
+      "mx_direct_scale_handoff": false,
+      "mx_register_scale_handoff": false,
+      "mx_pair_scale_scratch": false,
+      "mx_async_scale_handoff": false,
+      "mx_shiftless_corr_bypass": true,
+      "mx_defer_job_stats_wait": false,
+      "mx_direct_scale_scratch": false,
+      "mx_split_stage_pv": false,
+      "mx_qk_scale_preload": false,
+      "mx_qk_scale_preload_mask": 3,
+      "mx_qk_scale_preload_before_p": false,
+      "nv_qk_folded_k64_scales": false,
+      "nv_qk_folded_k64_scale_mask": 0,
+      "nv_qk_compact_folded_scales": false,
+      "nv_qk_preload_page_mask": 3,
+      "mx_q3_corr_wg": false,
+      "mx_dual_q3_corr_wg": false,
+      "mx_dual_q3_smem_wg": false,
+      "mx_dual_q3_tmem_wg": false,
+      "fused_pv_issue": false,
+      "log2_p_quant": true,
+      "mx_log2_p_quant": false,
+      "mx_scale_select": 0,
+      "mx_direct_log_code": false,
+      "mx_direct_log_code_mode": 0,
+      "mx_log_lut_bits": 0,
+      "mx_log_lut_bit_code_mode": 0,
+      "mx_quantized_denom": false,
+      "mx_denom_corr_wg": false,
+      "mx_denom_load_width": 4,
+      "mx_denom_pipelined_sum": false,
+      "mx_denom_pair_overlap": false,
+      "mx_denom_factor_hoist": false,
+      "mx_denom_int_scale_fusion": false,
+      "mx_denom_sum_lanes": 1,
+      "mx_denom_words": 4,
+      "mx_denom_decode_mode": 0,
+      "mx_denom_scale_smem": false,
+      "mx_denom_payload_smem": false,
+      "mx_denom_magic_i2f": false,
+      "mx_denom_early_smem": false,
+      "mx_denom_early_split": false,
+      "mx_denom_split_prefetch": false,
+      "mx_global_anchor32": false,
+      "mx_global_anchor128": false,
+      "mx_global_anchor_bias": 0.0,
+      "mx_global_anchor_margin_log2": 0,
+      "mx_anchor_affine_hoist": false,
+      "mx_fixed_anchor_log2": 0,
+      "mx_stored_scale_shift_log2": 0,
+      "debug_lse_stat": 0,
+      "mx_denom_sample_stride": 1,
+      "mx_max_sample_stride": 1,
+      "mx_max_sample_bias_x2": 0,
+      "mx_q1_max_sample_stride": 1,
+      "mx_pair_scale_reuse": 0,
+      "mx_pair_scale_stage_mask": 3,
+      "mx_pair_scale_period": 1,
+      "mx_pair_scale_delta": 0,
+      "mx_q1_pair_probe": 0,
+      "mx_q1_pair_probe_bias": 0.0,
+      "mx_lagged_q1_scale": false,
+      "mx_q1_scale_offload": false,
+      "mx_q1_self_max": 0,
+      "mx_scan_fused_p": false,
+      "mx_local_native_deferred_scale": false,
+      "mx_bit_exp2_mask": 0,
+      "mx_pwl_exp2": false,
+      "mx_pwl_exp2_mode": 0,
+      "mx_mode23_native_density": 0,
+      "mx_mode23_native_quarter_mask": 0,
+      "mx_mode23_early_native": false,
+      "mx_mode23_early_native_stage_mask": 3,
+      "mx_mode23_early_native_quarter_mask": 15,
+      "mx_mode23_early_native_lookahead": 4,
+      "mx_mode23_early_native_order": 0,
+      "mx_pwl_four_sample_denom": false,
+      "mx_full_approx_denom": false,
+      "mx_full_approx_denom_mode": 0,
+      "mx_affine_a": 1.623300313949585,
+      "mx_affine_b": 0.9208354353904724,
+      "mx_stage0_affine_mask": 0,
+      "mx_stage1_affine_mask": 0,
+      "mx_shiftless_softmax": true,
+      "nv_shiftless_softmax": true,
+      "nv_shiftless_scale_lift": false,
+      "nv_scale_satfinite": false,
+      "nv_v_global_decode": false,
+      "nv_p_global_log2": 0.0,
+      "nv_policy_id": 0,
+      "nv_pwl_exp2_mode": 9,
+      "nv_stage0_affine_mask": 14,
+      "nv_stage1_affine_mask": 14,
+      "nv_fast_approx_mode": 0,
+      "nv_affine_a": 1.6113160848617554,
+      "nv_affine_b": 0.9357470273971558,
+      "nv_cubic_a": 0.07839805632829666,
+      "nv_cubic_b": 0.286250501871109,
+      "nv_cubic_c": 0.6314520239830017,
+      "nv_cubic_d": 0.9920233488082886,
+      "nv_refit_cubic_a": 0.07430709153413773,
+      "nv_refit_cubic_b": 0.28611862659454346,
+      "nv_refit_cubic_c": 0.6467000246047974,
+      "nv_refit_cubic_d": 0.9901078343391418,
+      "nv_hinge_m": 1.3763010501861572,
+      "nv_hinge_b": 0.2806391716003418,
+      "nv_hinge_d": 0.9073908925056458,
+      "nv_hinge_t": 0.8456308245658875,
+      "nv_native_pairs": 4,
+      "nv_native6_quarter_mask": 0,
+      "nv_relu_pack": true,
+      "nv_quantized_denom": false,
+      "nv_hybrid_denom": false,
+      "nv_sampled_denom": true,
+      "mx_sampled_stabilizer": false,
+      "mx_retain_q0": false,
+      "mx_pair_load_scan": false,
+      "mx_half_prefetch_q0": false,
+      "mx_half_prefetch_q1": false,
+      "mx_half_prefetch_q3": false,
+      "mx_delayed_half_q2": true,
+      "mx_delayed_early_q3": true,
+      "mx_early_q2_reduce": true,
+      "mx_stage1_early_q1": false,
+      "mx_q1_max_interleave": false,
+      "mx_tree_max": false,
+      "mx_max3_reduce": false,
+      "mx_max3_wide_reduce": false,
+      "nv_quarter_scale": true,
+      "nv_scale_encode_mode": 2,
+      "nv_quarter_schedule_mode": 1,
+      "nv_denom_source": 0,
+      "nv_denom_corr_wg": false,
+      "nv_denom_smem_handoff": false,
+      "nv_denom_words": 4,
+      "nv_denom_known_max": false,
+      "nv_denom_short_exact": false,
+      "nv_denom_exact_max_tiles": 0,
+      "nv_global_anchor64": false,
+      "nv_global_anchor32": false,
+      "nv_global_anchor_samples": 0,
+      "nv_global_anchor_scale": 1.0,
+      "nv_global_anchor_bias": 0.0,
+      "nv_debug_lse_rowmax": false,
+      "nv_tail_q3_hook_word": 0,
+      "nv_q01_corr_wg": false,
+      "nv_tree_max": false,
+      "nv_max3_reduce": false,
+      "nv_max_sample_stride": 1,
+      "nv_max_sample_bias_x2": 0,
+      "nv_q0_stabilizer": false,
+      "nv_preview_stabilizer": false,
+      "nv_preview_width": 0,
+      "nv_preview_bias_x8": 0,
+      "nv_full_row_stabilizer": false,
+      "nv_direct_scale_handoff": true,
+      "nv_preload_v_tail_mode": 0,
+      "nv_issuer_v_scale_prefetch_mask": 0,
+      "nv_register_scale_handoff": false,
+      "nv_reuse_v_scale": false,
+      "nv_softmax_v_scale_prefetch": false,
+      "p_ilp_pipeline": false,
+      "fixed_p_ceiling": false,
+      "score_pack_ceiling": false,
+      "rowmax_pack_ceiling": false,
+      "fake_denom_ceiling": false,
+      "ex2_emu_mask": 0,
+      "ex2_alu_degree": 3,
+      "mx_ex2_q1_mask": 0,
+      "mx_ex2_q2_mask": 0,
+      "mx_ex2_q3_mask": 0,
+      "task_order": 0,
+      "wait_hint_cycles": 10000000,
+      "qk_format": "nvfp4_e4m3_block16",
+      "pv_format": "nvfp4_e4m3_block16"
+    },
+    "layer_extension_topologies": {},
+    "formats": {
+      "qk": "nvfp4",
+      "pv": "nvfp4"
+    },
+    "interleave_kv_quarters": false,
+    "global_anchor_kv": false,
+    "global_anchor_samples": 32,
+    "mx_quant_modes": {
+      "q": 0,
+      "k": 0,
+      "v": 0
+    },
+    "nv_qk_fold_k64_scales": "none",
+    "nv_qk_fold_scale_select": "mse",
+    "nv_qk_fold_scale_multiplier": 1.0,
+    "qk_equalization": 1.0,
+    "qk_channel_equalization": "none",
+    "qk_channel_equalization_strength": 1.0,
+    "qk_channel_permutation": "none",
+    "qk_orthogonal_transform": "none",
+    "key_centering": "none",
+    "score_shift": 0.0,
+    "score_shift_predictor": "fixed",
+    "score_shift_bias": 0.0,
+    "all_outputs_finite": false,
+    "nonfinite_output_rows": 21717,
+    "layer_output_error": {
+      "0": {
+        "cosine": NaN,
+        "rmse": NaN,
+        "reference_rms": 0.17530295252799988,
+        "relative_l2": NaN,
+        "max_abs": NaN
+      },
+      "1": {
+        "cosine": NaN,
+        "rmse": NaN,
+        "reference_rms": NaN,
+        "relative_l2": NaN,
+        "max_abs": NaN
+      },
+      "2": {
+        "cosine": NaN,
+        "rmse": NaN,
+        "reference_rms": NaN,
+        "relative_l2": NaN,
+        "max_abs": NaN
+      },
+      "3": {
+        "cosine": NaN,
+        "rmse": NaN,
+        "reference_rms": NaN,
+        "relative_l2": NaN,
+        "max_abs": NaN
+      },
+      "4": {
+        "cosine": NaN,
+        "rmse": NaN,
+        "reference_rms": NaN,
+        "relative_l2": NaN,
+        "max_abs": NaN
+      },
+      "5": {
+        "cosine": NaN,
+        "rmse": NaN,
+        "reference_rms": NaN,
+        "relative_l2": NaN,
+        "max_abs": NaN
+      },
+      "6": {
+        "cosine": NaN,
+        "rmse": NaN,
+        "reference_rms": NaN,
+        "relative_l2": NaN,
+        "max_abs": NaN
+      },
+      "7": {
+        "cosine": NaN,
+        "rmse": NaN,
+        "reference_rms": NaN,
+        "relative_l2": NaN,
+        "max_abs": NaN
+      },
+      "8": {
+        "cosine": NaN,
+        "rmse": NaN,
+        "reference_rms": NaN,
+        "relative_l2": NaN,
+        "max_abs": NaN
+      },
+      "9": {
+        "cosine": NaN,
+        "rmse": NaN,
+        "reference_rms": NaN,
+        "relative_l2": NaN,
+        "max_abs": NaN
+      },
+      "10": {
+        "cosine": NaN,
+        "rmse": NaN,
+        "reference_rms": NaN,
+        "relative_l2": NaN,
+        "max_abs": NaN
+      },
+      "11": {
+        "cosine": NaN,
+        "rmse": NaN,
+        "reference_rms": NaN,
+        "relative_l2": NaN,
+        "max_abs": NaN
+      }
+    },
+    "layer_finite_stats": {
+      "0": [
+        {
+          "sample": 0,
+          "query": {
+            "all_finite": true,
+            "finite_count": 196608,
+            "nonfinite_count": 0,
+            "minimum": -7.65625,
+            "maximum": 6.3125,
+            "max_abs": 7.65625
+          },
+          "key": {
+            "all_finite": true,
+            "finite_count": 196608,
+            "nonfinite_count": 0,
+            "minimum": -6.875,
+            "maximum": 8.25,
+            "max_abs": 8.25
+          },
+          "value": {
+            "all_finite": true,
+            "finite_count": 196608,
+            "nonfinite_count": 0,
+            "minimum": -3.9375,
+            "maximum": 2.75,
+            "max_abs": 3.9375
+          },
+          "scores": {
+            "all_finite": false,
+            "finite_count": 36864,
+            "nonfinite_count": 749568,
+            "minimum": -9.362695693969727,
+            "maximum": 10.202066421508789,
+            "max_abs": 10.202066421508789
+          },
+          "q_scale": {
+            "all_finite": true,
+            "finite_count": 32768,
+            "nonfinite_count": 0,
+            "minimum": 0.0,
+            "maximum": 1.75,
+            "max_abs": 1.75
+          },
+          "k_scale": {
+            "all_finite": true,
+            "finite_count": 65536,
+            "nonfinite_count": 0,
+            "minimum": 0.0,
+            "maximum": 1.625,
+            "max_abs": 1.625
+          },
+          "v_scale": {
+            "all_finite": true,
+            "finite_count": 32768,
+            "nonfinite_count": 0,
+            "minimum": 0.0,
+            "maximum": 0.625,
+            "max_abs": 0.625
+          },
+          "output": {
+            "all_finite": false,
+            "finite_count": 191616,
+            "nonfinite_count": 4992,
+            "minimum": -0.00469970703125,
+            "maximum": 0.005096435546875,
+            "max_abs": 0.005096435546875
+          },
+          "bad_output_rows": [
+            {
+              "batch": 0,
+              "head": 2,
+              "row": 73,
+              "score_minimum": -Infinity,
+              "score_maximum": 7.4177422523498535,
+              "kernel_lse_payload": 19.505008697509766
+            },
+            {
+              "batch": 0,
+              "head": 2,
+              "row": 110,
+              "score_minimum": -Infinity,
+              "score_maximum": 7.201705455780029,
+              "kernel_lse_payload": 18.930683135986328
+            },
+            {
+              "batch": 0,
+              "head": 2,
+              "row": 150,
+              "score_minimum": -Infinity,
+              "score_maximum": 7.276458740234375,
+              "kernel_lse_payload": 20.459373474121094
+            },
+            {
+              "batch": 0,
+              "head": 2,
+              "row": 151,
+              "score_minimum": -Infinity,
+              "score_maximum": 7.234073638916016,
+              "kernel_lse_payload": 20.2520809173584
+            },
+            {
+              "batch": 0,
+              "head": 2,
+              "row": 205,
+              "score_minimum": -Infinity,
+              "score_maximum": 7.3389387130737305,
+              "kernel_lse_payload": 20.86676025390625
+            },
+            {
+              "batch": 0,
+              "head": 2,
+              "row": 234,
+              "score_minimum": -Infinity,
+              "score_maximum": 7.775146484375,
+              "kernel_lse_payload": 19.474245071411133
+            },
+            {
+              "batch": 0,
+              "head": 3,
+              "row": 28,
+              "score_minimum": -Infinity,
+              "score_maximum": 8.146060943603516,
+              "kernel_lse_payload": 19.70393943786621
+            },
+            {
+              "batch": 0,
+              "head": 3,
+              "row": 43,
+              "score_minimum": -Infinity,
+              "score_maximum": 8.274052619934082,
+              "kernel_lse_payload": 20.84488868713379
+            },
+            {
+              "batch": 0,
+              "head": 3,
+              "row": 48,
+              "score_minimum": -Infinity,
+              "score_maximum": 8.620528221130371,
+              "kernel_lse_payload": 21.425012588500977
+            },
+            {
+              "batch": 0,
+              "head": 3,
+              "row": 54,
+              "score_minimum": -Infinity,
+              "score_maximum": 8.265459060668945,
+              "kernel_lse_payload": 20.837671279907227
+            },
+            {
+              "batch": 0,
+              "head": 3,
+              "row": 59,
+              "score_minimum": -Infinity,
+              "score_maximum": 7.997342586517334,
+              "kernel_lse_payload": 20.881383895874023
+            },
+            {
+              "batch": 0,
+              "head": 3,
+              "row": 67,
+              "score_minimum": -Infinity,
+              "score_maximum": 8.10615062713623,
+              "kernel_lse_payload": 20.204940795898438
+            },
+            {
+              "batch": 0,
+              "head": 3,
+              "row": 75,
+              "score_minimum": -Infinity,
+              "score_maximum": 7.884005546569824,
+              "kernel_lse_payload": 20.270641326904297
+            },
+            {
+              "batch": 0,
+              "head": 3,
+              "row": 88,
+              "score_minimum": -Infinity,
+              "score_maximum": 6.8226318359375,
+              "kernel_lse_payload": 19.098791122436523
+            },
+            {
+              "batch": 0,
+              "head": 3,
+              "row": 98,
+              "score_minimum": -Infinity,
+              "score_maximum": 6.606093883514404,
+              "kernel_lse_payload": 18.26734161376953
+            },
+            {
+              "batch": 0,
+              "head": 3,
+              "row": 105,
+              "score_minimum": -Infinity,
+              "score_maximum": 7.111215114593506,
+              "kernel_lse_payload": 21.3223819732666
+            },
+            {
+              "batch": 0,
+              "head": 3,
+              "row": 130,
+              "score_minimum": -Infinity,
+              "score_maximum": 8.580988883972168,
+              "kernel_lse_payload": 21.29226303100586
+            },
+            {
+              "batch": 0,
+              "head": 3,
+              "row": 142,
+              "score_minimum": -Infinity,
+              "score_maximum": 8.470354080200195,
+              "kernel_lse_payload": 20.147890090942383
+            },
+            {
+              "batch": 0,
+              "head": 3,
+              "row": 146,
+              "score_minimum": -Infinity,
+              "score_maximum": 8.43852424621582,
+              "kernel_lse_payload": 21.182172775268555
+            },
+            {
+              "batch": 0,
+              "head": 3,
+              "row": 167,
+              "score_minimum": -Infinity,
+              "score_maximum": 8.878419876098633,
+              "kernel_lse_payload": 21.292476654052734
+            },
+            {
+              "batch": 0,
+              "head": 3,
+              "row": 195,
+              "score_minimum": -Infinity,
+              "score_maximum": 7.601367950439453,
+              "kernel_lse_payload": 18.617780685424805
+            },
+            {
+              "batch": 0,
+              "head": 3,
+              "row": 200,
+              "score_minimum": -Infinity,
+              "score_maximum": 8.075743675231934,
+              "kernel_lse_payload": 19.974609375
+            },
+            {
+              "batch": 0,
+              "head": 3,
+              "row": 202,
+              "score_minimum": -Infinity,
+              "score_maximum": 8.137452125549316,
+              "kernel_lse_payload": 20.415456771850586
+            },
+            {
+              "batch": 0,
+              "head": 3,
+              "row": 203,
+              "score_minimum": -Infinity,
+              "score_maximum": 8.097835540771484,
+              "kernel_lse_payload": 21.105466842651367
+            },
+            {
+              "batch": 0,
+              "head": 3,
+              "row": 207,
+              "score_minimum": -Infinity,
+              "score_maximum": 7.677718162536621,
+              "kernel_lse_payload": 20.830780029296875
+            },
+            {
+              "batch": 0,
+              "head": 3,
+              "row": 216,
+              "score_minimum": -Infinity,
+              "score_maximum": 7.667524337768555,
+              "kernel_lse_payload": 21.16926383972168
+            },
+            {
+              "batch": 0,
+              "head": 3,
+              "row": 219,
+              "score_minimum": -Infinity,
+              "score_maximum": 7.378173828125,
+              "kernel_lse_payload": 19.69862937927246
+            },
+            {
+              "batch": 0,
+              "head": 3,
+              "row": 220,
+              "score_minimum": -Infinity,
+              "score_maximum": 7.614778995513916,
+              "kernel_lse_payload": 21.42913055419922
+            },
+            {
+              "batch": 0,
+              "head": 3,
+              "row": 223,
+              "score_minimum": -Infinity,
+              "score_maximum": 6.973505020141602,
+              "kernel_lse_payload": 19.077489852905273
+            },
+            {
+              "batch": 0,
+              "head": 3,
+              "row": 235,
+              "score_minimum": -Infinity,
+              "score_maximum": 7.414543151855469,
+              "kernel_lse_payload": 21.74128532409668
+            },
+            {
+              "batch": 0,
+              "head": 3,
+              "row": 236,
+              "score_minimum": -Infinity,
+              "score_maximum": 7.533370018005371,
+              "kernel_lse_payload": 21.18773651123047
+            },
+            {
+              "batch": 0,
+              "head": 3,
+              "row": 238,
+              "score_minimum": -Infinity,
+              "score_maximum": 7.548404693603516,
+              "kernel_lse_payload": 20.807998657226562
+            }
+          ],
+          "lse": {
+            "all_finite": true,
+            "finite_count": 3072,
+            "nonfinite_count": 0,
+            "minimum": 11.66823959350586,
+            "maximum": 23.3660831451416,
+            "max_abs": 23.3660831451416
+          }
+        }
+      ],
+      "1": [
+        {
+          "sample": 0,
+          "query": {
+            "all_finite": false,
+            "finite_count": 145920,
+            "nonfinite_count": 50688,
+            "minimum": -6.0,
+            "maximum": 7.21875,
+            "max_abs": 7.21875
+          },
+          "key": {
+            "all_finite": false,
+            "finite_count": 145920,
+            "nonfinite_count": 50688,
+            "minimum": -6.65625,
+            "maximum": 6.4375,
+            "max_abs": 6.65625
+          },
+          "value": {
+            "all_finite": false,
+            "finite_count": 145920,
+            "nonfinite_count": 50688,
+            "minimum": -3.171875,
+            "maximum": 2.8125,
+            "max_abs": 3.171875
+          },
+          "scores": {
+            "all_finite": false,
+            "finite_count": 25080,
+            "nonfinite_count": 761352,
+            "minimum": -11.671374320983887,
+            "maximum": 13.042281150817871,
+            "max_abs": 13.042281150817871
+          },
+          "q_scale": {
+            "all_finite": false,
+            "finite_count": 29600,
+            "nonfinite_count": 3168,
+            "minimum": 0.0,
+            "maximum": 1.75,
+            "max_abs": 1.75
+          },
+          "k_scale": {
+            "all_finite": false,
+            "finite_count": 59200,
+            "nonfinite_count": 6336,
+            "minimum": 0.0,
+            "maximum": 1.625,
+            "max_abs": 1.625
+          },
+          "v_scale": {
+            "all_finite": true,
+            "finite_count": 32768,
+            "nonfinite_count": 0,
+            "minimum": 0.0,
+            "maximum": 0.5,
+            "max_abs": 0.5
+          },
+          "output": {
+            "all_finite": false,
+            "finite_count": 193280,
+            "nonfinite_count": 3328,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "max_abs": 0.0
+          },
+          "bad_output_rows": [
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 108,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 1,
+              "row": 20,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 1,
+              "row": 38,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 1,
+              "row": 41,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 1,
+              "row": 53,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 1,
+              "row": 69,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 1,
+              "row": 78,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 1,
+              "row": 87,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 1,
+              "row": 92,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 1,
+              "row": 97,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 1,
+              "row": 106,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 1,
+              "row": 132,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 1,
+              "row": 156,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 1,
+              "row": 160,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 1,
+              "row": 164,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 1,
+              "row": 166,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 1,
+              "row": 169,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 1,
+              "row": 177,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 1,
+              "row": 185,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 1,
+              "row": 186,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 1,
+              "row": 188,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 1,
+              "row": 201,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 1,
+              "row": 209,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 1,
+              "row": 213,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 1,
+              "row": 244,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 1,
+              "row": 248,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 1,
+              "row": 255,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 4,
+              "row": 20,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 4,
+              "row": 30,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 4,
+              "row": 70,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 4,
+              "row": 79,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 4,
+              "row": 85,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            }
+          ],
+          "lse": {
+            "all_finite": false,
+            "finite_count": 0,
+            "nonfinite_count": 3072
+          }
+        }
+      ],
+      "2": [
+        {
+          "sample": 0,
+          "query": {
+            "all_finite": false,
+            "finite_count": 112128,
+            "nonfinite_count": 84480,
+            "minimum": -10.8125,
+            "maximum": 9.5,
+            "max_abs": 10.8125
+          },
+          "key": {
+            "all_finite": false,
+            "finite_count": 112128,
+            "nonfinite_count": 84480,
+            "minimum": -8.3125,
+            "maximum": 9.0625,
+            "max_abs": 9.0625
+          },
+          "value": {
+            "all_finite": false,
+            "finite_count": 112128,
+            "nonfinite_count": 84480,
+            "minimum": -2.90625,
+            "maximum": 3.40625,
+            "max_abs": 3.40625
+          },
+          "scores": {
+            "all_finite": false,
+            "finite_count": 19272,
+            "nonfinite_count": 767160,
+            "minimum": -33.66762161254883,
+            "maximum": 32.19683837890625,
+            "max_abs": 33.66762161254883
+          },
+          "q_scale": {
+            "all_finite": false,
+            "finite_count": 27488,
+            "nonfinite_count": 5280,
+            "minimum": 0.0,
+            "maximum": 2.5,
+            "max_abs": 2.5
+          },
+          "k_scale": {
+            "all_finite": false,
+            "finite_count": 54976,
+            "nonfinite_count": 10560,
+            "minimum": 0.0,
+            "maximum": 1.625,
+            "max_abs": 1.625
+          },
+          "v_scale": {
+            "all_finite": true,
+            "finite_count": 32768,
+            "nonfinite_count": 0,
+            "minimum": 0.0,
+            "maximum": 0.5625,
+            "max_abs": 0.5625
+          },
+          "output": {
+            "all_finite": false,
+            "finite_count": 195264,
+            "nonfinite_count": 1344,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "max_abs": 0.0
+          },
+          "bad_output_rows": [
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 68,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 74,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 77,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 84,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 115,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 136,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 184,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 206,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 215,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 227,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 253,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 1,
+              "row": 8,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 1,
+              "row": 128,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 1,
+              "row": 199,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 1,
+              "row": 253,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 9,
+              "row": 56,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 9,
+              "row": 58,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 9,
+              "row": 63,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 9,
+              "row": 161,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 9,
+              "row": 204,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 9,
+              "row": 224,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            }
+          ],
+          "lse": {
+            "all_finite": false,
+            "finite_count": 0,
+            "nonfinite_count": 3072
+          }
+        }
+      ],
+      "3": [
+        {
+          "sample": 0,
+          "query": {
+            "all_finite": false,
+            "finite_count": 96768,
+            "nonfinite_count": 99840,
+            "minimum": -10.0,
+            "maximum": 7.9375,
+            "max_abs": 10.0
+          },
+          "key": {
+            "all_finite": false,
+            "finite_count": 96768,
+            "nonfinite_count": 99840,
+            "minimum": -7.09375,
+            "maximum": 7.28125,
+            "max_abs": 7.28125
+          },
+          "value": {
+            "all_finite": false,
+            "finite_count": 96768,
+            "nonfinite_count": 99840,
+            "minimum": -3.171875,
+            "maximum": 4.0625,
+            "max_abs": 4.0625
+          },
+          "scores": {
+            "all_finite": false,
+            "finite_count": 15120,
+            "nonfinite_count": 771312,
+            "minimum": -16.857906341552734,
+            "maximum": 16.28563117980957,
+            "max_abs": 16.857906341552734
+          },
+          "q_scale": {
+            "all_finite": false,
+            "finite_count": 26528,
+            "nonfinite_count": 6240,
+            "minimum": 0.0,
+            "maximum": 2.25,
+            "max_abs": 2.25
+          },
+          "k_scale": {
+            "all_finite": false,
+            "finite_count": 53056,
+            "nonfinite_count": 12480,
+            "minimum": 0.0,
+            "maximum": 1.625,
+            "max_abs": 1.625
+          },
+          "v_scale": {
+            "all_finite": true,
+            "finite_count": 32768,
+            "nonfinite_count": 0,
+            "minimum": 0.0,
+            "maximum": 0.6875,
+            "max_abs": 0.6875
+          },
+          "output": {
+            "all_finite": false,
+            "finite_count": 194112,
+            "nonfinite_count": 2496,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "max_abs": 0.0
+          },
+          "bad_output_rows": [
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 3,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 3,
+              "row": 22,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 3,
+              "row": 57,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 3,
+              "row": 126,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 3,
+              "row": 214,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 3,
+              "row": 217,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 3,
+              "row": 252,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 5,
+              "row": 42,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 5,
+              "row": 45,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 5,
+              "row": 47,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 5,
+              "row": 86,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 5,
+              "row": 124,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 5,
+              "row": 148,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 5,
+              "row": 163,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 5,
+              "row": 170,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 5,
+              "row": 174,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 5,
+              "row": 194,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 9,
+              "row": 2,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 9,
+              "row": 10,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 9,
+              "row": 60,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 9,
+              "row": 86,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 9,
+              "row": 113,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 9,
+              "row": 129,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 9,
+              "row": 138,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 9,
+              "row": 181,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 9,
+              "row": 189,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 9,
+              "row": 222,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 9,
+              "row": 241,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 11,
+              "row": 26,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 11,
+              "row": 55,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 11,
+              "row": 66,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 11,
+              "row": 109,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            }
+          ],
+          "lse": {
+            "all_finite": false,
+            "finite_count": 0,
+            "nonfinite_count": 3072
+          }
+        }
+      ],
+      "4": [
+        {
+          "sample": 0,
+          "query": {
+            "all_finite": false,
+            "finite_count": 69120,
+            "nonfinite_count": 127488,
+            "minimum": -7.0,
+            "maximum": 7.75,
+            "max_abs": 7.75
+          },
+          "key": {
+            "all_finite": false,
+            "finite_count": 69120,
+            "nonfinite_count": 127488,
+            "minimum": -7.9375,
+            "maximum": 7.1875,
+            "max_abs": 7.9375
+          },
+          "value": {
+            "all_finite": false,
+            "finite_count": 69120,
+            "nonfinite_count": 127488,
+            "minimum": -3.0,
+            "maximum": 4.0625,
+            "max_abs": 4.0625
+          },
+          "scores": {
+            "all_finite": false,
+            "finite_count": 7560,
+            "nonfinite_count": 778872,
+            "minimum": -13.2792329788208,
+            "maximum": 10.072012901306152,
+            "max_abs": 13.2792329788208
+          },
+          "q_scale": {
+            "all_finite": false,
+            "finite_count": 24800,
+            "nonfinite_count": 7968,
+            "minimum": 0.0,
+            "maximum": 1.875,
+            "max_abs": 1.875
+          },
+          "k_scale": {
+            "all_finite": false,
+            "finite_count": 49600,
+            "nonfinite_count": 15936,
+            "minimum": 0.0,
+            "maximum": 1.625,
+            "max_abs": 1.625
+          },
+          "v_scale": {
+            "all_finite": true,
+            "finite_count": 32768,
+            "nonfinite_count": 0,
+            "minimum": 0.0,
+            "maximum": 0.6875,
+            "max_abs": 0.6875
+          },
+          "output": {
+            "all_finite": false,
+            "finite_count": 195136,
+            "nonfinite_count": 1472,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "max_abs": 0.0
+          },
+          "bad_output_rows": [
+            {
+              "batch": 0,
+              "head": 5,
+              "row": 4,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 5,
+              "row": 19,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 5,
+              "row": 65,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 5,
+              "row": 91,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 5,
+              "row": 116,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 5,
+              "row": 144,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 5,
+              "row": 145,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 5,
+              "row": 240,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 6,
+              "row": 7,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 7,
+              "row": 162,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 9,
+              "row": 82,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 9,
+              "row": 94,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 9,
+              "row": 112,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 9,
+              "row": 121,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 9,
+              "row": 122,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 10,
+              "row": 141,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 10,
+              "row": 158,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 10,
+              "row": 192,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 10,
+              "row": 221,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 11,
+              "row": 80,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 11,
+              "row": 112,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 11,
+              "row": 127,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 11,
+              "row": 221,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            }
+          ],
+          "lse": {
+            "all_finite": false,
+            "finite_count": 0,
+            "nonfinite_count": 3072
+          }
+        }
+      ],
+      "5": [
+        {
+          "sample": 0,
+          "query": {
+            "all_finite": false,
+            "finite_count": 52992,
+            "nonfinite_count": 143616,
+            "minimum": -6.71875,
+            "maximum": 6.5,
+            "max_abs": 6.71875
+          },
+          "key": {
+            "all_finite": false,
+            "finite_count": 52992,
+            "nonfinite_count": 143616,
+            "minimum": -7.5,
+            "maximum": 7.84375,
+            "max_abs": 7.84375
+          },
+          "value": {
+            "all_finite": false,
+            "finite_count": 52992,
+            "nonfinite_count": 143616,
+            "minimum": -2.984375,
+            "maximum": 3.34375,
+            "max_abs": 3.34375
+          },
+          "scores": {
+            "all_finite": false,
+            "finite_count": 4140,
+            "nonfinite_count": 782292,
+            "minimum": -11.507085800170898,
+            "maximum": 8.13402271270752,
+            "max_abs": 11.507085800170898
+          },
+          "q_scale": {
+            "all_finite": false,
+            "finite_count": 23792,
+            "nonfinite_count": 8976,
+            "minimum": 0.0,
+            "maximum": 1.625,
+            "max_abs": 1.625
+          },
+          "k_scale": {
+            "all_finite": false,
+            "finite_count": 47584,
+            "nonfinite_count": 17952,
+            "minimum": 0.0,
+            "maximum": 1.625,
+            "max_abs": 1.625
+          },
+          "v_scale": {
+            "all_finite": false,
+            "finite_count": 32000,
+            "nonfinite_count": 768,
+            "minimum": 0.0,
+            "maximum": 0.5625,
+            "max_abs": 0.5625
+          },
+          "output": {
+            "all_finite": false,
+            "finite_count": 0,
+            "nonfinite_count": 196608
+          },
+          "bad_output_rows": [
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 0,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 1,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 2,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 3,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 4,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 5,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 6,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 7,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 8,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 9,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 10,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 11,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 12,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 13,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 14,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 15,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 16,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 17,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 18,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 19,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 20,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 21,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 22,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 23,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 24,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 25,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 26,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 27,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 28,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 29,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 30,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 31,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            }
+          ],
+          "lse": {
+            "all_finite": false,
+            "finite_count": 0,
+            "nonfinite_count": 3072
+          }
+        }
+      ],
+      "6": [
+        {
+          "sample": 0,
+          "query": {
+            "all_finite": false,
+            "finite_count": 0,
+            "nonfinite_count": 196608
+          },
+          "key": {
+            "all_finite": false,
+            "finite_count": 0,
+            "nonfinite_count": 196608
+          },
+          "value": {
+            "all_finite": false,
+            "finite_count": 0,
+            "nonfinite_count": 196608
+          },
+          "scores": {
+            "all_finite": false,
+            "finite_count": 0,
+            "nonfinite_count": 786432
+          },
+          "q_scale": {
+            "all_finite": false,
+            "finite_count": 20480,
+            "nonfinite_count": 12288,
+            "minimum": 0.0,
+            "maximum": 1.625,
+            "max_abs": 1.625
+          },
+          "k_scale": {
+            "all_finite": false,
+            "finite_count": 40960,
+            "nonfinite_count": 24576,
+            "minimum": 0.0,
+            "maximum": 1.625,
+            "max_abs": 1.625
+          },
+          "v_scale": {
+            "all_finite": false,
+            "finite_count": 20480,
+            "nonfinite_count": 12288,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "max_abs": 0.0
+          },
+          "output": {
+            "all_finite": false,
+            "finite_count": 0,
+            "nonfinite_count": 196608
+          },
+          "bad_output_rows": [
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 0,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 1,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 2,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 3,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 4,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 5,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 6,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 7,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 8,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 9,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 10,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 11,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 12,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 13,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 14,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 15,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 16,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 17,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 18,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 19,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 20,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 21,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 22,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 23,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 24,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 25,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 26,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 27,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 28,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 29,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 30,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 31,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            }
+          ],
+          "lse": {
+            "all_finite": false,
+            "finite_count": 0,
+            "nonfinite_count": 3072
+          }
+        }
+      ],
+      "7": [
+        {
+          "sample": 0,
+          "query": {
+            "all_finite": false,
+            "finite_count": 0,
+            "nonfinite_count": 196608
+          },
+          "key": {
+            "all_finite": false,
+            "finite_count": 0,
+            "nonfinite_count": 196608
+          },
+          "value": {
+            "all_finite": false,
+            "finite_count": 0,
+            "nonfinite_count": 196608
+          },
+          "scores": {
+            "all_finite": false,
+            "finite_count": 0,
+            "nonfinite_count": 786432
+          },
+          "q_scale": {
+            "all_finite": false,
+            "finite_count": 20480,
+            "nonfinite_count": 12288,
+            "minimum": 0.0,
+            "maximum": 1.625,
+            "max_abs": 1.625
+          },
+          "k_scale": {
+            "all_finite": false,
+            "finite_count": 40960,
+            "nonfinite_count": 24576,
+            "minimum": 0.0,
+            "maximum": 1.625,
+            "max_abs": 1.625
+          },
+          "v_scale": {
+            "all_finite": false,
+            "finite_count": 20480,
+            "nonfinite_count": 12288,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "max_abs": 0.0
+          },
+          "output": {
+            "all_finite": false,
+            "finite_count": 0,
+            "nonfinite_count": 196608
+          },
+          "bad_output_rows": [
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 0,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 1,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 2,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 3,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 4,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 5,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 6,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 7,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 8,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 9,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 10,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 11,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 12,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 13,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 14,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 15,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 16,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 17,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 18,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 19,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 20,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 21,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 22,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 23,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 24,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 25,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 26,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 27,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 28,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 29,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 30,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 31,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            }
+          ],
+          "lse": {
+            "all_finite": false,
+            "finite_count": 0,
+            "nonfinite_count": 3072
+          }
+        }
+      ],
+      "8": [
+        {
+          "sample": 0,
+          "query": {
+            "all_finite": false,
+            "finite_count": 0,
+            "nonfinite_count": 196608
+          },
+          "key": {
+            "all_finite": false,
+            "finite_count": 0,
+            "nonfinite_count": 196608
+          },
+          "value": {
+            "all_finite": false,
+            "finite_count": 0,
+            "nonfinite_count": 196608
+          },
+          "scores": {
+            "all_finite": false,
+            "finite_count": 0,
+            "nonfinite_count": 786432
+          },
+          "q_scale": {
+            "all_finite": false,
+            "finite_count": 20480,
+            "nonfinite_count": 12288,
+            "minimum": 0.0,
+            "maximum": 1.625,
+            "max_abs": 1.625
+          },
+          "k_scale": {
+            "all_finite": false,
+            "finite_count": 40960,
+            "nonfinite_count": 24576,
+            "minimum": 0.0,
+            "maximum": 1.625,
+            "max_abs": 1.625
+          },
+          "v_scale": {
+            "all_finite": false,
+            "finite_count": 20480,
+            "nonfinite_count": 12288,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "max_abs": 0.0
+          },
+          "output": {
+            "all_finite": false,
+            "finite_count": 0,
+            "nonfinite_count": 196608
+          },
+          "bad_output_rows": [
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 0,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 1,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 2,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 3,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 4,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 5,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 6,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 7,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 8,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 9,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 10,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 11,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 12,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 13,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 14,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 15,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 16,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 17,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 18,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 19,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 20,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 21,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 22,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 23,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 24,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 25,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 26,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 27,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 28,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 29,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 30,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 31,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            }
+          ],
+          "lse": {
+            "all_finite": false,
+            "finite_count": 0,
+            "nonfinite_count": 3072
+          }
+        }
+      ],
+      "9": [
+        {
+          "sample": 0,
+          "query": {
+            "all_finite": false,
+            "finite_count": 0,
+            "nonfinite_count": 196608
+          },
+          "key": {
+            "all_finite": false,
+            "finite_count": 0,
+            "nonfinite_count": 196608
+          },
+          "value": {
+            "all_finite": false,
+            "finite_count": 0,
+            "nonfinite_count": 196608
+          },
+          "scores": {
+            "all_finite": false,
+            "finite_count": 0,
+            "nonfinite_count": 786432
+          },
+          "q_scale": {
+            "all_finite": false,
+            "finite_count": 20480,
+            "nonfinite_count": 12288,
+            "minimum": 0.0,
+            "maximum": 1.625,
+            "max_abs": 1.625
+          },
+          "k_scale": {
+            "all_finite": false,
+            "finite_count": 40960,
+            "nonfinite_count": 24576,
+            "minimum": 0.0,
+            "maximum": 1.625,
+            "max_abs": 1.625
+          },
+          "v_scale": {
+            "all_finite": false,
+            "finite_count": 20480,
+            "nonfinite_count": 12288,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "max_abs": 0.0
+          },
+          "output": {
+            "all_finite": false,
+            "finite_count": 0,
+            "nonfinite_count": 196608
+          },
+          "bad_output_rows": [
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 0,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 1,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 2,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 3,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 4,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 5,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 6,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 7,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 8,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 9,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 10,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 11,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 12,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 13,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 14,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 15,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 16,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 17,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 18,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 19,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 20,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 21,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 22,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 23,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 24,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 25,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 26,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 27,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 28,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 29,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 30,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 31,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            }
+          ],
+          "lse": {
+            "all_finite": false,
+            "finite_count": 0,
+            "nonfinite_count": 3072
+          }
+        }
+      ],
+      "10": [
+        {
+          "sample": 0,
+          "query": {
+            "all_finite": false,
+            "finite_count": 0,
+            "nonfinite_count": 196608
+          },
+          "key": {
+            "all_finite": false,
+            "finite_count": 0,
+            "nonfinite_count": 196608
+          },
+          "value": {
+            "all_finite": false,
+            "finite_count": 0,
+            "nonfinite_count": 196608
+          },
+          "scores": {
+            "all_finite": false,
+            "finite_count": 0,
+            "nonfinite_count": 786432
+          },
+          "q_scale": {
+            "all_finite": false,
+            "finite_count": 20480,
+            "nonfinite_count": 12288,
+            "minimum": 0.0,
+            "maximum": 1.625,
+            "max_abs": 1.625
+          },
+          "k_scale": {
+            "all_finite": false,
+            "finite_count": 40960,
+            "nonfinite_count": 24576,
+            "minimum": 0.0,
+            "maximum": 1.625,
+            "max_abs": 1.625
+          },
+          "v_scale": {
+            "all_finite": false,
+            "finite_count": 20480,
+            "nonfinite_count": 12288,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "max_abs": 0.0
+          },
+          "output": {
+            "all_finite": false,
+            "finite_count": 0,
+            "nonfinite_count": 196608
+          },
+          "bad_output_rows": [
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 0,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 1,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 2,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 3,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 4,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 5,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 6,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 7,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 8,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 9,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 10,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 11,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 12,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 13,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 14,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 15,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 16,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 17,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 18,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 19,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 20,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 21,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 22,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 23,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 24,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 25,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 26,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 27,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 28,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 29,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 30,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 31,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            }
+          ],
+          "lse": {
+            "all_finite": false,
+            "finite_count": 0,
+            "nonfinite_count": 3072
+          }
+        }
+      ],
+      "11": [
+        {
+          "sample": 0,
+          "query": {
+            "all_finite": false,
+            "finite_count": 0,
+            "nonfinite_count": 196608
+          },
+          "key": {
+            "all_finite": false,
+            "finite_count": 0,
+            "nonfinite_count": 196608
+          },
+          "value": {
+            "all_finite": false,
+            "finite_count": 0,
+            "nonfinite_count": 196608
+          },
+          "scores": {
+            "all_finite": false,
+            "finite_count": 0,
+            "nonfinite_count": 786432
+          },
+          "q_scale": {
+            "all_finite": false,
+            "finite_count": 20480,
+            "nonfinite_count": 12288,
+            "minimum": 0.0,
+            "maximum": 1.625,
+            "max_abs": 1.625
+          },
+          "k_scale": {
+            "all_finite": false,
+            "finite_count": 40960,
+            "nonfinite_count": 24576,
+            "minimum": 0.0,
+            "maximum": 1.625,
+            "max_abs": 1.625
+          },
+          "v_scale": {
+            "all_finite": false,
+            "finite_count": 20480,
+            "nonfinite_count": 12288,
+            "minimum": 0.0,
+            "maximum": 0.0,
+            "max_abs": 0.0
+          },
+          "output": {
+            "all_finite": false,
+            "finite_count": 0,
+            "nonfinite_count": 196608
+          },
+          "bad_output_rows": [
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 0,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 1,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 2,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 3,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 4,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 5,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 6,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 7,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 8,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 9,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 10,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 11,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 12,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 13,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 14,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 15,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 16,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 17,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 18,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 19,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 20,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 21,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 22,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 23,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 24,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 25,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 26,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 27,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 28,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 29,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 30,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            },
+            {
+              "batch": 0,
+              "head": 0,
+              "row": 31,
+              "score_minimum": NaN,
+              "score_maximum": NaN,
+              "kernel_lse_payload": -Infinity
+            }
+          ],
+          "lse": {
+            "all_finite": false,
+            "finite_count": 0,
+            "nonfinite_count": 3072
+          }
+        }
+      ]
+    },
+    "p_scale_sweep": {
+      "1.0": {
+        "cosine": 0.9936205744743347,
+        "rmse": 0.020323049277067184,
+        "reference_rms": 0.17530295252799988,
+        "relative_l2": 0.11593101173639297,
+        "max_abs": 0.22050359845161438,
+        "scale_underflow_fraction": 0.875,
+        "scale_subnormal_fraction": 0.875,
+        "scale_overflow_fraction": 0.0
+      },
+      "32.0": {
+        "cosine": 0.9936205744743347,
+        "rmse": 0.020323049277067184,
+        "reference_rms": 0.17530295252799988,
+        "relative_l2": 0.11593101173639297,
+        "max_abs": 0.22050359845161438,
+        "scale_underflow_fraction": 0.875,
+        "scale_subnormal_fraction": 0.875,
+        "scale_overflow_fraction": 0.0
+      },
+      "448.0": {
+        "cosine": 0.9940413236618042,
+        "rmse": 0.01930573396384716,
+        "reference_rms": 0.17530295252799988,
+        "relative_l2": 0.11012782901525497,
+        "max_abs": 0.2511265277862549,
+        "scale_underflow_fraction": 0.875,
+        "scale_subnormal_fraction": 0.875,
+        "scale_overflow_fraction": 0.0
+      }
+    },
+    "p_scale_sweep_applicable": true,
+    "p_scale_distribution": {
+      "stable": {
+        "fraction_below_e4m3_subnormal": 0.875,
+        "fraction_below_e4m3_normal": 0.875,
+        "fraction_above_e4m3_max": 0.0,
+        "minimum": 0.0,
+        "maximum": 0.1666666716337204
+      },
+      "shiftless": {
+        "fraction_below_e4m3_subnormal": 0.875,
+        "fraction_below_e4m3_normal": 0.875,
+        "fraction_above_e4m3_max": 0.0146484375,
+        "minimum": 0.0,
+        "maximum": 4493.1396484375
+      }
+    },
+    "p_replay": {
+      "enabled": false,
+      "samples": 1,
+      "layers": [
+        0
+      ],
+      "ranges": {},
+      "candidate_metrics": {},
+      "candidate_metrics_by_layer": {
+        "0": {}
+      }
+    }
+  },
+  "records": [
+    {
+      "index": 0,
+      "label": 1,
+      "valid_tokens": 12,
+      "baseline_prediction": 1,
+      "fp4_prediction": 0,
+      "baseline_logits": [
+        -4.3125,
+        4.03125
+      ],
+      "fp4_logits": [
+        NaN,
+        NaN
+      ]
+    }
+  ]
+}

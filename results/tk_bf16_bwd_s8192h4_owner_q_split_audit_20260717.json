@@ -1,0 +1,131 @@
+{
+  "complete": true,
+  "shape": {
+    "batch": 1,
+    "seqlen": 8192,
+    "heads": 4,
+    "dqk": 192,
+    "dv": 128,
+    "causal": true,
+    "layout": "BSHD",
+    "dtype": "BF16"
+  },
+  "rejected_artifact": {
+    "path": "results/.artifacts/tk_bf16_bwd_s8192h4_owner_q_split_20260717/_C.cpython-312-aarch64-linux-gnu.so",
+    "sha256": "4d365f3760b01b152f57328aaa4a8e44993c2cff1b0ccaf0051fef38a79594f7",
+    "size_bytes": 10803000
+  },
+  "harness": {
+    "path": "results/tk_bf16_bwd_s8192h4_owner_q_split_harness.py",
+    "sha256": "47eeb42066f0af2ef0b4e591dcfd9ac7f16ebbdf7377c87582213fd3537b0467"
+  },
+  "static_gate": {
+    "parent_and_split_sass_match_retained_exact64": true,
+    "extracted_sass_sha256": {
+      "parent": "3e782762ec81f5a4b5613de9be6ec66b04410c6b33a4f7f8eb6a7badf91a2299",
+      "split_0": "f77436cfdf7d37676c6666fbf9ed894e49e23e90fc72615c91828bb11a23dc5f",
+      "split_1": "53546f8755e68e70a6562f031d0177f09967d92fc5a00b24d923fbf887d38256"
+    },
+    "resources_all_three": {
+      "registers": 128,
+      "stack_bytes": 0,
+      "local_bytes": 0,
+      "shared_bytes": 231276,
+      "spill_loads": 0,
+      "spill_stores": 0,
+      "utchmma_2cta_sites": 52
+    },
+    "decoded_instructions_parent_split0_split1": [4096, 3528, 3536],
+    "public_dispatch_unchanged": true
+  },
+  "correctness": {
+    "onecall": {
+      "seed": 20270819,
+      "manifest": "results/tk_bf16_bwd_s8192h4_owner_q_split_onecall_seed20270819.json",
+      "sha256": "e0ee64a96f4b2e3085ac35da7e84d1060b308ffa5e13a7b2ec2669308ce1665e",
+      "rel_l2_dq_dk_dv": [0.0033642053604125977, 0.003635489149019122, 0.0002382025559199974],
+      "max_abs_dq_dk_dv": [0.020294904708862305, 0.015625, 0.015625],
+      "gate_pass": true
+    },
+    "stress50": {
+      "seed": 20270919,
+      "manifest": "results/tk_bf16_bwd_s8192h4_owner_q_split_stress50_seed20270919.json",
+      "sha256": "3d4f38ba22f40e569654267249503ac3cdf8bf84a0b1d2c61c4fec959594dd00",
+      "calls_completed": 50,
+      "max_drift_dq_dk_dv": [2.9802322387695312e-8, 0.0, 0.0],
+      "gate_pass": true
+    },
+    "stress2000": {
+      "seed": 20260768,
+      "manifest": "results/tk_bf16_bwd_s8192h4_owner_q_split_stress2000_seed20260768.json",
+      "sha256": "db2b571c4b31c9720adbf01ba692016c09e4e01c233cb945eab8150250dec77d",
+      "calls_completed": 2000,
+      "max_drift_dq_dk_dv": [5.960464477539063e-8, 0.0, 0.0],
+      "gate_pass": true
+    }
+  },
+  "timing": {
+    "protocol": "12 warmups, 201 samples, three-route six-permutation rotation, full device synchronization around every route",
+    "rotations": [
+      {
+        "seed": 20271019,
+        "manifest": "results/tk_bf16_bwd_s8192h4_owner_q_split_timing_r1_seed20271019.json",
+        "sha256": "e76d6cf44fe76c3c60f1e4b04b5898053c6401481b775d76f57c45aa41f096be",
+        "child_median_us": 415.489,
+        "parent_median_us": 371.457,
+        "cute_median_us": 395.936,
+        "child_over_parent": 1.1185386195441194,
+        "child_over_cute": 1.049384243918209,
+        "parent_over_cute": 0.938174351410329
+      },
+      {
+        "seed": 20271119,
+        "manifest": "results/tk_bf16_bwd_s8192h4_owner_q_split_timing_r2_seed20271119.json",
+        "sha256": "afec60721291e71c2bf6c9fa01a7c99174c73f67f9c21354c584f351ea019e0f",
+        "child_median_us": 413.151,
+        "parent_median_us": 369.663,
+        "cute_median_us": 392.831,
+        "child_over_parent": 1.1176422850001217,
+        "child_over_cute": 1.0517270785655919,
+        "parent_over_cute": 0.9410229844386008
+      }
+    ],
+    "child_objective_beats_cute_both_rotations": false,
+    "parent_objective_beats_cute_both_rotations": true
+  },
+  "safe_restore": {
+    "head": "bb70baf",
+    "artifact": {
+      "path": "results/.artifacts/tk_bf16_bwd_owner_q_split_safe_bb70baf_20260717/_C.cpython-312-aarch64-linux-gnu.so",
+      "sha256": "f2531ef668b2cdc9d58542543dd05335e04e3fd0242641cc00af68a7ce7fc373",
+      "size_bytes": 10736808
+    },
+    "rejected_export_absent": true,
+    "source_matches_head": true,
+    "retained_s2048h8_exact_sass_identity": true,
+    "control_harness": {
+      "path": "results/tk_bf16_bwd_owner_q_split_safe_bb70baf_harness.py",
+      "sha256": "53b72ecec8bb1aada894396cd49289de1b86cf63ea8bc022a356ee08fe928646"
+    },
+    "stress50": {
+      "seed": 20271219,
+      "manifest": "results/tk_bf16_bwd_owner_q_split_safe_bb70baf_stress50_seed20271219.json",
+      "sha256": "5e82690a8b379b742b2dc100f20a6f3d5521314e48cac544522d32ea0ec761dc",
+      "calls_completed": 50,
+      "max_drift_dq_dk_dv": [2.9802322387695312e-8, 0.0, 0.0],
+      "gate_pass": true
+    }
+  },
+  "verdict": {
+    "retain_owner_q_split_child": false,
+    "retain_existing_parent": true,
+    "strict_matrix_cell": "U16",
+    "strict_matrix_reclassification": "win",
+    "strict_35_cell_matrix_after_result": {
+      "wins": 6,
+      "losses": 13,
+      "unknown": 16
+    },
+    "public_dispatch_unchanged": true
+  }
+}

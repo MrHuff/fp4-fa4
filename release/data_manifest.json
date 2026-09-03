@@ -1,0 +1,743 @@
+{
+  "schema": "fa4_data_provenance_v1",
+  "status_vocabulary": {
+    "exact_and_present": "The repository contains the bytes needed for offline verification.",
+    "exact_identity_input_absent": "The expected bytes and digest are known, but the input is not redistributed here.",
+    "identity_incomplete": "At least one immutable input or order identity needed for an exact replay is unknown.",
+    "recipe_only": "The record defines a new-run recipe and is not evidence that the historical experiment was replayed."
+  },
+  "claim_boundary": [
+    "A matching model or dataset name is not an exact identity; exactness requires the byte, tree, or immutable revision checks recorded below.",
+    "The portable Hugging Face SlimPajama loader in this release is a new-run path. It does not recreate the historical MosaicML MDS sample order.",
+    "No tokenizer, dataset, checkpoint, credential, private storage locator, or model weight is redistributed by this manifest."
+  ],
+  "tokenizer": {
+    "id": "llama_3_1_8b_tokenizer_four_file_tree",
+    "status": "exact_identity_input_absent",
+    "redistribution": {
+      "included": false,
+      "reason": "Redistribution rights require review under the Meta Llama license.",
+      "contract": "Acquire the tokenizer under its upstream terms, isolate the four listed files, and accept it only if tools/verify_fa4_data.py passes."
+    },
+    "acquisition": {
+      "repository": "meta-llama/Llama-3.1-8B",
+      "candidate_revision": "d04e592bb4f6aa9cfee91e2e20afa771667e1d4b",
+      "candidate_revision_status": "unverified_association",
+      "note": "The revision came from a surviving local Hugging Face ref, but no durable receipt binds that ref to the exact four recovered files. The byte checks, not this revision string, are authoritative."
+    },
+    "tree": {
+      "archive_prefix": "Llama-3.1-8B",
+      "schema": "sha256_size_mode_path_v1",
+      "sha256": "ba9162eb542cf6445c6a1c9cf997dc176458b1dcfa127aad434b563ec5d94718",
+      "files": 4,
+      "bytes": 11320213,
+      "entries": [
+        {
+          "path": "Llama-3.1-8B/original/tokenizer.model",
+          "sha256": "82e9d31979e92ab929cd544440f129d9ecd797b69e327f80f17e1c50d5551b55",
+          "bytes": 2183982,
+          "mode": "0644"
+        },
+        {
+          "path": "Llama-3.1-8B/special_tokens_map.json",
+          "sha256": "462d91939dbc37178aa5a3eae7068d1990ccc92e09f288cc71f42cdf139d69cc",
+          "bytes": 73,
+          "mode": "0644"
+        },
+        {
+          "path": "Llama-3.1-8B/tokenizer.json",
+          "sha256": "76e48799b099d43365bd24ccd8ecc5aedac831718da780552f03b0a6eb4412aa",
+          "bytes": 9085658,
+          "mode": "0644"
+        },
+        {
+          "path": "Llama-3.1-8B/tokenizer_config.json",
+          "sha256": "8004530facf809ac432114de2a4dcc65fcb632da5ec16d666091aeb6a2ee444a",
+          "bytes": 50500,
+          "mode": "0644"
+        }
+      ]
+    },
+    "canonical_archive": {
+      "format": "POSIX.1-2001 PAX tar",
+      "schema": "deterministic_regular_file_pax_tar_v1",
+      "ordering": "lexicographic path order",
+      "metadata": {
+        "mtime": 0,
+        "uid": 0,
+        "gid": 0,
+        "uname": "",
+        "gname": "",
+        "pax_headers": {}
+      },
+      "sha256": "5f78fe6ca69a64aa2ccf5d07bd9a6e33d29da33bd0441416d31b1cf2274c1ab5",
+      "bytes": 11325440
+    },
+    "semantic_identity": {
+      "vocabulary_size": 128256,
+      "bos_token_id": 128000,
+      "eos_token_id": 128001
+    }
+  },
+  "verifier_targets": {
+    "dolma3_longmino_len_8_16k_first512_jsonl": {
+      "status": "exact_identity_input_absent",
+      "kind": "jsonl",
+      "sha256": "860b33924dffd53f4c20b80abbcee96e1bf09c3c313290c15ea3a6ee418269ce",
+      "bytes": 21911537,
+      "rows": 512,
+      "terminal_newline": true
+    },
+    "dclm_a319_first20000_jsonl": {
+      "status": "exact_identity_input_absent",
+      "kind": "jsonl",
+      "sha256": "7c9e3b55b3c1abbfb79412037c7c0f80ba6e16571ed677d1dd6bc4eb14d16e0f",
+      "bytes": 150441082,
+      "rows": 20000,
+      "terminal_newline": true
+    },
+    "canonical_dclm_arrow_subshard": {
+      "status": "exact_identity_input_absent",
+      "kind": "arrow",
+      "sha256": "846edebc43fa909016d6499240e2fb8101b8fd23bf6d9e07a69be347f708be93",
+      "bytes": 469413680,
+      "rows": 88669,
+      "unique_rows": 88638,
+      "columns": [
+        "text",
+        "id",
+        "source_ds"
+      ]
+    }
+  },
+  "experiments": {
+    "llama8b_slimpajama_matched_b4": {
+      "evidence_role": "main-paper interim distributed training and MXFP4-PV failure diagnostic",
+      "status": "identity_incomplete",
+      "receipts": [
+        {
+          "path": "results/fp4_fa4_technical_report_v2_20260819/receipts/llama8b_b4_w64_launch_check_20260902.json",
+          "sha256": "f652ea07c34048e9180629737dc000933e481e88856e7c64ee87f148eea21063"
+        },
+        {
+          "path": "results/fp4_fa4_technical_report_v2_20260819/receipts/llama8b_b4_matched_snapshot_20260902T1358Z.json",
+          "sha256": "295fc28099e686ed101cdd86c28313da10cf330fc47f8c1b7c5255b55e230f80"
+        }
+      ],
+      "source_identity": {
+        "gc_training_commit": "e7db209b0c7017c415fdd66e04e85f96ae24f276",
+        "torchtitan_commit": "20b3de7585696c327bd5aa9f9627f0300abdbf9d",
+        "fp4_matmul_runtime_commit": "4590537f1479e1a7e847f2783e9ab7aa7f11b975",
+        "source_archive_sha256": "20af94e0899a56fcd1eb6b8dae9a75217012631d72554f75612b35bcb84b4181",
+        "runtime_bundle_sha256": "e0cef3469d9203169e0497152fa83dc9d6f12a5c1c1bbcbb9c0fd43edc58281c",
+        "materialized_data_code_snapshot": {
+          "root": "reproduction/snapshots/training_e7db209b",
+          "source_commit": "e7db209b0c7017c415fdd66e04e85f96ae24f276",
+          "tree_hash_schema": "sha256_size_canonical_git_mode_path_v2",
+          "tree_sha256": "2479d3b89c495887b844629ffd08cb066b5cbe4a249b06d005dfe373a388aa85",
+          "tree_files": 8,
+          "tree_bytes": 108613,
+          "sha256sums_path": "reproduction/snapshots/training_e7db209b/SHA256SUMS",
+          "sha256sums_sha256": "6dadc091b694dbdfc41c5d94de9ca45b45a7653f59deadfe2d30ad41ee95b18e",
+          "exact_historical_python_files": 7,
+          "sanitized_historical_templates": 1
+        },
+        "files": [
+          {
+            "path": "reproduction/snapshots/training_e7db209b/train_configs/slimpajama_fa4_exact_50b/llama3_8b_40b.toml",
+            "sha256": "c813fd247b3bcd4e61818e3b6030d54d0c9d799f9b41da31361b19650f03af41",
+            "historical_path": "train_configs/slimpajama_fa4_exact_50b/llama3_8b_40b.toml",
+            "historical_sha256": "9cd0f52092ed5a49905a5c12f1924bb1d915a2fc7fa0629add27f430489bd0cc",
+            "sanitization": "Both historical dataset_path values were replaced with __HISTORICAL_SLIMPAJAMA_MDS_ROOT__; no other byte changed."
+          },
+          {
+            "path": "scripts/nvl72/render_exact_fa4_50b_volt.py",
+            "sha256": "e62a0b6ae85173e0e9276ed39d42485a3a78b2914dd79723f70bee30140e38e0"
+          },
+          {
+            "path": "scripts/nvl72/render_exact_fa4_8b_w64_volt_prod.py",
+            "sha256": "770fdce4343e4d123cb08c59b340b1986e809b351bc3c1968f42173e199fdb88"
+          },
+          {
+            "path": "scripts/nvl72/exact_fa4_50b_entrypoint.sh",
+            "sha256": "a5d0c37544e47993222a275de679123e9ca5a3d96a569a7d4a4adb702a8187c3"
+          },
+          {
+            "path": "scripts/nvl72/exact_fa4_50b_volt.yaml.tmpl",
+            "sha256": "b93b2c0c41f143327b77d280c5b729090ce0fbea62e9a1133f80a971d81b2b4c"
+          },
+          {
+            "path": "scripts/nvl72/package_exact_fa4_50b_assets.py",
+            "sha256": "a66070f025efc1dc491455a9ad355375b7e13fa6f4c2776b96b1408775d07e9e"
+          }
+        ]
+      },
+      "model": {
+        "name": "Llama-3.1-style 8B",
+        "flavor": "8B_llama3_blog",
+        "parameters": 8030261248,
+        "embedding_tie": "untied",
+        "layers": 32,
+        "hidden_size": 4096,
+        "ffn_size": 14336,
+        "query_heads": 32,
+        "key_value_heads": 8,
+        "head_dimension": 128,
+        "vocabulary_size": 128256,
+        "rms_norm_epsilon": 1e-05,
+        "initialization": "TorchTitan Llama initialization at debug seed 42",
+        "rope": {
+          "theta": 500000.0,
+          "scaling_factor": 8.0,
+          "low_frequency_factor": 1.0,
+          "high_frequency_factor": 4.0,
+          "original_context": 8192
+        },
+        "model_source_sha256": "be3f99b03ee5d4f39f7552dd6e9adaaaf060e2b7e54f37868a1ad34025f45ba3",
+        "torchtitan_llama_registration_sha256": "944c4fd1ee47110487ef6ac6a0d077a61f9f1192ee498bd6c697a5eb4d506b29",
+        "torchtitan_llama_args_sha256": "697daee25cdaa6b8fa96ccf90dff0bda74e4634f9dbf3391224a491198c1f268"
+      },
+      "training": {
+        "sequence_length": 4096,
+        "world_size": 64,
+        "workers": 16,
+        "gpus_per_worker": 4,
+        "local_batch": 4,
+        "physical_global_batch": 256,
+        "gradient_accumulation": 4,
+        "effective_global_batch": 1024,
+        "tokens_per_update": 4194304,
+        "target_updates": 23842,
+        "target_tokens": 100000595968,
+        "seed": 42,
+        "optimizer": {
+          "name": "AdamWBF16SR",
+          "implementation": "fused_stateless",
+          "learning_rate": 0.0003,
+          "beta1": 0.9,
+          "beta2": 0.95,
+          "epsilon": 1e-08,
+          "weight_decay": 0.1,
+          "max_gradient_norm": 1.0,
+          "parameter_dtype": "bfloat16",
+          "moment_dtype": "bfloat16",
+          "fp32_master_parameters": false,
+          "stochastic_rounding_seed": 0,
+          "provider": "lbt_fused_stateless_adamw_bf16_sr",
+          "provider_version": 1,
+          "source_sha256": "05e9133ac24ac286e059ebaaef4311921c5566f0b57e07367af30ac2f48f4dbd",
+          "checkpoint_schema": "v2-fused-stateless",
+          "state_version": 2
+        },
+        "schedule": {
+          "warmup_updates": 2000,
+          "warmup_tokens": 8388608000,
+          "decay": "cosine",
+          "minimum_learning_rate_factor": 0.01
+        },
+        "validation": {
+          "frequency_updates": 298,
+          "steps": 16,
+          "local_batch": 4,
+          "sequence_length": 4096
+        },
+        "checkpoint": {
+          "frequency_updates": 239,
+          "synchronous": true,
+          "keep_latest": 3,
+          "export_dtype": "float32",
+          "forced_final_update": 23842
+        },
+        "loss": "standard dense bfloat16 cross entropy compiled with TorchInductor",
+        "cut_cross_entropy_enabled": false,
+        "parallelism": "DDP64; no tensor, pipeline, context, or sharded data parallelism"
+      },
+      "historical_data": {
+        "name": "SlimPajama",
+        "format": "MosaicML MDS",
+        "stream_version": "private object-store stream; immutable object identity not captured",
+        "train": {
+          "split": "train",
+          "shuffle": false,
+          "batching_method": "stratified",
+          "workers_per_rank": 8,
+          "prefetch_factor": 8,
+          "persistent_workers": true,
+          "canonical_nodes": 32
+        },
+        "validation": {
+          "split": "validation",
+          "shuffle": false,
+          "batching_method": "stratified",
+          "workers_per_rank": 1,
+          "prefetch_factor": 8,
+          "canonical_nodes": 32
+        },
+        "packing": "Concatenate tokenized documents with BOS/EOS into a checkpointed token buffer; take 4097-token windows to form S=4096 input/label pairs.",
+        "loader_source": [
+          {
+            "path": "reproduction/snapshots/training_e7db209b/low_bits_training/datasets/mosaic_datasets.py",
+            "historical_path": "low_bits_training/datasets/mosaic_datasets.py",
+            "sha256": "4b368542eb40084c3b3c95bbdd9786fcc013f00e0cfa99d2319f6e06ec7e19c2"
+          },
+          {
+            "path": "reproduction/snapshots/training_e7db209b/low_bits_training/datasets/common.py",
+            "historical_path": "low_bits_training/datasets/common.py",
+            "sha256": "499f16fe80e44d71d0e33457b07d84fdca86eec1e32a1099f78070136d3512e1"
+          },
+          {
+            "path": "reproduction/snapshots/training_e7db209b/low_bits_training/components/tokenizer.py",
+            "historical_path": "low_bits_training/components/tokenizer.py",
+            "sha256": "897b53ffc8b685da6bf884b83f8469f7909f18d50ae29eb2642039565508f371"
+          },
+          {
+            "path": "reproduction/snapshots/training_e7db209b/low_bits_training/components/tiktoken_tokenizer.py",
+            "historical_path": "low_bits_training/components/tiktoken_tokenizer.py",
+            "sha256": "f80b69fa5e380da61e5f4744050d020c2ab0829b892677f0db3729758cf6a9ad"
+          },
+          {
+            "path": "reproduction/snapshots/training_e7db209b/low_bits_training/checkpoints.py",
+            "historical_path": "low_bits_training/checkpoints.py",
+            "sha256": "15442802c766247c71d924d786023fee60c41d763118488dab350d22187150fc"
+          },
+          {
+            "path": "reproduction/snapshots/training_e7db209b/low_bits_training/trainer.py",
+            "historical_path": "low_bits_training/trainer.py",
+            "sha256": "ab5e41304070e6f6a4d2b03838ebe45eb674ab8b63bdc878ab48b3296a27bc24"
+          },
+          {
+            "path": "reproduction/snapshots/training_e7db209b/low_bits_training/batch_resume.py",
+            "historical_path": "low_bits_training/batch_resume.py",
+            "sha256": "3573d2b9509e6b5329a3ffdfdfba97e4d87c9140c39b4742181cd6a36356bb2a"
+          }
+        ],
+        "dependency_evidence": {
+          "uv_lock_sha256": "0f3ddb4a2720cbfabcbefa986b286c44b6c7d238bd1a8f0c484aa7407e056d2f",
+          "pyproject_sha256": "7ded7d0da1669b3fe29e38fe46a3523437a308bbc4cd13bf0a7688c5383c5e54",
+          "mosaicml_streaming_source_lock_version": "0.13.0",
+          "mosaicml_streaming_runtime_version_asserted_by_worker": false,
+          "production_torch_version_from_launch_record": "2.9.0a0+145a3a7bda.nv25.10"
+        },
+        "batch_fingerprints_enabled": false,
+        "missing_exact_identity": [
+          "train index.json SHA256 or immutable object version",
+          "validation index.json SHA256 or immutable object version",
+          "train and validation shard inventory with byte hashes",
+          "per-update batch or packed-token fingerprints"
+        ]
+      },
+      "historical_raw_artifacts": [
+        {
+          "arm": "bf16",
+          "kind": "wandb_history",
+          "repository_path": null,
+          "sha256": "8b3c5ef94cd57a3718e15df3fb7b32ba66509fe7e3d39c53a46433d3705980dc",
+          "bytes": 127630
+        },
+        {
+          "arm": "bf16",
+          "kind": "worker_log_requires_endpoint_scrub",
+          "repository_path": null,
+          "sha256": "07dda1dcd8a01a32a58a56642a82a22e6bd026c2a1901706da440016dc407e56",
+          "bytes": 1304309
+        },
+        {
+          "arm": "fp8",
+          "kind": "wandb_history",
+          "repository_path": null,
+          "sha256": "7f5a781265b04418bf61dca99041e21b1cd13a46fba18681df5faef95a2264fc",
+          "bytes": 140837
+        },
+        {
+          "arm": "fp8",
+          "kind": "worker_log_requires_endpoint_scrub",
+          "repository_path": null,
+          "sha256": "534ed6a5e5453181d59d0dba0072eed40873ddb1ac720f9526c7f807628c9133",
+          "bytes": 1391567
+        },
+        {
+          "arm": "mxfp4",
+          "kind": "wandb_history",
+          "repository_path": null,
+          "sha256": "a19a237c747c148196dc83c263886ead7910fda08e62565d016a740cec233de5",
+          "bytes": 18985
+        },
+        {
+          "arm": "mxfp4",
+          "kind": "worker_log_requires_endpoint_scrub",
+          "repository_path": null,
+          "sha256": "50649cc015c14d72cabdd401643addbc9aa7bdf3b3d2288622b3d1be531e68f3",
+          "bytes": 306920
+        }
+      ],
+      "release_replay_contract": "The committed receipts reproduce the paper plots. An exact fresh historical trajectory remains blocked until the MDS index/shard/order identity is recovered or the result is replaced by a newly receipted, fully pinned run."
+    },
+    "llama_d64_dolma3_prefix256": {
+      "evidence_role": "historical 1.2B/D64 and 8B/D128 short real-data gate",
+      "status": "exact_identity_input_absent",
+      "source_identity": {
+        "fp4_matmul_commit": "cd59dda37ebf22e0d77b9c9d6851ec164b86e3af",
+        "historical_driver_path": "tk_fa4/lowp_fa4_bwd/train_llama12b_real_tokens.py",
+        "historical_driver_sha256": "baf77ea116e048249b8e33e2e4f591a7cac7c8f9a39be4608ac07de7f9a4eca0"
+      },
+      "dataset": {
+        "name": "Dolma3 Longmino len-8-16k",
+        "selection": "physical MDS rows 0 through 511 inclusive; no shuffle",
+        "target": "dolma3_longmino_len_8_16k_first512_jsonl",
+        "source_rows": 512,
+        "empty_rows_removed": 0,
+        "exact_duplicates_removed": 66,
+        "unique_documents": 446,
+        "first_record_sha256": "faa102f1eaec25757989cb77469f5ca154706e89f8464cef8e775c67536c1f60",
+        "last_record_sha256": "0aff8440f3b61db1d96654fa06b30064c492e19eb1944027c931a1f7b98dfd6c",
+        "record_hashes_sha256": "521e3e34c60323de5eebfe3e09a95432b020560f87f2ca7d7ef165845ca5e08e",
+        "upstream_index": {
+          "sha256": "a55250492330910331815a0dcc8689de0a2f71eccd698e534be8c71f5877b73d",
+          "bytes": 7303313,
+          "immutable_version_id": "BM30DJDRusZ0hnHxe.lRAmlsX7JqKiUj",
+          "etag": "\"88456685f2d8ddcbcb5165ce5c21f692\"",
+          "last_modified": "2026-06-14T13:04:38Z",
+          "mds_version": 2,
+          "shards": 16016,
+          "documents": 12675856,
+          "columns": [
+            "hf_global_id",
+            "meta",
+            "text"
+          ],
+          "shard_validation_hash": "sha1"
+        },
+        "materialization_metadata": {
+          "path": "results/dolma3_causal_training_20260821/raw/8b/dolma3-materialization-metadata.json",
+          "sha256": "0a621a5dd546cc78127a52c25551cd03083daf1712c41c6b3276df8d2e85a79a"
+        }
+      },
+      "model": {
+        "name": "Llama-3-style 1.235B",
+        "parameters": 1235814400,
+        "embedding_tie": "tied",
+        "layers": 16,
+        "hidden_size": 2048,
+        "ffn_size": 8192,
+        "query_heads": 32,
+        "key_value_heads": 8,
+        "head_dimension": 64,
+        "vocabulary_size": 128256,
+        "rms_norm_epsilon": 1e-05,
+        "initialization": "strict clone of the BF16 state_dict",
+        "rope": {
+          "theta": 500000.0,
+          "scaling_factor": 32.0,
+          "low_frequency_factor": 1.0,
+          "high_frequency_factor": 4.0,
+          "original_context": 8192
+        }
+      },
+      "training": {
+        "hardware": "one NVIDIA GB200",
+        "local_batch": 1,
+        "sequence_length": 4096,
+        "updates": 256,
+        "seed": 20260818,
+        "split_seed": 20261121,
+        "train_fraction": 0.8,
+        "learning_rate": 0.0001,
+        "gradient_clipping": false,
+        "optimizer": "fused AdamW",
+        "loss_dtype": "float32",
+        "validation_frequency_updates": 64,
+        "routes": [
+          "BF16 FA4",
+          "NVFP4-QK plus FP8-PV",
+          "NVFP4-QK plus MXFP4-PV"
+        ],
+        "train_packing": {
+          "batches": 256,
+          "tokens_with_boundary": 1048832,
+          "packed_tokens_before_truncation": 1053283,
+          "documents_consumed": 98,
+          "document_order_sha256": "9b29a22bfa2a40241bbebda1e5d7b0e9a69b260bd3cf23046c399397718cf481",
+          "packed_token_sha256": "f0c2a2a40fb77bc5f43b91aab0385cd05d8a663f69f88830978c69b76839478c"
+        },
+        "validation_packing": {
+          "batches": 8,
+          "tokens_with_boundary": 32776,
+          "packed_tokens_before_truncation": 37691,
+          "documents_consumed": 3,
+          "document_order_sha256": "dc03dd238c22960da598c2dac31b32a94c3f715c45c658111b8811c25fb743d8",
+          "packed_token_sha256": "61e89010706c73acd6bcb37af531f87dd5f4db4c1f06d54f32a3514dfd10c88b"
+        }
+      },
+      "additional_8b_gate": {
+        "model": {
+          "parameters": 8030261248,
+          "embedding_tie": "untied",
+          "layers": 32,
+          "hidden_size": 4096,
+          "ffn_size": 14336,
+          "query_heads": 32,
+          "key_value_heads": 8,
+          "head_dimension": 128,
+          "vocabulary_size": 128256
+        },
+        "training": {
+          "hardware": "one NVIDIA GB200",
+          "local_batch": 1,
+          "sequence_length": 4096,
+          "updates": 256,
+          "seed": 20260818,
+          "learning_rate": 0.0001,
+          "gradient_clipping": false,
+          "execution": "independent BF16, MX-A, FP8, and MX-B processes run sequentially"
+        },
+        "evidence": [
+          {
+            "path": "results/dolma3_causal_training_20260821/comparison_summary.json",
+            "sha256": "a9652f6c0e40b250cd749f036c9b97764fc6d70b3016dbe962a24953e4b0dc80"
+          },
+          {
+            "historical_path": "results/dolma3_causal_training_20260821/manifests/fa4-dolma3-8b-isolated256-cd59dda-20260821d.yaml",
+            "sha256": "619705c65035fc9fe9acd38d5e3eec4fdf8c3ea0caded724acf4515a5b594dd9",
+            "redistribution": {
+              "included": false,
+              "reason": "Internal scheduler specification excluded from the source release."
+            }
+          }
+        ]
+      },
+      "evidence": [
+        {
+          "path": "results/dolma3_causal_training_20260821/raw/1p2b/llama1p2b-matched.json",
+          "sha256": "d012cc8d2531a1d9a24c8d3e27407befdd95f37fe534e4a42c3176b104133079"
+        },
+        {
+          "historical_path": "results/dolma3_causal_training_20260821/manifests/fa4-dolma3-1p2b-matched256-cd59dda-20260821b.yaml",
+          "sha256": "1c39fe637730170f32ebf360433c9c2ba9d582a8ad7456b986b74b76551d974c",
+          "role": "corrected reproduction manifest; not submitted",
+          "redistribution": {
+            "included": false,
+            "reason": "Internal scheduler specification excluded from the source release."
+          }
+        },
+        {
+          "historical_path": "results/dolma3_causal_training_20260821/manifests/submitted-fa4-dolma3-1p2b-matched256-cd59dda-20260821a.yaml",
+          "sha256": "fd37579caffe5e836c25f6f7a4019ca78b3d04b335a103e6bb4ae577e0cd71a3",
+          "role": "submitted manifest with a faulty post-run 512-document assertion",
+          "redistribution": {
+            "included": false,
+            "reason": "Internal scheduler specification excluded from the source release."
+          }
+        }
+      ],
+      "completion_note": "All three 256-update training trajectories completed. The scheduler job exited one only because its post-run assertion expected 512 documents instead of 446 after exact deduplication."
+    },
+    "llama_d64_dclm_a319_first20000_2k": {
+      "evidence_role": "historical D64 engineering ablation; not the missing canonical DCLM replay",
+      "status": "exact_identity_input_absent",
+      "dataset": {
+        "repository": "allenai/dolmino-mix-1124",
+        "revision": "a319f19eef1e257417b11ea8c30da266ae175557",
+        "object": "data/dclm/0000/dclm-0000.json.zst",
+        "selection": "first 20000 newline-delimited records",
+        "target": "dclm_a319_first20000_jsonl",
+        "compressed_object_sha256": null
+      },
+      "model": {
+        "parameters": 1235814400,
+        "layers": 16,
+        "hidden_size": 2048,
+        "ffn_size": 8192,
+        "query_heads": 32,
+        "key_value_heads": 8,
+        "head_dimension": 64,
+        "vocabulary_size": 128256
+      },
+      "training": {
+        "local_batch": 1,
+        "sequence_length": 4096,
+        "updates": 2000,
+        "seed": 20260818,
+        "split_seed": 20261121,
+        "learning_rate": 0.0001,
+        "gradient_clipping": false,
+        "train_fraction": 0.8,
+        "train_documents": 16000,
+        "validation_documents": 4000,
+        "train_tokens": {
+          "batches": 2000,
+          "tokens_with_boundary": 8194000,
+          "packed_tokens_before_truncation": 8194021,
+          "documents_consumed": 6468,
+          "document_order_sha256": "43dcee708ed042932463098d238c02fc8054434c7e770ec8282a333bc6fdca3a",
+          "sha256": "ca015efd3423c24a471099f1db18cc532c4eb25216a3183e125a398e2ccaf737"
+        },
+        "validation_tokens": {
+          "batches": 8,
+          "tokens_with_boundary": 32776,
+          "packed_tokens_before_truncation": 32966,
+          "documents_consumed": 33,
+          "document_order_sha256": "bfd4ad1b3a5b4dec87420c75c351fc59238f3a2e8a2c464abe8dc7749bad1ee5",
+          "sha256": "821b34a143eec2480ebe6619e7a87842d710665d503422401419aa1c37b60c4a"
+        }
+      },
+      "evidence": {
+        "path": "results/causal_isolated_matrix_20260820/training/dolmino_dclm_a319_2k_d4all_alllane_replay_seed20260818_20260820.audit.json",
+        "sha256": "baaac82c9739f0fbcb4c644a43d4afc66f2c6a072a3cd0c2b64c05c58740ec79"
+      }
+    },
+    "llama_d64_canonical_dclm_2k_reconstruction": {
+      "evidence_role": "unresolved reconstruction target",
+      "status": "exact_identity_input_absent",
+      "dataset": {
+        "target": "canonical_dclm_arrow_subshard",
+        "all_source_ds": "DCLM",
+        "all_id_values": null,
+        "source_object_key_status": "unresolved",
+        "train_token_sha256": "fb8d70332aae02c39c8dd17893505a7286db9a11df6019bd92a3a09a58f86223",
+        "validation_token_sha256": "cc526d9251fb25f1c76e65cd36c214fc46dc1db1b5a2bc08cb652836a7689b54",
+        "train_document_order_sha256": "3b8b2ae797661e1b32fe36a22227a2728e4bc5362fbd61a8bc98ea8668ee683e",
+        "validation_document_order_sha256": "ca20d4f109e2c4929e295cc410353b5b4bc8c17e2c207c44424f38156e7053c4",
+        "first_500_update_token_sha256": "e928a334304dc353b3051300e1e55d9b23ad854989f34370c289007748ec721c"
+      },
+      "note": "The exact Arrow input is absent and must not be replaced by C4 or the a319 first-20000 JSONL corpus."
+    },
+    "llama1p2b_long_horizon_templates": {
+      "evidence_role": "historical templates plus the manifest-bound portable 50B-token replacement; not completed paper evidence",
+      "status": "recipe_only",
+      "historical_templates": [
+        {
+          "dataset": "ten-stream Dolma3 Longmino mixture",
+          "path": "train_configs/dolma_fa4_exact_50b/llama3_1p2b_50b.toml",
+          "source_commit": "e7db209b0c7017c415fdd66e04e85f96ae24f276",
+          "sha256": "b18cf00cfca97e47e481c6c94a371e1320f84b7ba5eb7f13365330135138720e",
+          "data_identity_complete": false
+        },
+        {
+          "dataset": "SlimPajama",
+          "path": "train_configs/slimpajama_fa4_exact_50b/llama3_1p2b_50b.toml",
+          "source_commit": "e7db209b0c7017c415fdd66e04e85f96ae24f276",
+          "sha256": "c3193c19bd382f6fc67a647c2a50d55b9c791e454186d8d700f1ab1cc7a81316",
+          "data_identity_complete": false
+        }
+      ],
+      "portable_profile": {
+        "name": "llama1p2b-d64-50b",
+        "renderer": "tools/render_fa4_training_config.py",
+        "artifact_manifest_schema": "fa4_artifact_manifest_v3",
+        "artifact_profile": "llama1p2b-d64-b16",
+        "documentation": "release/D64_REPRODUCTION.md",
+        "model": {
+          "flavor": "1B",
+          "parameters": 1235814400,
+          "embedding_tie": "tied",
+          "layers": 16,
+          "hidden_size": 2048,
+          "ffn_size": 8192,
+          "query_heads": 32,
+          "key_value_heads": 8,
+          "head_dimension": 64,
+          "rope_theta": 500000.0,
+          "rope_scaling_factor": 32.0
+        },
+        "training": {
+          "world_size": 16,
+          "local_batch": 16,
+          "global_batch": 256,
+          "gradient_accumulation": 1,
+          "sequence_length": 4096,
+          "updates": 47684,
+          "target_tokens": 50000297984,
+          "learning_rate": 0.00048828125,
+          "warmup_updates": 954,
+          "checkpoint_interval_updates": 954,
+          "validation_frequency_updates": 262,
+          "validation_steps": 16,
+          "validation_local_batch": 16,
+          "optimizer": "fused BF16 stochastic-rounding AdamW; historical 1.2B templates used ordinary AdamW",
+          "cross_entropy": "ordinary dense BF16 cross entropy compiled with TorchInductor",
+          "cut_cross_entropy": false
+        },
+        "routes": [
+          "bf16_fa4",
+          "e4m3_proj_nvfp4_qk_fp8_pv",
+          "e4m3_proj_nvfp4_qk_mxfp4_pv"
+        ],
+        "dataset": {
+          "replacement": "user-supplied exhaustively manifested public SlimPajama snapshot",
+          "historical_mds_identity_complete": false,
+          "missing": [
+            "train and validation index.json identities",
+            "shard byte hashes",
+            "historical row and rank order"
+          ]
+        },
+        "completion": "The renderer, verifier, planner, and runtime contract are present. DDP16 save/fresh-resume and long-horizon training have not been run."
+      }
+    }
+  },
+  "other_external_inputs": [
+    {
+      "experiment": "ViT CIFAR-10 replay",
+      "model": "nateraw/vit-base-patch16-224-cifar10",
+      "dataset": "uoft-cs/cifar10",
+      "split": "test",
+      "seed": 20260728,
+      "status": "identity_incomplete",
+      "missing": [
+        "immutable model revision and weight hashes",
+        "immutable dataset revision or byte manifest"
+      ]
+    },
+    {
+      "experiment": "BERT masked-language-model replay",
+      "model": "google-bert/bert-base-uncased",
+      "dataset": "Salesforce/wikitext",
+      "dataset_config": "wikitext-2-raw-v1",
+      "split": "test",
+      "seed": 20260728,
+      "status": "identity_incomplete",
+      "missing": [
+        "immutable model revision and weight hashes",
+        "immutable dataset revision or byte manifest"
+      ]
+    },
+    {
+      "experiment": "SST-2 replay",
+      "model": "textattack/bert-base-uncased-SST-2",
+      "dataset": "glue",
+      "dataset_config": "sst2",
+      "split": "validation",
+      "seed": 20260728,
+      "status": "identity_incomplete",
+      "missing": [
+        "immutable model revision and weight hashes",
+        "immutable dataset revision or byte manifest"
+      ]
+    },
+    {
+      "experiment": "ViT-MAE COCO reconstruction",
+      "model": "facebook/vit-mae-base",
+      "dataset": "COCO 2017 validation",
+      "seed": 20260805,
+      "status": "identity_incomplete",
+      "preserved": "the selected 100 image filenames",
+      "missing": [
+        "immutable model revision and weight hashes",
+        "hashes for the selected image bytes"
+      ]
+    },
+    {
+      "experiment": "Wan 2.1 video replay",
+      "models": [
+        "Wan-AI/Wan2.1-T2V-1.3B-Diffusers",
+        "Wan-AI/Wan2.1-T2V-14B-Diffusers"
+      ],
+      "status": "identity_incomplete",
+      "preserved": "prompts, seeds, inference steps, and model identifiers in raw result JSON",
+      "missing": [
+        "immutable checkpoint revisions and byte hashes",
+        "some raw inputs behind the main table"
+      ]
+    }
+  ]
+}

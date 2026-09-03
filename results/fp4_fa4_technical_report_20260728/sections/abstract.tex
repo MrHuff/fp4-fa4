@@ -1,0 +1,27 @@
+\begin{abstract}
+FlashAttention-4 (FA4) maps attention onto Blackwell's asynchronous matrix
+units, tensor memory (TMEM), TMA transfers, and online softmax. Although
+block-scaled FP4 matrix instructions target roughly four times BF16
+throughput, the probability tile $P=\softmax(QK^\mathsf{T}/\sqrt d)$ is
+created inside the kernel. It must be reduced, exponentiated, quantized, and
+published before FP4 PV can start. Existing implementations consequently find
+that FP4 QK with FP8 PV can be faster than FP4 QK and PV.
+
+We retain HAO AI Lab's two-query TMEM pipeline and shorten its exposed P path.
+QK uses NVFP4, while P and V use MXFP4. A packed affine map sends normalized
+log scores directly toward E2M1 codes, the denominator is computed from the
+same represented probabilities consumed by PV, and native exponentials are
+used only where they improve the hardware schedule. For model layers with an
+extreme QK range, a sampled-row guard shares one exponent budget with the
+stored MX scale. Reordering the denominator multiplication prevents a valid
+minimum-scale block from flushing to zero, without adding an instruction.
+
+On GB200, the fast policy is 2.125$\times$ faster than BF16 at
+B1/S8192/H64/D128. On B300 it reaches \BThreeThreeKStandardTflops\ TFLOP/s
+at that shape and \BThreeThreeKPeakTflops\ TFLOP/s on a wave-aligned case.
+HAO's NV/FP8 path remains the higher-fidelity reference; our result is a
+measured speed--accuracy frontier for full FP4 attention. The retained route
+remains finite in ViT, BERT, paired image reconstruction, and 20-step Wan
+replays, showing where operator error does and does not affect downstream
+behavior.
+\end{abstract}

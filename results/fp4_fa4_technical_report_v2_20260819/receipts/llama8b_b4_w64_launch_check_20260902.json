@@ -1,0 +1,180 @@
+{
+  "schema": "tkfa4.report.llama8b_b4_w64_launch_check.v1",
+  "capture": {
+    "credential_free_receipt": true,
+    "mode": "read-only worker-0 training logs and authenticated checkpoint inventories from a managed 64-GPU cluster",
+    "captured_utc": "2026-09-02",
+    "common_logged_updates": [
+      300,
+      325,
+      350,
+      375,
+      400
+    ],
+    "throughput_summary": "median of the five aligned rank-0 throughput observations"
+  },
+  "identity": {
+    "gc_training_commit": "e7db209b0c7017c415fdd66e04e85f96ae24f276",
+    "gc_training_branch": "codex/fa4-d128-numerics-no-cce-20260830",
+    "source_archive_sha256": "20af94e0899a56fcd1eb6b8dae9a75217012631d72554f75612b35bcb84b4181",
+    "runtime_bundle_sha256": "e0cef3469d9203169e0497152fa83dc9d6f12a5c1c1bbcbb9c0fd43edc58281c",
+    "fp4_matmul_runtime_commit": "4590537f1479e1a7e847f2783e9ab7aa7f11b975",
+    "native_backward": "v509 B4/S4096/D128 native NVFP4-score replay with E4M3 QKV and E5M2 dO"
+  },
+  "shared_recipe": {
+    "model": "Llama-3.1-style 8.03B",
+    "dataset": "SlimPajama",
+    "workers": 16,
+    "gpus_per_worker": 4,
+    "world_size": 64,
+    "local_batch": 4,
+    "physical_global_batch": 256,
+    "gradient_accumulation": 4,
+    "effective_global_batch": 1024,
+    "sequence_length": 4096,
+    "tokens_per_update": 4194304,
+    "optimizer": "fused AdamWBF16SR",
+    "loss": "standard dense BF16 cross entropy compiled with torch.compile; CCE disabled",
+    "warmup_updates": 2000,
+    "target_tokens": 100000595968
+  },
+  "working_arms": {
+    "bf16_fa4": {
+      "public_arm_label": "bf16_b4_control",
+      "throughput_tokens_per_second_per_gpu": [
+        21451,
+        21579,
+        21557,
+        20940,
+        21674
+      ],
+      "mfu_percent": [
+        49.07,
+        49.37,
+        49.31,
+        47.90,
+        49.58
+      ],
+      "loss": [
+        5.5890,
+        5.4610,
+        5.3227,
+        5.2454,
+        5.0446
+      ],
+      "preclip_grad_norm": [
+        0.6523,
+        0.9609,
+        0.7227,
+        1.0391,
+        0.9336
+      ],
+      "median_throughput_tokens_per_second_per_gpu": 21557,
+      "median_mfu_percent": 49.31,
+      "step_400_tokens": 1677721600,
+      "status_at_capture": "running_and_numerically_stable"
+    },
+    "nvfp4_projection_fp8_pv": {
+      "public_arm_label": "nvfp4_projection_fp8_pv_b4",
+      "learned_projection_format": "NVFP4",
+      "attention_qk_format": "NVFP4 with row-by-K16 scales",
+      "attention_pv_format": "E4M3 FP8",
+      "throughput_tokens_per_second_per_gpu": [
+        23027,
+        23180,
+        23119,
+        22407,
+        23203
+      ],
+      "mfu_percent": [
+        52.68,
+        53.03,
+        52.89,
+        51.26,
+        53.08
+      ],
+      "loss": [
+        5.6743,
+        5.5400,
+        5.3950,
+        5.3037,
+        5.1139
+      ],
+      "preclip_grad_norm": [
+        1.3594,
+        0.9297,
+        0.7461,
+        0.9531,
+        1.2500
+      ],
+      "median_throughput_tokens_per_second_per_gpu": 23119,
+      "median_mfu_percent": 52.89,
+      "speedup_over_bf16": 1.072459062021617,
+      "step_400_tokens": 1677721600,
+      "status_at_capture": "running_and_numerically_stable"
+    }
+  },
+  "rejected_arm": {
+    "public_arm_label": "nvfp4_projection_mxfp4_pv_b4",
+    "learned_projection_format": "NVFP4",
+    "attention_pv_format": "MXFP4 E8M0 block-32",
+    "step_300": {
+      "loss": 5.6917,
+      "preclip_grad_norm": 1.6094
+    },
+    "step_325": {
+      "loss": 7.0075,
+      "preclip_grad_norm": 8.9375
+    },
+    "step_350": {
+      "loss": 16.2527,
+      "preclip_grad_norm": 268.0
+    },
+    "status": "cancelled_after_confirmed_numerical_divergence_and_successful_step_239_checkpoint_sync"
+  },
+  "checkpoint_gate": {
+    "update": 239,
+    "transport": "dedicated all-rank Gloo process group for synchronous DCP metadata collectives",
+    "bf16_remote_checkpoint_objects": 65,
+    "fp8_remote_checkpoint_objects": 65,
+    "objects_per_checkpoint": "64 distcp rank shards plus one metadata object",
+    "save_duration_seconds_approx": 9.0,
+    "training_continued_after_save": true
+  },
+  "latency_bubble_diagnosis": {
+    "sources": {
+      "bf16": "normalized metric history for bf16_b4_control",
+      "fp8": "normalized metric history for nvfp4_projection_fp8_pv_b4",
+      "additional_source": "worker-0 logs and distributed timing metrics"
+    },
+    "step_225": {
+      "classification": "shared logical-data-coordinate input-loader straggler",
+      "slow_rank": 20,
+      "bf16_max_data_loading_seconds_per_microbatch": {
+        "step_200": 0.00428,
+        "step_225": 0.07682
+      },
+      "fp8_max_data_loading_seconds_per_microbatch": {
+        "step_200": 0.00415,
+        "step_225": 0.13019
+      },
+      "hardware_observation": "SM and tensor activity and power fall while SM clocks rise, consistent with GPU-idle host/input bubbles rather than throttling"
+    },
+    "step_250_and_500": {
+      "classification": "25-update reporting windows include scheduled synchronous DCP saves at updates 239 and 478",
+      "approximate_save_seconds": [
+        9.0,
+        7.2
+      ],
+      "remote_upload_timing": "remote upload follows the synchronous local save and is not the source of the save-window pause"
+    },
+    "conclusion": "No kernel, NCCL, node-health, OOM, or thermal fault explains these shared dips; both routes recover afterward."
+  },
+  "claim_boundary": [
+    "The 1.072x result is an early matched distributed launch-window measurement, not a completed-run aggregate.",
+    "All five samples are aligned by update and use the same data recipe, effective global batch, and worker topology.",
+    "The window ends at 1.678 billion tokens while learning-rate warmup continues to update 2000, so it does not establish convergence.",
+    "The stronger single-GB200 B4 result measures a controlled local timing bracket; distributed data, optimizer, and collective work dilute that local gain.",
+    "The NVFP4-projection plus MXFP4-PV arm is excluded from speedup claims because it diverged shortly after the initially matched region."
+  ]
+}

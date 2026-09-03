@@ -1,0 +1,147 @@
+{
+  "schema": "tkfa4.native_tk_d64_v414_production_bshd_receipt.v1",
+  "date_utc": "2026-08-29",
+  "hardware": {
+    "gpu": "NVIDIA GB200",
+    "architecture": "SM100a",
+    "visible_gpu_count": 1
+  },
+  "candidate": {
+    "source_identity": "v414_d64_gqa_e4m3_production_bshd_dq_first_v1",
+    "source_files": [
+      "tk_fa4/native_gqa_tk_bwd/v414_d64_gqa_e4m3_production_bshd_dq_first.cuh",
+      "tk_fa4/native_gqa_tk_bwd/v414_d64_gqa_e4m3_production_bshd_dq_first.cu",
+      "tk_fa4/native_gqa_tk_bwd/Makefile.v414"
+    ],
+    "parent": "v406_d64_gqa_e4m3_owner_aligned_dq_first_v1",
+    "operand_layout": "BSHD_contiguous",
+    "operand_dtype": "float8_e4m3fn",
+    "operand_encoding_scale": 4.0,
+    "output_layout": "BSHD_contiguous",
+    "output_dtype": "bfloat16_additive",
+    "output_encoding_scale": 4.0,
+    "lstat_abi": "8-LSE*log2(e)",
+    "dstat_abi": "-16*sum(O*dO)",
+    "stats_layout": "B,Hq,1,S_fp32_contiguous",
+    "public_softmax_scale": "natural",
+    "post_exp2_probability_scale": 1.0,
+    "probability_log2_clamp_max": 8.0,
+    "existing_python_runner_drop_in_compatible": false
+  },
+  "build": {
+    "module": "_C_sm100_gqa_tk_v414_d64_e4m3_production_bshd_dq_first",
+    "shared_object_bytes": 3138192,
+    "shared_object_sha256": "1756dda070f053913dca0dffa19c3e0f1517ee908cbe62a2ea379431fbb3e95e",
+    "main_kernel_resources": {
+      "registers": 128,
+      "stack_bytes": 0,
+      "local_bytes": 0,
+      "spill_load_bytes": 0,
+      "spill_store_bytes": 0,
+      "shared_bytes": 117984
+    },
+    "v406_resource_match": true
+  },
+  "scaling_audit": {
+    "production_lstat_embeds_probability_scale_bits": 8,
+    "rejected_bug": "Retaining v406's clamp(log2(P),0) after consuming production lstat clipped Pscaled to at most one and collapsed the earliest causal tiles.",
+    "correction": "Remove v406's post-EX2 multiply by 256 and clamp the prelifted production exponent at +8.",
+    "corrected_v406_reference_transform": {
+      "l_aux": "(production_lstat-8)/(softmax_scale*log2(e))",
+      "delta": "production_dstat/-16"
+    }
+  },
+  "validation": {
+    "fixture": "Represented E4M3(x4) causal GQA, Hq32/Hkv8/D64, exact forward-produced production statistics",
+    "zero_dout": "dq/dk/dv all exact zero at B1/S128 and B1/S4096",
+    "b1_s128_v414_vs_corrected_v406": {
+      "dq": {
+        "cosine": 0.9999998807907104,
+        "relative_l2": 0.00007621319673489779,
+        "norm_ratio": 1.000000238418579
+      },
+      "dk": {
+        "cosine": 0.9999953508377075,
+        "relative_l2": 0.0030391127802431583,
+        "norm_ratio": 1.0000219345092773
+      },
+      "dv": {
+        "cosine": 0.9999961256980896,
+        "relative_l2": 0.002798520028591156,
+        "norm_ratio": 1.0000101327896118
+      }
+    },
+    "b1_s4096_v414_vs_corrected_v406": {
+      "dq": {
+        "cosine": 1.0000001192092896,
+        "relative_l2": 0.00017620208382140845,
+        "norm_ratio": 0.9999999403953552
+      },
+      "dk": {
+        "cosine": 0.9999997019767761,
+        "relative_l2": 0.0008132040384225547,
+        "norm_ratio": 0.9999906420707703
+      },
+      "dv": {
+        "cosine": 0.9999998211860657,
+        "relative_l2": 0.0007888168911449611,
+        "norm_ratio": 0.9999995827674866
+      }
+    },
+    "b16_s4096_v414_vs_corrected_v406": {
+      "dq": {
+        "cosine": 0.9999998807907104,
+        "relative_l2": 0.0001785608910722658,
+        "norm_ratio": 1.0
+      },
+      "dk": {
+        "cosine": 0.9999998807907104,
+        "relative_l2": 0.0003778836689889431,
+        "norm_ratio": 1.0000016689300537
+      },
+      "dv": {
+        "cosine": 1.0,
+        "relative_l2": 0.00034504447830840945,
+        "norm_ratio": 1.0
+      }
+    },
+    "b16_s4096_v414_vs_retained_production_v382": {
+      "dq": {
+        "cosine": 0.9978244304656982,
+        "relative_l2": 0.06598804146051407,
+        "norm_ratio": 1.0006625652313232
+      },
+      "dk": {
+        "cosine": 0.9978337287902832,
+        "relative_l2": 0.06585371494293213,
+        "norm_ratio": 1.0008364915847778
+      },
+      "dv": {
+        "cosine": 0.9999937415122986,
+        "relative_l2": 0.003542376449331641,
+        "norm_ratio": 1.0000042915344238
+      }
+    }
+  },
+  "timing_b16_s4096_ms": {
+    "method": "paired rotation, full output-clearing wrappers, 10 warmups, 51 samples per candidate",
+    "v406_corrected_raw_bhsd": {
+      "minimum": 3.799168109893799,
+      "median": 3.800992012023926,
+      "maximum": 3.820768117904663,
+      "shared_object_bytes": 3137944,
+      "shared_object_sha256": "653036fbd86772fc418f0311c1aa376b98245113fa8b10eeec6fe665beee1f3e"
+    },
+    "v414_production_bshd": {
+      "minimum": 3.734560012817383,
+      "median": 3.736959934234619,
+      "maximum": 3.7441599369049072
+    },
+    "v414_over_v406_latency_ratio": 0.9831538509981737,
+    "v414_speedup_over_v406": 1.017134804471063
+  },
+  "claim_boundary": {
+    "verified": "Static resources, isolated kernel execution, parity under explicit layout/stat transforms, zero-dOut behavior, repeatability, and B16/S4096 paired latency.",
+    "unverified": "The existing production Python runner rejects v414 metadata and passes obsolete v382 accumulator/partial buffers; no end-to-end transformer route was changed or measured."
+  }
+}

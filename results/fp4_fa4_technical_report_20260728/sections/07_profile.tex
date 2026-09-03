@@ -1,0 +1,149 @@
+\section{Bottleneck Analysis}
+
+\subsection{What still delays the first PV command}
+\label{sec:current-headroom}
+
+After QK completes, the first K64 PV half still depends on two N32 score
+fragments. Each fragment must be loaded from TMEM, reduced, assigned an MX
+scale, mapped and packed to E2M1, included in the represented denominator,
+written into the score overlay, and published. Q0 alone is not useful; Q1
+must reach the same point before the matrix issuer has a legal operand. The
+other query stage and independent arithmetic hide part, but not all, of this
+chain.
+
+At B1/S4096/H24/D128, a clean tuning record measured 0.092448 ms and repeated
+at 0.092512 ms. Three intentionally incorrect kernels bound the local
+headroom:
+\begin{table}[htbp]
+\centering
+\caption{Speed-of-light diagnostics for the retained GB200 schedule. These
+rows do not compute valid attention.}
+\label{tab:speed-of-light}
+\small
+\begin{tabular}{lrr}
+\toprule
+Diagnostic & Time (ms) & Gap from record \\
+\midrule
+score-pack ceiling & 0.091168 & 1.280\us\ (1.38\%) \\
+row max retained, raw score pack & 0.090112 & 2.336\us\ (2.53\%) \\
+fixed P & 0.087616 & 4.832\us\ (5.23\%) \\
+\bottomrule
+\end{tabular}
+\end{table}
+The fixed-P experiment removes nearly all P construction yet saves only
+5.23\%. Early full-FP4 kernels were dominated by P quantization; the retained
+NV/MX code path has removed most of that exposed cost. The remaining distance
+from four-times BF16 also contains TMEM score loads, K64 publication
+granularity, shared-memory delivery, two FP32 output accumulators, online
+correction, and the epilogue. Another local polynomial fit cannot remove those
+terms.
+
+\subsection{Instruction count is not the schedule}
+
+A matched fixed-P diagnostic cut dynamic instructions from about 54.6 million
+to 11.9 million and raised tensor-pipe activity from 18.8\% to 26.6\%. Other
+experiments removed arithmetic but became slower. Independent instructions
+had occupied scheduler slots while a TMEM dependency or barrier event was
+pending; removing them exposed the wait without advancing publication.
+
+The represented-denominator decoder is a small example:
+\begin{table}[htbp]
+\centering
+\caption{Equivalent denominator reductions under the same schedule.}
+\label{tab:denom-schedule}
+\small
+\begin{tabular}{lrr}
+\toprule
+Decoder & Time (ms) & Change \\
+\midrule
+aggregate, retained & 0.092512 & baseline \\
+pairwise partials & 0.094208 & +1.83\% \\
+stream after each word & 0.094464 & +2.11\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+All three are mathematically equivalent. The alternatives extend live ranges
+and alter compiler interleaving. This also explains why an integer threshold
+classifier lost to packed FMA plus native conversion despite looking simpler
+algebraically.
+
+\subsection{Why B300 is not uniformly 1.5 times faster}
+
+\begin{table}[htbp]
+\centering
+\caption{Hardware properties relevant to the measured kernels. Per-SM
+exponential rates are reported by FA4; GPU-level Ultra ratios are from
+NVIDIA.}
+\label{tab:blackwell-generations}
+\small
+\begin{tabular}{lcc}
+\toprule
+Property & GB200 / SM100 & B300 / SM103 \\
+\midrule
+Visible SMs in this study & 152 & 148 \\
+Maximum reported clock & 2062 MHz & 2032 MHz \\
+TMEM per SM & 256 KB & 256 KB \\
+Key exponential rate & 16 ops/clock/SM & 32 ops/clock/SM \\
+Dense NVFP4 GPU class & 1.0$\times$ & 1.5$\times$ \\
+Fused TMEM load + reduction & no & \code{tcgen05.ld.red} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Blackwell Ultra raises dense NVFP4 throughput by 1.5$\times$, doubles key SFU
+rates, and exposes fused TMEM load/reduction
+\cite{nvidia2025blackwellultra,nvidia2026ptx,zadouri2026flashattention4}.
+Those changes do not scale the whole attention loop. Every CTA still occupies
+all 512 TMEM columns, so residency remains one CTA per SM. Faster QK/PV makes
+score reduction, scale publication, online state, and the epilogue a larger
+fraction of time.
+
+Launch geometry caused the first apparent regression. A binary compiled for
+152 persistent workers ran on a 148-SM B300 and left four CTAs in an almost
+empty second wave. Recompiling for 148 removes that tail. The retained D128
+SM103 policy then uses six K/V stages, fused score reduction, and only a light
+quarter-3 EX2 route where it wins. Routing EX2 through every quarter ties or
+loses despite the stronger SFU. The full density and grid sweep is moved to
+Appendix~\ref{app:sm103-tuning}.
+
+At S8192/H64 and S9472/H64, enough work is available to sustain 3116 and 3159
+TFLOP/s. S9472 has 2368 logical query-pair jobs, exactly 16 per persistent
+CTA. At S32768/H24, the tested B300 instead reaches 2945 TFLOP/s versus 2998
+on GB200. Its visible SM-clock envelope is
+\BThreeSMClockEnvelopeDeficitPct\% smaller; normalized per SM-clock, B300 is
+\BThreePerSMClockGainPct\% faster. The normalization explains the direction
+but is not an observed throughput result.
+
+\subsection{D64 specialization}
+\label{sec:b300-d64}
+
+HAO's published D64 full-FP4 route hits an atom boundary: its scaled FP4 PV
+atom requires K128. Our D64 path uses dedicated K64 NVFP4/MXFP4 atoms. On
+SM103 it also uses \code{tcgen05.ld.red} for all four score quarters and sends
+eight of each quarter's 16 score pairs through native EX2.
+
+Across all 24 matched shapes, safe NV/MX on B300 is
+\BThreeDsixtyfourSafeGenerationGeo$\times$ faster than GB200 geometrically,
+and \BThreeDsixtyfourSafeSaturatedGenerationGeo$\times$ for $S\ge4096$. At
+S32768/H24 it reaches \BThreeDsixtyfourNVMXTflops\ TFLOP/s in
+\BThreeDsixtyfourNVMXTime\,ms. A raw NV/NV control is faster on some inputs
+but produces non-finite values at H32/S32768 for one seed; the bounded control
+and full matrix are in Appendix~\ref{app:nvnv-d64}.
+
+\subsection{What would move the boundary}
+
+The remaining useful changes require a different hardware or ownership
+contract:
+\begin{description}
+  \item[Scaled-FP4 K32 PV.] Consume each N32 completion immediately instead
+  of waiting for a pair.
+  \item[Another score bank.] Give QK a destination while PV still owns the
+  current P overlay.
+  \item[Scales outside TMEM.] Let the matrix instruction consume compact
+  scales directly from shared memory or registers.
+  \item[Compressed score ownership.] Create look-ahead without duplicating a
+  full 128-column FP32 score tile.
+  \item[Wider SM103 tiles.] K96/K64 Ultra instructions make N192 or N256
+  attractive, but only if two-query K/V reuse and the P lifecycle survive the
+  rewrite.
+\end{description}

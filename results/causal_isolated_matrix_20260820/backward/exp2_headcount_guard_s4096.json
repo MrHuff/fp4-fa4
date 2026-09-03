@@ -1,0 +1,2343 @@
+{
+  "command": [
+    "/workspace/codebases/pv/fp4_matmul_worktrees/causal_matrix_20260820/tk_fa4/lowp_fa4_bwd/benchmark_causal_backward_matrix.py",
+    "--sequences",
+    "4096",
+    "--head-dims",
+    "64",
+    "--head-pairs",
+    "16/4,64/16",
+    "--routes",
+    "retained_lowp_native_exp2,retained_lowp_exp2_d1_p2",
+    "--seeds",
+    "20260820",
+    "--warmups",
+    "9",
+    "--samples",
+    "41",
+    "--output",
+    "results/causal_isolated_matrix_20260820/backward/exp2_headcount_guard_s4096.json"
+  ],
+  "created_utc": "2026-08-20T12:14:52.114412+00:00",
+  "device": {
+    "compute_capability": [
+      10,
+      0
+    ],
+    "device_name": "NVIDIA GB200",
+    "torch": "2.9.0a0+145a3a7bda.nv25.10",
+    "torch_cuda": "13.0",
+    "total_memory_bytes": 197897617408,
+    "visible_device_count": 1
+  },
+  "host": {
+    "platform": "Linux-6.12.68-92.122.amzn2023.aarch64-aarch64-with-glibc2.39",
+    "python": "3.12.3"
+  },
+  "planned_cases": [
+    {
+      "available": true,
+      "route": "retained_lowp_native_exp2",
+      "route_policy": {
+        "direct_tma_dkdv": true,
+        "exp2_degree": 2,
+        "exp2_period": 0,
+        "exp2_policy": {
+          "effective": {
+            "degree": 2,
+            "period": 0
+          },
+          "mode": "explicit",
+          "reason": "an explicit period overrides automatic sequence dispatch",
+          "requested": {
+            "degree": 2,
+            "period": 0
+          },
+          "version": "d64_s4096_selective_exp2_v1"
+        },
+        "fp8_ds_lift": 16,
+        "lowp_do_stages": 1,
+        "probability_lift": 256,
+        "probability_storage": "tmem",
+        "retained_source": "0db D64 coherent training policy with sequence-resolved EX2",
+        "reuse_quantized_p": false,
+        "workspace_stats": true
+      },
+      "shape": {
+        "batch": 1,
+        "gqa_ratio": 4,
+        "head_dim": 64,
+        "kv_heads": 4,
+        "q_heads": 16,
+        "sequence": 4096
+      }
+    },
+    {
+      "available": true,
+      "route": "retained_lowp_exp2_d1_p2",
+      "route_policy": {
+        "direct_tma_dkdv": true,
+        "exp2_degree": 1,
+        "exp2_period": 2,
+        "exp2_policy": {
+          "effective": {
+            "degree": 1,
+            "period": 2
+          },
+          "mode": "explicit",
+          "reason": "an explicit period overrides automatic sequence dispatch",
+          "requested": {
+            "degree": 1,
+            "period": 2
+          },
+          "version": "d64_s4096_selective_exp2_v1"
+        },
+        "fp8_ds_lift": 16,
+        "lowp_do_stages": 1,
+        "probability_lift": 256,
+        "probability_storage": "tmem",
+        "retained_source": "0db D64 coherent training policy with sequence-resolved EX2",
+        "reuse_quantized_p": false,
+        "workspace_stats": true
+      },
+      "shape": {
+        "batch": 1,
+        "gqa_ratio": 4,
+        "head_dim": 64,
+        "kv_heads": 4,
+        "q_heads": 16,
+        "sequence": 4096
+      }
+    },
+    {
+      "available": true,
+      "route": "retained_lowp_native_exp2",
+      "route_policy": {
+        "direct_tma_dkdv": true,
+        "exp2_degree": 2,
+        "exp2_period": 0,
+        "exp2_policy": {
+          "effective": {
+            "degree": 2,
+            "period": 0
+          },
+          "mode": "explicit",
+          "reason": "an explicit period overrides automatic sequence dispatch",
+          "requested": {
+            "degree": 2,
+            "period": 0
+          },
+          "version": "d64_s4096_selective_exp2_v1"
+        },
+        "fp8_ds_lift": 16,
+        "lowp_do_stages": 1,
+        "probability_lift": 256,
+        "probability_storage": "tmem",
+        "retained_source": "0db D64 coherent training policy with sequence-resolved EX2",
+        "reuse_quantized_p": false,
+        "workspace_stats": true
+      },
+      "shape": {
+        "batch": 1,
+        "gqa_ratio": 4,
+        "head_dim": 64,
+        "kv_heads": 16,
+        "q_heads": 64,
+        "sequence": 4096
+      }
+    },
+    {
+      "available": true,
+      "route": "retained_lowp_exp2_d1_p2",
+      "route_policy": {
+        "direct_tma_dkdv": true,
+        "exp2_degree": 1,
+        "exp2_period": 2,
+        "exp2_policy": {
+          "effective": {
+            "degree": 1,
+            "period": 2
+          },
+          "mode": "explicit",
+          "reason": "an explicit period overrides automatic sequence dispatch",
+          "requested": {
+            "degree": 1,
+            "period": 2
+          },
+          "version": "d64_s4096_selective_exp2_v1"
+        },
+        "fp8_ds_lift": 16,
+        "lowp_do_stages": 1,
+        "probability_lift": 256,
+        "probability_storage": "tmem",
+        "retained_source": "0db D64 coherent training policy with sequence-resolved EX2",
+        "reuse_quantized_p": false,
+        "workspace_stats": true
+      },
+      "shape": {
+        "batch": 1,
+        "gqa_ratio": 4,
+        "head_dim": 64,
+        "kv_heads": 16,
+        "q_heads": 64,
+        "sequence": 4096
+      }
+    }
+  ],
+  "planned_shapes": [
+    {
+      "batch": 1,
+      "gqa_ratio": 4,
+      "head_dim": 64,
+      "kv_heads": 4,
+      "q_heads": 16,
+      "sequence": 4096
+    },
+    {
+      "batch": 1,
+      "gqa_ratio": 4,
+      "head_dim": 64,
+      "kv_heads": 16,
+      "q_heads": 64,
+      "sequence": 4096
+    }
+  ],
+  "protocol": {
+    "accuracy_seeds": [
+      20260820
+    ],
+    "backward_exp2_dispatch": {
+      "at_or_above_threshold": {
+        "degree": 1,
+        "period": 2
+      },
+      "below_threshold": {
+        "degree": 2,
+        "period": 0
+      },
+      "scope": "D64 B1 causal retained lowp Hq/Hkv=32/8",
+      "threshold_sequence": 4096,
+      "verified_shapes": [
+        {
+          "kv_heads": 8,
+          "q_heads": 32,
+          "sequence": 4096
+        },
+        {
+          "kv_heads": 8,
+          "q_heads": 32,
+          "sequence": 8192
+        }
+      ],
+      "version": "d64_s4096_selective_exp2_v1"
+    },
+    "causal": true,
+    "comparison": "CuTe BF16 and retained lowp backward on one exact E4M3-represented Q/K/V/dO state",
+    "fixed_length": true,
+    "forward_for_statistics": "CuTe BF16 causal flash attention",
+    "forward_timing_included": false,
+    "minimum_device_free_gib": 16.0,
+    "minimum_host_free_gib": 16.0,
+    "primary_timing_includes_required_clears": true,
+    "quantization_timing_included": false,
+    "samples": 41,
+    "timing_seed": 20260820,
+    "warmups": 9
+  },
+  "records": [
+    {
+      "memory_before": {
+        "device_free_bytes": 197171675136,
+        "device_total_bytes": 197897617408,
+        "estimated_live_tensor_bytes": 111149056,
+        "host_available_bytes": 925517934592
+      },
+      "route": "retained_lowp_native_exp2",
+      "route_policy": {
+        "direct_tma_dkdv": true,
+        "exp2_degree": 2,
+        "exp2_period": 0,
+        "exp2_policy": {
+          "effective": {
+            "degree": 2,
+            "period": 0
+          },
+          "mode": "explicit",
+          "reason": "an explicit period overrides automatic sequence dispatch",
+          "requested": {
+            "degree": 2,
+            "period": 0
+          },
+          "version": "d64_s4096_selective_exp2_v1"
+        },
+        "fp8_ds_lift": 16,
+        "lowp_do_stages": 1,
+        "probability_lift": 256,
+        "probability_storage": "tmem",
+        "retained_source": "0db D64 coherent training policy with sequence-resolved EX2",
+        "reuse_quantized_p": false,
+        "workspace_stats": true
+      },
+      "seed_records": [
+        {
+          "accuracy": {
+            "aggregate": {
+              "actual_finite": true,
+              "cosine": 0.9996771096573962,
+              "max_abs": 0.015625,
+              "norm_ratio": 0.9998749825914658,
+              "reference_finite": true,
+              "relative_l2": 0.025410934275075847
+            },
+            "dk": {
+              "actual_finite": true,
+              "cosine": 0.999598503112793,
+              "max_abs": 0.0009765625,
+              "norm_ratio": 1.0003020763397217,
+              "reference_finite": true,
+              "relative_l2": 0.028346600010991096,
+              "row_cosine_p01": 0.9983664155006409,
+              "row_cosine_p05": 0.9987320303916931,
+              "row_cosine_p50": 0.9993615746498108
+            },
+            "dq": {
+              "actual_finite": true,
+              "cosine": 0.9995974898338318,
+              "max_abs": 0.00054931640625,
+              "norm_ratio": 1.0001212358474731,
+              "reference_finite": true,
+              "relative_l2": 0.028373831883072853,
+              "row_cosine_p01": 0.9984868168830872,
+              "row_cosine_p05": 0.9988569617271423,
+              "row_cosine_p50": 0.9995033144950867
+            },
+            "dv": {
+              "actual_finite": true,
+              "cosine": 0.9996777176856995,
+              "max_abs": 0.015625,
+              "norm_ratio": 0.9998728632926941,
+              "reference_finite": true,
+              "relative_l2": 0.025391219183802605,
+              "row_cosine_p01": 0.9992243051528931,
+              "row_cosine_p05": 0.9993520975112915,
+              "row_cosine_p50": 0.9995813369750977
+            }
+          },
+          "peak_device_allocated_bytes": 226237952,
+          "peak_device_reserved_bytes": 257949696,
+          "reference_policy": {
+            "causal": true,
+            "input": "BF16 decode of the represented E4M3 state",
+            "output": "BF16 dQ/dK/dV",
+            "probability": "BF16 score/softmax",
+            "statistics": "internal O*dO and LSE preprocessing"
+          },
+          "route": "retained_lowp_native_exp2",
+          "route_policy": {
+            "causal": true,
+            "direct_tma_dkdv": true,
+            "exp2_degree": 2,
+            "exp2_period": 0,
+            "exp2_policy": {
+              "effective": {
+                "degree": 2,
+                "period": 0
+              },
+              "mode": "explicit",
+              "reason": "an explicit period overrides automatic sequence dispatch",
+              "requested": {
+                "degree": 2,
+                "period": 0
+              },
+              "version": "d64_s4096_selective_exp2_v1"
+            },
+            "fp8_ds_lift": 16,
+            "input": "E4M3 Q/K/V/dO with fixed x4 publication scale",
+            "lowp_do_stages": 1,
+            "output": "BF16 dQ/dK/dV with common x4 decode",
+            "probability_lift": 256,
+            "probability_storage": "tmem",
+            "retained_source": "0db D64 coherent training policy with sequence-resolved EX2",
+            "reuse_quantized_p": false,
+            "score_scale": "(1/sqrt(64))/16",
+            "statistics": "negative projection-native pages in backward workspace",
+            "workspace_stats": true
+          },
+          "seed": 20260820,
+          "timing": {
+            "breakdown": {
+              "cute_bf16": {
+                "kernel_after_required_clear": {
+                  "maximum_us": 328.031986951828,
+                  "mean_us": 220.9693662277082,
+                  "median_us": 217.72800385951996,
+                  "minimum_us": 211.35999262332916,
+                  "p05_us": 212.19199895858765,
+                  "p95_us": 226.75199806690216,
+                  "samples_us": [
+                    220.2560007572174,
+                    218.84800493717194,
+                    225.11999309062958,
+                    221.27999365329742,
+                    220.38400173187256,
+                    217.66400337219238,
+                    221.82400524616241,
+                    228.44800353050232,
+                    219.10400688648224,
+                    328.031986951828,
+                    221.343994140625,
+                    216.73600375652313,
+                    217.43999421596527,
+                    212.92799711227417,
+                    222.75200486183167,
+                    219.61599588394165,
+                    220.99199891090393,
+                    216.35200083255768,
+                    215.7759964466095,
+                    216.48000180721283,
+                    219.32800114154816,
+                    222.01600670814514,
+                    217.72800385951996,
+                    217.24799275398254,
+                    218.9439982175827,
+                    212.19199895858765,
+                    217.79200434684753,
+                    216.60800278186798,
+                    215.90399742126465,
+                    215.13600647449493,
+                    211.35999262332916,
+                    214.6880030632019,
+                    219.52000260353088,
+                    211.96800470352173,
+                    213.919997215271,
+                    215.2319997549057,
+                    215.00800549983978,
+                    226.75199806690216,
+                    222.75200486183167,
+                    216.67200326919556,
+                    217.6000028848648
+                  ],
+                  "stdev_us": 17.55162492257359
+                },
+                "required_clear_only": {
+                  "maximum_us": 24.12799932062626,
+                  "mean_us": 18.922146318889247,
+                  "median_us": 18.880000337958336,
+                  "minimum_us": 17.023999243974686,
+                  "p05_us": 17.055999487638474,
+                  "p95_us": 21.63200080394745,
+                  "samples_us": [
+                    21.63200080394745,
+                    19.071999937295914,
+                    18.848000094294548,
+                    19.487999379634857,
+                    19.29599978029728,
+                    17.055999487638474,
+                    21.983999758958817,
+                    19.58400011062622,
+                    19.1040001809597,
+                    19.168000668287277,
+                    19.231999292969704,
+                    18.271999433636665,
+                    18.0479995906353,
+                    19.42400075495243,
+                    17.055999487638474,
+                    17.023999243974686,
+                    19.551999866962433,
+                    18.33599992096424,
+                    17.72800087928772,
+                    17.855999991297722,
+                    18.94400082528591,
+                    20.416000857949257,
+                    17.952000722289085,
+                    17.472000792622566,
+                    24.12799932062626,
+                    18.880000337958336,
+                    19.26399953663349,
+                    19.1040001809597,
+                    18.239999189972878,
+                    18.880000337958336,
+                    20.479999482631683,
+                    17.75999926030636,
+                    17.920000478625298,
+                    18.144000321626663,
+                    19.1040001809597,
+                    18.52799952030182,
+                    18.97599920630455,
+                    18.112000077962875,
+                    19.1040001809597,
+                    18.36800016462803,
+                    18.271999433636665
+                  ],
+                  "stdev_us": 1.3521929233377328
+                }
+              },
+              "retained_lowp_native_exp2": {
+                "kernel_after_required_clear": {
+                  "maximum_us": 327.2640109062195,
+                  "mean_us": 218.06517098008132,
+                  "median_us": 213.8880044221878,
+                  "minimum_us": 209.6319943666458,
+                  "p05_us": 210.4959934949875,
+                  "p95_us": 226.59200429916382,
+                  "samples_us": [
+                    226.59200429916382,
+                    218.81599724292755,
+                    213.8880044221878,
+                    216.86400473117828,
+                    212.3199999332428,
+                    214.62400257587433,
+                    213.34399282932281,
+                    217.31199324131012,
+                    216.12800657749176,
+                    213.8880044221878,
+                    214.91199731826782,
+                    215.2000069618225,
+                    212.351992726326,
+                    212.96000480651855,
+                    217.28000044822693,
+                    216.22399985790253,
+                    229.0560007095337,
+                    218.1439995765686,
+                    212.67199516296387,
+                    211.32799983024597,
+                    215.07200598716736,
+                    213.76000344753265,
+                    213.15200626850128,
+                    327.2640109062195,
+                    221.72799706459045,
+                    217.15199947357178,
+                    214.23999965190887,
+                    212.12799847126007,
+                    212.25599944591522,
+                    211.61599457263947,
+                    210.33599972724915,
+                    224.92800652980804,
+                    212.2880071401596,
+                    213.59999477863312,
+                    213.53599429130554,
+                    214.6880030632019,
+                    210.4959934949875,
+                    222.3999947309494,
+                    213.6320024728775,
+                    209.6319943666458,
+                    212.8639966249466
+                  ],
+                  "stdev_us": 17.999081799848305
+                },
+                "required_clear_only": {
+                  "maximum_us": 25.79200081527233,
+                  "mean_us": 17.60702432564846,
+                  "median_us": 16.96000061929226,
+                  "minimum_us": 14.208000153303146,
+                  "p05_us": 15.48799965530634,
+                  "p95_us": 22.304000332951546,
+                  "samples_us": [
+                    18.751999363303185,
+                    18.559999763965607,
+                    16.736000776290894,
+                    17.503999173641205,
+                    24.25600029528141,
+                    18.719999119639397,
+                    17.11999997496605,
+                    17.503999173641205,
+                    16.704000532627106,
+                    25.79200081527233,
+                    18.688000738620758,
+                    18.015999346971512,
+                    17.376000061631203,
+                    15.936000272631645,
+                    15.968000516295433,
+                    15.744000673294067,
+                    14.208000153303146,
+                    15.135999768972397,
+                    16.3199994713068,
+                    16.448000445961952,
+                    17.72800087928772,
+                    15.839999541640282,
+                    16.48000068962574,
+                    16.383999958634377,
+                    15.48799965530634,
+                    16.92800037562847,
+                    22.304000332951546,
+                    17.24799908697605,
+                    16.896000131964684,
+                    16.095999628305435,
+                    16.3199994713068,
+                    20.35200037062168,
+                    16.96000061929226,
+                    20.67199908196926,
+                    17.983999103307724,
+                    16.575999557971954,
+                    16.51199907064438,
+                    16.607999801635742,
+                    18.36800016462803,
+                    17.343999817967415,
+                    17.311999574303627
+                  ],
+                  "stdev_us": 2.271926974290048
+                }
+              }
+            },
+            "paired_with_required_clear": {
+              "cute_bf16": {
+                "maximum_us": 463.4239971637726,
+                "mean_us": 247.66361059212102,
+                "median_us": 237.69600689411163,
+                "minimum_us": 224.70399737358093,
+                "p05_us": 229.12000119686127,
+                "p95_us": 332.832008600235,
+                "samples_us": [
+                  259.5840096473694,
+                  243.6479926109314,
+                  463.4239971637726,
+                  245.05600333213806,
+                  232.2559952735901,
+                  248.83200228214264,
+                  232.89600014686584,
+                  239.42400515079498,
+                  231.10400140285492,
+                  239.74399268627167,
+                  246.72000110149384,
+                  240.25599658489227,
+                  229.12000119686127,
+                  250.65600872039795,
+                  238.71999979019165,
+                  238.36800456047058,
+                  232.16000199317932,
+                  244.6720004081726,
+                  332.832008600235,
+                  239.00799453258514,
+                  229.8559993505478,
+                  239.3600046634674,
+                  231.51999711990356,
+                  246.68799340724945,
+                  230.335995554924,
+                  234.52800512313843,
+                  230.880007147789,
+                  237.69600689411163,
+                  229.8559993505478,
+                  235.6799989938736,
+                  244.6720004081726,
+                  234.23999547958374,
+                  224.70399737358093,
+                  234.81599986553192,
+                  337.15200424194336,
+                  244.51200664043427,
+                  228.06400060653687,
+                  233.7920069694519,
+                  232.31999576091766,
+                  235.48799753189087,
+                  229.5680046081543
+                ],
+                "stdev_us": 41.195093260933206
+              },
+              "retained_lowp_native_exp2": {
+                "maximum_us": 251.48800015449524,
+                "mean_us": 235.63082988669234,
+                "median_us": 234.49599742889404,
+                "minimum_us": 228.32000255584717,
+                "p05_us": 228.92799973487854,
+                "p95_us": 249.7600018978119,
+                "samples_us": [
+                  249.7279942035675,
+                  237.8239929676056,
+                  249.7600018978119,
+                  234.97599363327026,
+                  236.28799617290497,
+                  230.46399652957916,
+                  251.16801261901855,
+                  230.78399896621704,
+                  236.51200532913208,
+                  228.32000255584717,
+                  239.80799317359924,
+                  229.50400412082672,
+                  235.58400571346283,
+                  232.89600014686584,
+                  239.3919974565506,
+                  233.37599635124207,
+                  232.41600394248962,
+                  230.30400276184082,
+                  240.25599658489227,
+                  233.18399488925934,
+                  238.78400027751923,
+                  234.8800003528595,
+                  237.63200640678406,
+                  230.6240051984787,
+                  238.27199637889862,
+                  230.81600666046143,
+                  230.75200617313385,
+                  230.0799936056137,
+                  251.48800015449524,
+                  229.8559993505478,
+                  236.06400191783905,
+                  229.50400412082672,
+                  234.72000658512115,
+                  230.880007147789,
+                  243.3599978685379,
+                  228.92799973487854,
+                  229.98400032520294,
+                  228.5439968109131,
+                  234.49599742889404,
+                  231.29600286483765,
+                  247.3600059747696
+                ],
+                "stdev_us": 6.542830631397076
+              }
+            },
+            "primary_boundary": "backward_with_every_required_clear",
+            "rotated_order": true,
+            "speedup_vs_bf16": 1.0136463287233204
+          }
+        }
+      ],
+      "shape": {
+        "batch": 1,
+        "gqa_ratio": 4,
+        "head_dim": 64,
+        "kv_heads": 4,
+        "q_heads": 16,
+        "sequence": 4096
+      },
+      "status": "complete"
+    },
+    {
+      "memory_before": {
+        "device_free_bytes": 197171675136,
+        "device_total_bytes": 197897617408,
+        "estimated_live_tensor_bytes": 111149056,
+        "host_available_bytes": 925517934592
+      },
+      "route": "retained_lowp_exp2_d1_p2",
+      "route_policy": {
+        "direct_tma_dkdv": true,
+        "exp2_degree": 1,
+        "exp2_period": 2,
+        "exp2_policy": {
+          "effective": {
+            "degree": 1,
+            "period": 2
+          },
+          "mode": "explicit",
+          "reason": "an explicit period overrides automatic sequence dispatch",
+          "requested": {
+            "degree": 1,
+            "period": 2
+          },
+          "version": "d64_s4096_selective_exp2_v1"
+        },
+        "fp8_ds_lift": 16,
+        "lowp_do_stages": 1,
+        "probability_lift": 256,
+        "probability_storage": "tmem",
+        "retained_source": "0db D64 coherent training policy with sequence-resolved EX2",
+        "reuse_quantized_p": false,
+        "workspace_stats": true
+      },
+      "seed_records": [
+        {
+          "accuracy": {
+            "aggregate": {
+              "actual_finite": true,
+              "cosine": 0.9984925496915119,
+              "max_abs": 0.04296875,
+              "norm_ratio": 0.9726842457560245,
+              "reference_finite": true,
+              "relative_l2": 0.06065226098480964
+            },
+            "dk": {
+              "actual_finite": true,
+              "cosine": 0.9985396265983582,
+              "max_abs": 0.001708984375,
+              "norm_ratio": 0.9717265367507935,
+              "reference_finite": true,
+              "relative_l2": 0.060313764959573746,
+              "row_cosine_p01": 0.9964666962623596,
+              "row_cosine_p05": 0.9973535537719727,
+              "row_cosine_p50": 0.9985076785087585
+            },
+            "dq": {
+              "actual_finite": true,
+              "cosine": 0.9985603094100952,
+              "max_abs": 0.0015869140625,
+              "norm_ratio": 0.9721118807792664,
+              "reference_finite": true,
+              "relative_l2": 0.059805143624544144,
+              "row_cosine_p01": 0.9960207343101501,
+              "row_cosine_p05": 0.9973415732383728,
+              "row_cosine_p50": 0.9993540644645691
+            },
+            "dv": {
+              "actual_finite": true,
+              "cosine": 0.9984923005104065,
+              "max_abs": 0.04296875,
+              "norm_ratio": 0.972689151763916,
+              "reference_finite": true,
+              "relative_l2": 0.06065598502755165,
+              "row_cosine_p01": 0.9970479011535645,
+              "row_cosine_p05": 0.99760901927948,
+              "row_cosine_p50": 0.9986351132392883
+            }
+          },
+          "peak_device_allocated_bytes": 226237952,
+          "peak_device_reserved_bytes": 257949696,
+          "reference_policy": {
+            "causal": true,
+            "input": "BF16 decode of the represented E4M3 state",
+            "output": "BF16 dQ/dK/dV",
+            "probability": "BF16 score/softmax",
+            "statistics": "internal O*dO and LSE preprocessing"
+          },
+          "route": "retained_lowp_exp2_d1_p2",
+          "route_policy": {
+            "causal": true,
+            "direct_tma_dkdv": true,
+            "exp2_degree": 1,
+            "exp2_period": 2,
+            "exp2_policy": {
+              "effective": {
+                "degree": 1,
+                "period": 2
+              },
+              "mode": "explicit",
+              "reason": "an explicit period overrides automatic sequence dispatch",
+              "requested": {
+                "degree": 1,
+                "period": 2
+              },
+              "version": "d64_s4096_selective_exp2_v1"
+            },
+            "fp8_ds_lift": 16,
+            "input": "E4M3 Q/K/V/dO with fixed x4 publication scale",
+            "lowp_do_stages": 1,
+            "output": "BF16 dQ/dK/dV with common x4 decode",
+            "probability_lift": 256,
+            "probability_storage": "tmem",
+            "retained_source": "0db D64 coherent training policy with sequence-resolved EX2",
+            "reuse_quantized_p": false,
+            "score_scale": "(1/sqrt(64))/16",
+            "statistics": "negative projection-native pages in backward workspace",
+            "workspace_stats": true
+          },
+          "seed": 20260820,
+          "timing": {
+            "breakdown": {
+              "cute_bf16": {
+                "kernel_after_required_clear": {
+                  "maximum_us": 352.2239923477173,
+                  "mean_us": 225.25892606595667,
+                  "median_us": 221.47199511528015,
+                  "minimum_us": 213.6639952659607,
+                  "p05_us": 216.70399606227875,
+                  "p95_us": 234.14400219917297,
+                  "samples_us": [
+                    224.5440036058426,
+                    225.600004196167,
+                    227.03999280929565,
+                    220.41599452495575,
+                    224.70399737358093,
+                    231.83999955654144,
+                    227.77600586414337,
+                    234.14400219917297,
+                    224.7679978609085,
+                    226.1119931936264,
+                    352.2239923477173,
+                    227.9359996318817,
+                    219.00799870491028,
+                    216.8000042438507,
+                    213.6639952659607,
+                    217.43999421596527,
+                    223.39199483394623,
+                    219.26400065422058,
+                    225.18399357795715,
+                    223.80800545215607,
+                    224.03199970722198,
+                    219.90400552749634,
+                    218.27200055122375,
+                    216.70399606227875,
+                    218.6879962682724,
+                    219.9680060148239,
+                    218.6879962682724,
+                    221.47199511528015,
+                    219.64800357818604,
+                    220.96000611782074,
+                    234.592005610466,
+                    217.3759937286377,
+                    221.91999852657318,
+                    218.49599480628967,
+                    221.98399901390076,
+                    216.63999557495117,
+                    218.9760059118271,
+                    219.58400309085846,
+                    221.91999852657318,
+                    221.50400280952454,
+                    218.62399578094482
+                  ],
+                  "stdev_us": 20.853709003327346
+                },
+                "required_clear_only": {
+                  "maximum_us": 29.311999678611755,
+                  "mean_us": 21.34478033134123,
+                  "median_us": 20.800000056624413,
+                  "minimum_us": 19.711999222636223,
+                  "p05_us": 19.7759997099638,
+                  "p95_us": 27.744000777602196,
+                  "samples_us": [
+                    22.23999984562397,
+                    21.43999934196472,
+                    20.447999238967896,
+                    20.160000771284103,
+                    20.479999482631683,
+                    19.7759997099638,
+                    20.35200037062168,
+                    20.54399996995926,
+                    20.447999238967896,
+                    20.096000283956528,
+                    28.031999245285988,
+                    20.416000857949257,
+                    20.479999482631683,
+                    19.711999222636223,
+                    20.191999152302742,
+                    20.927999168634415,
+                    20.800000056624413,
+                    21.43999934196472,
+                    20.191999152302742,
+                    21.023999899625778,
+                    20.99199965596199,
+                    20.767999812960625,
+                    21.183999255299568,
+                    19.872000440955162,
+                    21.27999998629093,
+                    29.311999678611755,
+                    22.911999374628067,
+                    27.744000777602196,
+                    21.088000386953354,
+                    20.67199908196926,
+                    21.056000143289566,
+                    21.824000403285027,
+                    21.43999934196472,
+                    21.824000403285027,
+                    20.416000857949257,
+                    19.90400068461895,
+                    21.31200022995472,
+                    19.967999309301376,
+                    21.12000063061714,
+                    21.47199958562851,
+                    19.7759997099638
+                  ],
+                  "stdev_us": 2.1238273403952475
+                }
+              },
+              "retained_lowp_exp2_d1_p2": {
+                "kernel_after_required_clear": {
+                  "maximum_us": 332.3200047016144,
+                  "mean_us": 204.04058694839478,
+                  "median_us": 199.74400103092194,
+                  "minimum_us": 193.37600469589233,
+                  "p05_us": 195.45599818229675,
+                  "p95_us": 214.11199867725372,
+                  "samples_us": [
+                    207.0080041885376,
+                    204.70400154590607,
+                    204.96000349521637,
+                    202.30400562286377,
+                    200.73600113391876,
+                    218.36799383163452,
+                    204.28800582885742,
+                    198.55999946594238,
+                    199.8720020055771,
+                    197.40800559520721,
+                    198.30399751663208,
+                    208.0959975719452,
+                    199.93600249290466,
+                    201.79200172424316,
+                    204.03200387954712,
+                    200.8640021085739,
+                    197.05599546432495,
+                    193.37600469589233,
+                    195.45599818229675,
+                    200.8640021085739,
+                    198.7520009279251,
+                    214.11199867725372,
+                    202.43200659751892,
+                    203.19999754428864,
+                    332.3200047016144,
+                    205.37599921226501,
+                    199.35999810695648,
+                    199.20000433921814,
+                    199.74400103092194,
+                    198.5280066728592,
+                    194.11200284957886,
+                    196.54400646686554,
+                    197.50399887561798,
+                    199.072003364563,
+                    197.66399264335632,
+                    197.66399264335632,
+                    196.19199633598328,
+                    198.59200716018677,
+                    200.57600736618042,
+                    198.5280066728592,
+                    198.2080042362213
+                  ],
+                  "stdev_us": 21.097338506389015
+                },
+                "required_clear_only": {
+                  "maximum_us": 25.887999683618546,
+                  "mean_us": 19.644878077797774,
+                  "median_us": 19.168000668287277,
+                  "minimum_us": 17.632000148296356,
+                  "p05_us": 18.303999677300453,
+                  "p95_us": 22.784000262618065,
+                  "samples_us": [
+                    22.784000262618065,
+                    19.967999309301376,
+                    19.168000668287277,
+                    19.039999693632126,
+                    18.49599927663803,
+                    20.735999569296837,
+                    19.1040001809597,
+                    18.783999606966972,
+                    19.74399946630001,
+                    20.160000771284103,
+                    18.912000581622124,
+                    19.840000197291374,
+                    19.29599978029728,
+                    19.807999953627586,
+                    19.168000668287277,
+                    18.880000337958336,
+                    18.52799952030182,
+                    18.719999119639397,
+                    19.26399953663349,
+                    18.688000738620758,
+                    18.52799952030182,
+                    18.36800016462803,
+                    20.67199908196926,
+                    18.36800016462803,
+                    18.912000581622124,
+                    18.688000738620758,
+                    17.632000148296356,
+                    17.920000478625298,
+                    18.592000007629395,
+                    21.75999991595745,
+                    19.680000841617584,
+                    19.648000597953796,
+                    19.168000668287277,
+                    20.320000126957893,
+                    19.1040001809597,
+                    25.887999683618546,
+                    25.439999997615814,
+                    19.711999222636223,
+                    18.783999606966972,
+                    18.303999677300453,
+                    20.864000543951988
+                  ],
+                  "stdev_us": 1.7048644133166941
+                }
+              }
+            },
+            "paired_with_required_clear": {
+              "cute_bf16": {
+                "maximum_us": 278.9759933948517,
+                "mean_us": 244.08429134182813,
+                "median_us": 242.8479939699173,
+                "minimum_us": 234.43199694156647,
+                "p05_us": 235.9039932489395,
+                "p95_us": 257.1519911289215,
+                "samples_us": [
+                  259.00799036026,
+                  252.60800123214722,
+                  242.8479939699173,
+                  257.1519911289215,
+                  237.47199773788452,
+                  247.23200500011444,
+                  240.38399755954742,
+                  248.31999838352203,
+                  238.17600309848785,
+                  249.37599897384644,
+                  238.65599930286407,
+                  241.95200204849243,
+                  242.2720044851303,
+                  245.15199661254883,
+                  241.56799912452698,
+                  244.47999894618988,
+                  234.43199694156647,
+                  249.63200092315674,
+                  239.42400515079498,
+                  244.9920028448105,
+                  238.01599442958832,
+                  245.08799612522125,
+                  238.94399404525757,
+                  247.71200120449066,
+                  235.29599606990814,
+                  243.6479926109314,
+                  238.62400650978088,
+                  242.8479939699173,
+                  236.2239956855774,
+                  278.9759933948517,
+                  242.08000302314758,
+                  246.49600684642792,
+                  240.7039999961853,
+                  244.47999894618988,
+                  242.36799776554108,
+                  248.7040013074875,
+                  239.32799696922302,
+                  244.1280037164688,
+                  237.05600202083588,
+                  245.69599330425262,
+                  235.9039932489395
+                ],
+                "stdev_us": 7.842012723088052
+              },
+              "retained_lowp_exp2_d1_p2": {
+                "maximum_us": 1124.351978302002,
+                "mean_us": 255.65502374637418,
+                "median_us": 226.23999416828156,
+                "minimum_us": 218.30399334430695,
+                "p05_us": 218.9120054244995,
+                "p95_us": 369.02400851249695,
+                "samples_us": [
+                  238.75199258327484,
+                  230.01599311828613,
+                  1124.351978302002,
+                  235.07200181484222,
+                  233.0559939146042,
+                  223.61600399017334,
+                  225.3440022468567,
+                  225.0880002975464,
+                  225.8239984512329,
+                  222.6880043745041,
+                  226.9120067358017,
+                  220.5439954996109,
+                  228.96000742912292,
+                  223.07200729846954,
+                  233.37599635124207,
+                  220.89600563049316,
+                  246.0480034351349,
+                  222.81600534915924,
+                  369.02400851249695,
+                  230.5919975042343,
+                  225.75999796390533,
+                  220.86399793624878,
+                  225.24799406528473,
+                  218.75199675559998,
+                  226.8799990415573,
+                  224.03199970722198,
+                  229.312002658844,
+                  224.73600506782532,
+                  226.55999660491943,
+                  225.3119945526123,
+                  226.23999416828156,
+                  233.40800404548645,
+                  226.6560047864914,
+                  220.92799842357635,
+                  369.2159950733185,
+                  232.06399381160736,
+                  227.1679937839508,
+                  218.30399334430695,
+                  230.30400276184082,
+                  218.9120054244995,
+                  225.15200078487396
+                ],
+                "stdev_us": 142.58177623080914
+              }
+            },
+            "primary_boundary": "backward_with_every_required_clear",
+            "rotated_order": true,
+            "speedup_vs_bf16": 1.0734087704638218
+          }
+        }
+      ],
+      "shape": {
+        "batch": 1,
+        "gqa_ratio": 4,
+        "head_dim": 64,
+        "kv_heads": 4,
+        "q_heads": 16,
+        "sequence": 4096
+      },
+      "status": "complete"
+    },
+    {
+      "memory_before": {
+        "device_free_bytes": 197068914688,
+        "device_total_bytes": 197897617408,
+        "estimated_live_tensor_bytes": 444596224,
+        "host_available_bytes": 924972568576
+      },
+      "route": "retained_lowp_native_exp2",
+      "route_policy": {
+        "direct_tma_dkdv": true,
+        "exp2_degree": 2,
+        "exp2_period": 0,
+        "exp2_policy": {
+          "effective": {
+            "degree": 2,
+            "period": 0
+          },
+          "mode": "explicit",
+          "reason": "an explicit period overrides automatic sequence dispatch",
+          "requested": {
+            "degree": 2,
+            "period": 0
+          },
+          "version": "d64_s4096_selective_exp2_v1"
+        },
+        "fp8_ds_lift": 16,
+        "lowp_do_stages": 1,
+        "probability_lift": 256,
+        "probability_storage": "tmem",
+        "retained_source": "0db D64 coherent training policy with sequence-resolved EX2",
+        "reuse_quantized_p": false,
+        "workspace_stats": true
+      },
+      "seed_records": [
+        {
+          "accuracy": {
+            "aggregate": {
+              "actual_finite": true,
+              "cosine": 0.9996762961699523,
+              "max_abs": 0.015625,
+              "norm_ratio": 0.9990619086337711,
+              "reference_finite": true,
+              "relative_l2": 0.025449564789408196
+            },
+            "dk": {
+              "actual_finite": true,
+              "cosine": 0.9996122717857361,
+              "max_abs": 0.0008544921875,
+              "norm_ratio": 0.9994235038757324,
+              "reference_finite": true,
+              "relative_l2": 0.027849864214658737,
+              "row_cosine_p01": 0.9983334541320801,
+              "row_cosine_p05": 0.9987188577651978,
+              "row_cosine_p50": 0.9993679523468018
+            },
+            "dq": {
+              "actual_finite": true,
+              "cosine": 0.9996086955070496,
+              "max_abs": 0.0008544921875,
+              "norm_ratio": 0.9995765089988708,
+              "reference_finite": true,
+              "relative_l2": 0.027973143383860588,
+              "row_cosine_p01": 0.998469889163971,
+              "row_cosine_p05": 0.9988531470298767,
+              "row_cosine_p50": 0.9995097517967224
+            },
+            "dv": {
+              "actual_finite": true,
+              "cosine": 0.9996767640113831,
+              "max_abs": 0.015625,
+              "norm_ratio": 0.9990590214729309,
+              "reference_finite": true,
+              "relative_l2": 0.025433039292693138,
+              "row_cosine_p01": 0.9991943836212158,
+              "row_cosine_p05": 0.9993463754653931,
+              "row_cosine_p50": 0.9995996356010437
+            }
+          },
+          "peak_device_allocated_bytes": 904929792,
+          "peak_device_reserved_bytes": 968884224,
+          "reference_policy": {
+            "causal": true,
+            "input": "BF16 decode of the represented E4M3 state",
+            "output": "BF16 dQ/dK/dV",
+            "probability": "BF16 score/softmax",
+            "statistics": "internal O*dO and LSE preprocessing"
+          },
+          "route": "retained_lowp_native_exp2",
+          "route_policy": {
+            "causal": true,
+            "direct_tma_dkdv": true,
+            "exp2_degree": 2,
+            "exp2_period": 0,
+            "exp2_policy": {
+              "effective": {
+                "degree": 2,
+                "period": 0
+              },
+              "mode": "explicit",
+              "reason": "an explicit period overrides automatic sequence dispatch",
+              "requested": {
+                "degree": 2,
+                "period": 0
+              },
+              "version": "d64_s4096_selective_exp2_v1"
+            },
+            "fp8_ds_lift": 16,
+            "input": "E4M3 Q/K/V/dO with fixed x4 publication scale",
+            "lowp_do_stages": 1,
+            "output": "BF16 dQ/dK/dV with common x4 decode",
+            "probability_lift": 256,
+            "probability_storage": "tmem",
+            "retained_source": "0db D64 coherent training policy with sequence-resolved EX2",
+            "reuse_quantized_p": false,
+            "score_scale": "(1/sqrt(64))/16",
+            "statistics": "negative projection-native pages in backward workspace",
+            "workspace_stats": true
+          },
+          "seed": 20260820,
+          "timing": {
+            "breakdown": {
+              "cute_bf16": {
+                "kernel_after_required_clear": {
+                  "maximum_us": 708.1599831581116,
+                  "mean_us": 539.9976590784585,
+                  "median_us": 534.9439978599548,
+                  "minimum_us": 527.3920297622681,
+                  "p05_us": 529.2800068855286,
+                  "p95_us": 544.7999835014343,
+                  "samples_us": [
+                    557.0560097694397,
+                    538.5599732398987,
+                    539.6479964256287,
+                    541.7280197143555,
+                    533.2800149917603,
+                    534.9439978599548,
+                    535.2960228919983,
+                    536.3519787788391,
+                    537.5999808311462,
+                    539.7760272026062,
+                    708.1599831581116,
+                    543.7440276145935,
+                    533.5360169410706,
+                    536.512017250061,
+                    532.8959822654724,
+                    544.7999835014343,
+                    539.2640233039856,
+                    533.02401304245,
+                    534.5280170440674,
+                    529.4399857521057,
+                    534.5280170440674,
+                    528.3839702606201,
+                    530.0480127334595,
+                    542.7200198173523,
+                    529.7920107841492,
+                    530.4319858551025,
+                    535.5839729309082,
+                    529.2800068855286,
+                    533.3759784698486,
+                    539.6479964256287,
+                    531.1359763145447,
+                    532.8959822654724,
+                    541.3119792938232,
+                    534.5280170440674,
+                    527.3920297622681,
+                    531.4559936523438,
+                    537.6319885253906,
+                    532.480001449585,
+                    538.6239886283875,
+                    533.5040092468262,
+                    535.0080132484436
+                  ],
+                  "stdev_us": 27.471481790879746
+                },
+                "required_clear_only": {
+                  "maximum_us": 50.04800111055374,
+                  "mean_us": 46.86751234822157,
+                  "median_us": 46.751998364925385,
+                  "minimum_us": 45.24800181388855,
+                  "p05_us": 45.343998819589615,
+                  "p95_us": 48.64000156521797,
+                  "samples_us": [
+                    49.18399825692177,
+                    48.128001391887665,
+                    46.30399867892265,
+                    47.231998294591904,
+                    46.33599892258644,
+                    47.07200080156326,
+                    47.71199822425842,
+                    46.23999819159508,
+                    47.488000243902206,
+                    47.39199951291084,
+                    46.592000871896744,
+                    46.20800167322159,
+                    45.632001012563705,
+                    46.9760000705719,
+                    46.04800045490265,
+                    48.448000103235245,
+                    47.13600128889084,
+                    45.98399996757507,
+                    45.98399996757507,
+                    47.39199951291084,
+                    48.64000156521797,
+                    46.52800038456917,
+                    50.04800111055374,
+                    47.040000557899475,
+                    46.94399982690811,
+                    46.39999940991402,
+                    46.112000942230225,
+                    47.648001462221146,
+                    47.74399846792221,
+                    46.46399989724159,
+                    46.52800038456917,
+                    45.24800181388855,
+                    45.24800181388855,
+                    46.751998364925385,
+                    46.01600021123886,
+                    47.10400104522705,
+                    47.520000487565994,
+                    45.53600028157234,
+                    47.00800031423569,
+                    46.20800167322159,
+                    45.343998819589615
+                  ],
+                  "stdev_us": 1.0427256392637407
+                }
+              },
+              "retained_lowp_native_exp2": {
+                "kernel_after_required_clear": {
+                  "maximum_us": 721.9840288162231,
+                  "mean_us": 560.9412643967605,
+                  "median_us": 556.6719770431519,
+                  "minimum_us": 549.7279763221741,
+                  "p05_us": 551.0079860687256,
+                  "p95_us": 564.4479990005493,
+                  "samples_us": [
+                    571.8079805374146,
+                    556.2559962272644,
+                    551.9999861717224,
+                    557.6320290565491,
+                    557.7279925346375,
+                    557.3760271072388,
+                    551.8079996109009,
+                    550.9120225906372,
+                    553.0880093574524,
+                    554.9759864807129,
+                    556.4799904823303,
+                    559.391975402832,
+                    559.8719716072083,
+                    555.7439923286438,
+                    553.8240075111389,
+                    554.144024848938,
+                    560.7360005378723,
+                    557.5039982795715,
+                    556.6719770431519,
+                    557.6000213623047,
+                    561.9199872016907,
+                    556.0640096664429,
+                    561.3759756088257,
+                    562.8799796104431,
+                    721.9840288162231,
+                    561.7280006408691,
+                    553.1839728355408,
+                    559.1679811477661,
+                    561.9199872016907,
+                    554.207980632782,
+                    553.5039901733398,
+                    554.1120171546936,
+                    564.4479990005493,
+                    558.0160021781921,
+                    555.1999807357788,
+                    557.7279925346375,
+                    557.5680136680603,
+                    551.0079860687256,
+                    551.0079860687256,
+                    549.7279763221741,
+                    556.2880039215088
+                  ],
+                  "stdev_us": 26.134123781934758
+                },
+                "required_clear_only": {
+                  "maximum_us": 31.488001346588135,
+                  "mean_us": 25.130926608675864,
+                  "median_us": 24.831999093294144,
+                  "minimum_us": 22.5600004196167,
+                  "p05_us": 22.911999374628067,
+                  "p95_us": 27.168000116944313,
+                  "samples_us": [
+                    25.98400041460991,
+                    24.639999493956566,
+                    24.800000712275505,
+                    23.871999233961105,
+                    25.66399984061718,
+                    31.488001346588135,
+                    26.367999613285065,
+                    24.992000311613083,
+                    25.95200017094612,
+                    27.135999873280525,
+                    25.631999596953392,
+                    26.815999299287796,
+                    27.103999629616737,
+                    24.447999894618988,
+                    24.831999093294144,
+                    24.607999250292778,
+                    24.927999824285507,
+                    24.351999163627625,
+                    26.367999613285065,
+                    25.439999997615814,
+                    25.82399919629097,
+                    23.871999233961105,
+                    23.871999233961105,
+                    22.784000262618065,
+                    24.607999250292778,
+                    22.5600004196167,
+                    24.800000712275505,
+                    23.93599972128868,
+                    23.93599972128868,
+                    22.911999374628067,
+                    27.39199995994568,
+                    23.391999304294586,
+                    25.567999109625816,
+                    24.831999093294144,
+                    24.639999493956566,
+                    23.584000766277313,
+                    27.168000116944313,
+                    23.80800060927868,
+                    25.087999179959297,
+                    24.607999250292778,
+                    25.760000571608543
+                  ],
+                  "stdev_us": 1.5909281970034759
+                }
+              }
+            },
+            "paired_with_required_clear": {
+              "cute_bf16": {
+                "maximum_us": 610.4000210762024,
+                "mean_us": 579.9469279079902,
+                "median_us": 579.6160101890564,
+                "minimum_us": 568.4800148010254,
+                "p05_us": 569.8239803314209,
+                "p95_us": 590.8160209655762,
+                "samples_us": [
+                  610.4000210762024,
+                  590.7840132713318,
+                  582.4639797210693,
+                  587.7119898796082,
+                  574.9760270118713,
+                  581.1840295791626,
+                  573.9200115203857,
+                  586.4319801330566,
+                  576.9280195236206,
+                  580.128014087677,
+                  568.4800148010254,
+                  583.6160182952881,
+                  572.3839998245239,
+                  577.2799849510193,
+                  569.8239803314209,
+                  589.0560150146484,
+                  572.0319747924805,
+                  575.9360194206238,
+                  579.6160101890564,
+                  581.0880064964294,
+                  569.4400072097778,
+                  582.5920104980469,
+                  571.9040036201477,
+                  586.1759781837463,
+                  582.7199816703796,
+                  578.2719850540161,
+                  573.4400153160095,
+                  583.4239721298218,
+                  572.704017162323,
+                  583.2319855690002,
+                  574.3680000305176,
+                  580.9919834136963,
+                  581.6320180892944,
+                  577.1520137786865,
+                  574.720025062561,
+                  578.7519812583923,
+                  590.8160209655762,
+                  580.7679891586304,
+                  571.7759728431702,
+                  592.6399827003479,
+                  576.0639905929565
+                ],
+                "stdev_us": 7.878023143803952
+              },
+              "retained_lowp_native_exp2": {
+                "maximum_us": 1416.5120124816895,
+                "mean_us": 613.7100516296015,
+                "median_us": 585.536003112793,
+                "minimum_us": 575.8079886436462,
+                "p05_us": 576.5119791030884,
+                "p95_us": 721.7599749565125,
+                "samples_us": [
+                  607.3600053787231,
+                  593.280017375946,
+                  1416.5120124816895,
+                  591.5840268135071,
+                  605.4080128669739,
+                  583.3920240402222,
+                  586.2079858779907,
+                  575.8079886436462,
+                  585.1519703865051,
+                  579.3600082397461,
+                  586.0480070114136,
+                  590.6239748001099,
+                  587.8400206565857,
+                  579.6160101890564,
+                  589.7279977798462,
+                  582.8800201416016,
+                  585.312008857727,
+                  581.4399719238281,
+                  721.7599749565125,
+                  586.624026298523,
+                  587.007999420166,
+                  584.1599702835083,
+                  581.3440084457397,
+                  576.4480233192444,
+                  583.5199952125549,
+                  576.5119791030884,
+                  589.024007320404,
+                  584.991991519928,
+                  590.719997882843,
+                  580.8640122413635,
+                  594.7840213775635,
+                  582.6240181922913,
+                  585.3440165519714,
+                  581.4399719238281,
+                  745.7280158996582,
+                  588.2880091667175,
+                  600.9920239448547,
+                  585.536003112793,
+                  586.2079858779907,
+                  578.9120197296143,
+                  581.7279815673828
+                ],
+                "stdev_us": 132.67220573999154
+              }
+            },
+            "primary_boundary": "backward_with_every_required_clear",
+            "rotated_order": true,
+            "speedup_vs_bf16": 0.9898896175602098
+          }
+        }
+      ],
+      "shape": {
+        "batch": 1,
+        "gqa_ratio": 4,
+        "head_dim": 64,
+        "kv_heads": 16,
+        "q_heads": 64,
+        "sequence": 4096
+      },
+      "status": "complete"
+    },
+    {
+      "memory_before": {
+        "device_free_bytes": 197068914688,
+        "device_total_bytes": 197897617408,
+        "estimated_live_tensor_bytes": 444596224,
+        "host_available_bytes": 924972568576
+      },
+      "route": "retained_lowp_exp2_d1_p2",
+      "route_policy": {
+        "direct_tma_dkdv": true,
+        "exp2_degree": 1,
+        "exp2_period": 2,
+        "exp2_policy": {
+          "effective": {
+            "degree": 1,
+            "period": 2
+          },
+          "mode": "explicit",
+          "reason": "an explicit period overrides automatic sequence dispatch",
+          "requested": {
+            "degree": 1,
+            "period": 2
+          },
+          "version": "d64_s4096_selective_exp2_v1"
+        },
+        "fp8_ds_lift": 16,
+        "lowp_do_stages": 1,
+        "probability_lift": 256,
+        "probability_storage": "tmem",
+        "retained_source": "0db D64 coherent training policy with sequence-resolved EX2",
+        "reuse_quantized_p": false,
+        "workspace_stats": true
+      },
+      "seed_records": [
+        {
+          "accuracy": {
+            "aggregate": {
+              "actual_finite": true,
+              "cosine": 0.998532002275019,
+              "max_abs": 0.068359375,
+              "norm_ratio": 0.971079783900372,
+              "reference_finite": true,
+              "relative_l2": 0.06072449856794335
+            },
+            "dk": {
+              "actual_finite": true,
+              "cosine": 0.9985314011573792,
+              "max_abs": 0.0032958984375,
+              "norm_ratio": 0.9707867503166199,
+              "reference_finite": true,
+              "relative_l2": 0.06086798384785652,
+              "row_cosine_p01": 0.9965161085128784,
+              "row_cosine_p05": 0.9973779916763306,
+              "row_cosine_p50": 0.9985235929489136
+            },
+            "dq": {
+              "actual_finite": true,
+              "cosine": 0.9985244870185852,
+              "max_abs": 0.003173828125,
+              "norm_ratio": 0.9709216356277466,
+              "reference_finite": true,
+              "relative_l2": 0.060917750000953674,
+              "row_cosine_p01": 0.9960402846336365,
+              "row_cosine_p05": 0.9973499178886414,
+              "row_cosine_p50": 0.9993605613708496
+            },
+            "dv": {
+              "actual_finite": true,
+              "cosine": 0.9985319375991821,
+              "max_abs": 0.068359375,
+              "norm_ratio": 0.9710811972618103,
+              "reference_finite": true,
+              "relative_l2": 0.06072341278195381,
+              "row_cosine_p01": 0.9972532987594604,
+              "row_cosine_p05": 0.9978225827217102,
+              "row_cosine_p50": 0.9987345337867737
+            }
+          },
+          "peak_device_allocated_bytes": 904929792,
+          "peak_device_reserved_bytes": 968884224,
+          "reference_policy": {
+            "causal": true,
+            "input": "BF16 decode of the represented E4M3 state",
+            "output": "BF16 dQ/dK/dV",
+            "probability": "BF16 score/softmax",
+            "statistics": "internal O*dO and LSE preprocessing"
+          },
+          "route": "retained_lowp_exp2_d1_p2",
+          "route_policy": {
+            "causal": true,
+            "direct_tma_dkdv": true,
+            "exp2_degree": 1,
+            "exp2_period": 2,
+            "exp2_policy": {
+              "effective": {
+                "degree": 1,
+                "period": 2
+              },
+              "mode": "explicit",
+              "reason": "an explicit period overrides automatic sequence dispatch",
+              "requested": {
+                "degree": 1,
+                "period": 2
+              },
+              "version": "d64_s4096_selective_exp2_v1"
+            },
+            "fp8_ds_lift": 16,
+            "input": "E4M3 Q/K/V/dO with fixed x4 publication scale",
+            "lowp_do_stages": 1,
+            "output": "BF16 dQ/dK/dV with common x4 decode",
+            "probability_lift": 256,
+            "probability_storage": "tmem",
+            "retained_source": "0db D64 coherent training policy with sequence-resolved EX2",
+            "reuse_quantized_p": false,
+            "score_scale": "(1/sqrt(64))/16",
+            "statistics": "negative projection-native pages in backward workspace",
+            "workspace_stats": true
+          },
+          "seed": 20260820,
+          "timing": {
+            "breakdown": {
+              "cute_bf16": {
+                "kernel_after_required_clear": {
+                  "maximum_us": 695.2639818191528,
+                  "mean_us": 541.9769795929514,
+                  "median_us": 535.5520248413086,
+                  "minimum_us": 529.4079780578613,
+                  "p05_us": 531.4559936523438,
+                  "p95_us": 560.6399774551392,
+                  "samples_us": [
+                    551.5519976615906,
+                    539.6479964256287,
+                    535.5520248413086,
+                    534.5600247383118,
+                    536.2560153007507,
+                    541.4080023765564,
+                    536.0320210456848,
+                    534.9760055541992,
+                    552.9919862747192,
+                    540.448009967804,
+                    695.2639818191528,
+                    545.6640124320984,
+                    533.1199765205383,
+                    532.4479937553406,
+                    532.480001449585,
+                    529.4079780578613,
+                    532.9279899597168,
+                    545.7919836044312,
+                    536.7680191993713,
+                    533.5040092468262,
+                    530.0480127334595,
+                    532.4479937553406,
+                    571.9680190086365,
+                    547.872006893158,
+                    534.5280170440674,
+                    531.4559936523438,
+                    531.4559936523438,
+                    536.1279845237732,
+                    536.0000133514404,
+                    532.256007194519,
+                    537.3759865760803,
+                    535.5520248413086,
+                    535.5520248413086,
+                    532.0640206336975,
+                    532.0320129394531,
+                    533.5360169410706,
+                    535.5520248413086,
+                    560.6399774551392,
+                    542.3039793968201,
+                    535.5520248413086,
+                    535.9359979629517
+                  ],
+                  "stdev_us": 25.98364380919399
+                },
+                "required_clear_only": {
+                  "maximum_us": 71.16799801588058,
+                  "mean_us": 47.76585374663516,
+                  "median_us": 46.78399860858917,
+                  "minimum_us": 45.53600028157234,
+                  "p05_us": 45.69600149989128,
+                  "p95_us": 51.392000168561935,
+                  "samples_us": [
+                    50.016000866889954,
+                    47.16800153255463,
+                    46.30399867892265,
+                    47.040000557899475,
+                    47.775998711586,
+                    47.13600128889084,
+                    46.751998364925385,
+                    46.52800038456917,
+                    46.78399860858917,
+                    46.23999819159508,
+                    46.39999940991402,
+                    46.78399860858917,
+                    47.16800153255463,
+                    45.60000076889992,
+                    46.14400118589401,
+                    48.67200180888176,
+                    46.94399982690811,
+                    46.65600135922432,
+                    46.62400111556053,
+                    45.88799923658371,
+                    46.46399989724159,
+                    47.040000557899475,
+                    47.520000487565994,
+                    46.592000871896744,
+                    46.52800038456917,
+                    45.69600149989128,
+                    46.30399867892265,
+                    47.74399846792221,
+                    47.39199951291084,
+                    46.62400111556053,
+                    46.431999653577805,
+                    71.16799801588058,
+                    51.392000168561935,
+                    47.07200080156326,
+                    47.87199944257736,
+                    47.775998711586,
+                    45.53600028157234,
+                    46.720001846551895,
+                    46.08000069856644,
+                    47.32799902558327,
+                    54.496001452207565
+                  ],
+                  "stdev_us": 4.071038952511849
+                }
+              },
+              "retained_lowp_exp2_d1_p2": {
+                "kernel_after_required_clear": {
+                  "maximum_us": 659.3599915504456,
+                  "mean_us": 508.01561082281717,
+                  "median_us": 503.04001569747925,
+                  "minimum_us": 498.1119930744171,
+                  "p05_us": 498.4639883041382,
+                  "p95_us": 513.375997543335,
+                  "samples_us": [
+                    510.55997610092163,
+                    506.49601221084595,
+                    501.6000270843506,
+                    509.5040202140808,
+                    505.5040121078491,
+                    499.9360144138336,
+                    498.6239969730377,
+                    499.6800124645233,
+                    504.12797927856445,
+                    500.9920001029968,
+                    502.3679733276367,
+                    513.375997543335,
+                    503.04001569747925,
+                    500.92798471450806,
+                    499.55201148986816,
+                    504.12797927856445,
+                    498.33598732948303,
+                    498.1119930744171,
+                    501.8240213394165,
+                    507.2000026702881,
+                    506.20800256729126,
+                    507.07197189331055,
+                    506.27201795578003,
+                    504.96000051498413,
+                    659.3599915504456,
+                    525.9199738502502,
+                    506.1439871788025,
+                    500.70399045944214,
+                    498.4639883041382,
+                    508.28802585601807,
+                    501.8240213394165,
+                    501.08802318573,
+                    501.7920136451721,
+                    503.2320022583008,
+                    512.5120282173157,
+                    502.7199983596802,
+                    499.2319941520691,
+                    498.59198927879333,
+                    509.2800259590149,
+                    506.6559910774231,
+                    502.4319887161255
+                  ],
+                  "stdev_us": 24.792286249201894
+                },
+                "required_clear_only": {
+                  "maximum_us": 30.527999624609947,
+                  "mean_us": 25.362731707168788,
+                  "median_us": 25.119999423623085,
+                  "minimum_us": 23.072000592947006,
+                  "p05_us": 23.520000278949738,
+                  "p95_us": 27.07199938595295,
+                  "samples_us": [
+                    27.07199938595295,
+                    30.527999624609947,
+                    25.79200081527233,
+                    24.224000051617622,
+                    25.536000728607178,
+                    26.43200010061264,
+                    26.72000043094158,
+                    26.72000043094158,
+                    27.03999914228916,
+                    24.639999493956566,
+                    27.648000046610832,
+                    26.30399912595749,
+                    23.072000592947006,
+                    25.05600079894066,
+                    24.639999493956566,
+                    23.520000278949738,
+                    25.37599951028824,
+                    25.087999179959297,
+                    23.96799996495247,
+                    23.77600036561489,
+                    24.831999093294144,
+                    25.087999179959297,
+                    25.66399984061718,
+                    23.93599972128868,
+                    25.855999439954758,
+                    25.151999667286873,
+                    26.655999943614006,
+                    24.992000311613083,
+                    24.224000051617622,
+                    25.37599951028824,
+                    25.312000885605812,
+                    23.360000923275948,
+                    24.671999737620354,
+                    26.496000587940216,
+                    24.960000067949295,
+                    25.119999423623085,
+                    25.887999683618546,
+                    25.02400055527687,
+                    24.320000782608986,
+                    24.57600086927414,
+                    25.21600015461445
+                  ],
+                  "stdev_us": 1.3525436714379735
+                }
+              }
+            },
+            "paired_with_required_clear": {
+              "cute_bf16": {
+                "maximum_us": 606.2399744987488,
+                "mean_us": 577.6351196009938,
+                "median_us": 577.567994594574,
+                "minimum_us": 566.2720203399658,
+                "p05_us": 568.4159994125366,
+                "p95_us": 589.5360112190247,
+                "samples_us": [
+                  606.2399744987488,
+                  593.34397315979,
+                  585.7599973678589,
+                  589.5360112190247,
+                  574.1119980812073,
+                  577.567994594574,
+                  571.8079805374146,
+                  581.824004650116,
+                  573.7599730491638,
+                  581.2479853630066,
+                  582.8800201416016,
+                  578.1440138816833,
+                  572.8319883346558,
+                  572.6079940795898,
+                  578.2719850540161,
+                  581.824004650116,
+                  575.4240155220032,
+                  583.9679837226868,
+                  576.416015625,
+                  583.7119817733765,
+                  570.7200169563293,
+                  578.0799984931946,
+                  568.0959820747375,
+                  576.7359733581543,
+                  577.7279734611511,
+                  577.9520273208618,
+                  569.0879821777344,
+                  578.5279870033264,
+                  569.1199898719788,
+                  575.2000212669373,
+                  572.2560286521912,
+                  576.3199925422668,
+                  573.248028755188,
+                  581.5039873123169,
+                  578.719973564148,
+                  580.6400179862976,
+                  566.2720203399658,
+                  577.6320099830627,
+                  569.7919726371765,
+                  575.7120251655579,
+                  568.4159994125366
+                ],
+                "stdev_us": 7.397192382013617
+              },
+              "retained_lowp_exp2_d1_p2": {
+                "maximum_us": 951.807975769043,
+                "mean_us": 551.7440002139022,
+                "median_us": 532.800018787384,
+                "minimum_us": 521.4080214500427,
+                "p05_us": 524.5440006256104,
+                "p95_us": 666.9759750366211,
+                "samples_us": [
+                  548.1280088424683,
+                  543.4560179710388,
+                  951.807975769043,
+                  540.6720042228699,
+                  535.3599786758423,
+                  525.8560180664062,
+                  529.2479991912842,
+                  534.2400074005127,
+                  533.4720015525818,
+                  527.0079970359802,
+                  537.8879904747009,
+                  528.4159779548645,
+                  531.6479802131653,
+                  529.9199819564819,
+                  541.4400100708008,
+                  533.9840054512024,
+                  536.575973033905,
+                  535.103976726532,
+                  708.2239985466003,
+                  532.2239995002747,
+                  539.4240021705627,
+                  524.5440006256104,
+                  535.1359844207764,
+                  528.0320048332214,
+                  530.5920243263245,
+                  523.8720178604126,
+                  591.1999940872192,
+                  542.4000024795532,
+                  530.5920243263245,
+                  526.7840027809143,
+                  535.6159806251526,
+                  528.7039875984192,
+                  530.4639935493469,
+                  530.5600166320801,
+                  666.9759750366211,
+                  537.9520058631897,
+                  532.800018787384,
+                  526.3360142707825,
+                  527.0400047302246,
+                  521.4080214500427,
+                  526.4000296592712
+                ],
+                "stdev_us": 73.20710417743796
+              }
+            },
+            "primary_boundary": "backward_with_every_required_clear",
+            "rotated_order": true,
+            "speedup_vs_bf16": 1.0840239756542778
+          }
+        }
+      ],
+      "shape": {
+        "batch": 1,
+        "gqa_ratio": 4,
+        "head_dim": 64,
+        "kv_heads": 16,
+        "q_heads": 64,
+        "sequence": 4096
+      },
+      "status": "complete"
+    }
+  ],
+  "requested_routes": [
+    "retained_lowp_native_exp2",
+    "retained_lowp_exp2_d1_p2"
+  ],
+  "route_capabilities": {
+    "mx_exact_replay": {
+      "available": false,
+      "reason": "No retained callable adapter in the clean source line consumes the causal forward's published MXFP4 probability payload/E8M0 scale page at the CompiledGqaBackward boundary. Exploratory fp4_pv_experiments.py probes are not a production substitute.",
+      "required_adapter_contract": {
+        "inputs": [
+          "represented E4M3 Q/K/V/dO",
+          "forward MXFP4 probability payload or deterministic replay",
+          "forward-published E8M0 block32 probability scales",
+          "forward LSE/statistics"
+        ],
+        "outputs": [
+          "BF16 dQ",
+          "BF16 dK",
+          "BF16 dV"
+        ],
+        "required_methods": [
+          "reset",
+          "run"
+        ],
+        "timing_boundary": "replay/publication handoff plus every required clear and attention backward"
+      },
+      "scope": "route_complete_mxfp4_probability_replay_and_backward"
+    },
+    "retained_lowp": {
+      "available": true,
+      "d64_exp2_contract": "Hq/Hkv=32/8 automatic: native d2/p0 below S4096; selective d1/p2 at S4096+; other head topologies remain native",
+      "input_contract": "represented_e4m3_q_k_v_dout_x4",
+      "probability_contract": "score/LSE reconstruction with retained E4M3 probability path",
+      "scope": "isolated_attention_backward_shared_core",
+      "supported_head_dims": [
+        64,
+        128
+      ]
+    },
+    "retained_lowp_exp2_d1_p2": {
+      "available": true,
+      "comparison_control_for": "retained_lowp_native_exp2",
+      "explicit_exp2_policy": {
+        "degree": 1,
+        "period": 2
+      },
+      "input_contract": "represented_e4m3_q_k_v_dout_x4",
+      "only_policy_change": {
+        "exp2_degree": [
+          2,
+          1
+        ],
+        "exp2_period": [
+          0,
+          2
+        ]
+      },
+      "probability_contract": "score/LSE reconstruction with retained E4M3 probability path",
+      "reason_d64_only": "This is a controlled long-sequence D64 screen of the selective packed-ALU EX2 cadence; it is not a D128 policy.",
+      "scope": "isolated_attention_backward_shared_core",
+      "supported_head_dims": [
+        64
+      ]
+    },
+    "retained_lowp_exp2_d1_p3": {
+      "available": true,
+      "comparison_control_for": "retained_lowp_native_exp2",
+      "explicit_exp2_policy": {
+        "degree": 1,
+        "period": 3
+      },
+      "input_contract": "represented_e4m3_q_k_v_dout_x4",
+      "only_policy_change": {
+        "exp2_degree": [
+          2,
+          1
+        ],
+        "exp2_period": [
+          0,
+          3
+        ]
+      },
+      "probability_contract": "score/LSE reconstruction with retained E4M3 probability path",
+      "reason_d64_only": "This is a controlled long-sequence D64 screen of the selective packed-ALU EX2 cadence; it is not a D128 policy.",
+      "scope": "isolated_attention_backward_shared_core",
+      "supported_head_dims": [
+        64
+      ]
+    },
+    "retained_lowp_native_exp2": {
+      "available": true,
+      "comparison_control_for": "retained_lowp",
+      "explicit_exp2_policy": {
+        "degree": 2,
+        "period": 0
+      },
+      "input_contract": "represented_e4m3_q_k_v_dout_x4",
+      "probability_contract": "score/LSE reconstruction with retained E4M3 probability path",
+      "reason_d64_only": "This control forces the pre-dispatch native EX2 implementation.",
+      "scope": "isolated_attention_backward_shared_core",
+      "supported_head_dims": [
+        64
+      ]
+    },
+    "retained_lowp_no_direct_tma": {
+      "available": true,
+      "comparison_control_for": "retained_lowp",
+      "input_contract": "represented_e4m3_q_k_v_dout_x4",
+      "only_policy_change": {
+        "compiled_backward_direct_tma_dkdv": [
+          true,
+          false
+        ],
+        "control_module_direct_tma_dkdv": [
+          true,
+          false
+        ]
+      },
+      "probability_contract": "score/LSE reconstruction with retained E4M3 probability path",
+      "reason_d64_only": "D128 retained_lowp already uses direct_tma_dkdv=False; this control isolates the D64 direct-TMA dK/dV epilogue only.",
+      "scope": "isolated_attention_backward_shared_core",
+      "supported_head_dims": [
+        64
+      ]
+    }
+  },
+  "schema": "fp4_fa4_causal_backward_matrix_v2",
+  "source": {
+    "control_inputs": [
+      {
+        "exists": true,
+        "path": "qutlass/third_party/cutlass/examples/python/CuTeDSL/blackwell/fmha_bwd.py",
+        "sha256": "953b86a13cc64789052e9d1f8090c9562ac579ee903d275d78cf426780c09eff",
+        "size_bytes": 130976
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/backward_policy.py",
+        "sha256": "084186fcfc8509f26c6ff63134395e9a9f1866c126ef00e8590685c1e5712784",
+        "size_bytes": 4652
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/profile_gqa_d128_chain.py",
+        "sha256": "6d31bb8f8d8df7ce9504bc0c2f64b0f4affedbf796644481b3f8f6ff20646f02",
+        "size_bytes": 96405
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/tune_d64_gqa_cute.py",
+        "sha256": "b353d87ae3ca6ba5309f27ed75dc67512f968ac321df548d344f43963f93bc29",
+        "size_bytes": 27125
+      },
+      {
+        "exists": true,
+        "path": "flash-attention/flash_attn/cute/interface.py",
+        "sha256": "f62d3cc9ba70534fa36cb3300bcf87432c957289e53ef165ad79d247820016ca",
+        "size_bytes": 150840
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/d64_gqa_cute.patch",
+        "sha256": "51c7c733108b6a4547b00b560dfd0a827ec321733fae08fdb55ae5708598e487",
+        "size_bytes": 34748
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/d64_gqa_direct_tma_dkdv.patch",
+        "sha256": "948413fdd2e95c3844c2771222458d6bbe5d17a3c84b4f3d717a9797a1586b9e",
+        "size_bytes": 15482
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/d64_gqa_fp8_p_layout.patch",
+        "sha256": "4e9fbd7e5a2a291dd8965c17df5a1bb950d3c0a09276f9963ca5fea3ca45db34",
+        "size_bytes": 7705
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/d64_gqa_fp8_p_lift.patch",
+        "sha256": "39884efa3580ea6342730bdc817a83dfc6294235584e3482e67fe524ca948f1f",
+        "size_bytes": 6200
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/d64_gqa_fp8_p_tmem_coord.patch",
+        "sha256": "3533c0f0e20faaad2a9a59ac2286e21ba56f840c88848e8dd9b196f7e3cc879c",
+        "size_bytes": 5063
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/d64_gqa_fp8_p_tmem_wide_load.patch",
+        "sha256": "d1fd6695d181b475e1d9104f8adf292d06af2bdd6096dda38e494bf3389b7486",
+        "size_bytes": 328
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/d64_gqa_fused_probability_lift.patch",
+        "sha256": "af7adbc9dc0faf06d7ebeed206a891139efcc197f6671896b57da61f6791b8bd",
+        "size_bytes": 3697
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/d64_gqa_owner_d64.patch",
+        "sha256": "ec42e984a982b3e8608e9c3d4095b249bfec3bac0628c08e9d3730745e319b01",
+        "size_bytes": 7070
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/d64_gqa_owner_full_operand.patch",
+        "sha256": "2dc9455b7820f78e70744db83d6cb91c22214f8af665ba96e94ca371fa15b198",
+        "size_bytes": 1521
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/d64_gqa_owner_fused_dq_scale.patch",
+        "sha256": "96d97e96e8afc6d375a5ca361f339f7b353819de9a632834fca3e30b2b4a22e5",
+        "size_bytes": 3396
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/d64_gqa_owner_kv_no_materialize.patch",
+        "sha256": "14cfb0e5abe1d8d496594c0dc531079db3d9599c6a398bf34217b8e910ace63e",
+        "size_bytes": 4871
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/d64_gqa_owner_kv_quantize.patch",
+        "sha256": "b9b54388fe6b1b39dd3259391a8660405f0b7e2b57191ead9659563154432b84",
+        "size_bytes": 7939
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/d64_gqa_owner_quantize.patch",
+        "sha256": "fc03f81c1ac0fb325dfc0b517a096e0ab8fb60ce139ba10a1b4fdeffe73904d8",
+        "size_bytes": 34684
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/d64_gqa_reverse_query.patch",
+        "sha256": "7e8b469320c2c9e5350d6f6fa2014c30106c538e14fd9c1e84968d0a97586f23",
+        "size_bytes": 5047
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/d64_gqa_tile_ready.patch",
+        "sha256": "60cba7afbb40933ac9154f56a0761f87e6ed34f3d5925e4414f27e7a9c0637ba",
+        "size_bytes": 8042
+      }
+    ],
+    "git": {
+      "branch": "codex/causal-isolated-matrix-20260820",
+      "dirty": true,
+      "head": "4e738753db5da7cc356ae512d360c48329f63ff0"
+    },
+    "harness": {
+      "exists": true,
+      "path": "tk_fa4/lowp_fa4_bwd/benchmark_causal_backward_matrix.py",
+      "sha256": "0d6a83736ae7655791ef4cb3b128d2e8697457e8e5b1d123aaffe5f322f9ed78",
+      "size_bytes": 49510
+    },
+    "lowp_extension": {
+      "exists": true,
+      "path": "/workspace/codebases/pv/fp4_matmul_worktrees/causal_matrix_20260820/tk_fa4/_C_b300_lowp_bwd.cpython-312-aarch64-linux-gnu.so",
+      "sha256": "aeed2603d40290b815218cc77142ddacda0c734384429f26c0d4a6a200fbe884",
+      "size_bytes": 17423160
+    }
+  },
+  "status": "complete",
+  "unavailable_routes": []
+}

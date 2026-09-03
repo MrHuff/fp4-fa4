@@ -1,0 +1,175 @@
+# Matched Llama 3-style 8B SlimPajama 40B/100B-token render template.
+#
+# This file is not directly runnable.  The authenticated renderer replaces
+# every marked token and rejects route, topology, data, and artifact drift.
+
+[job]
+dump_folder = "/workspace/checkpoints"
+remote_folder = "__CHECKPOINT_S3_PREFIX__"
+description = "__ATTENTION_DESCRIPTION__"
+
+[profiling]
+enable_profiling = false
+save_traces_folder = "profile_trace"
+profile_freq = 10000
+
+[metrics]
+log_freq = 25
+enable_tensorboard = true
+save_tb_folder = "tb"
+distributed_mode = "rank_0"
+
+[wandb]
+project = "__WANDB_PROJECT__"
+group = "__WANDB_GROUP__"
+name = "__RUN_NAME__"
+mode = "online"
+
+[model]
+name = "llama3_gc"
+flavor = "8B_llama3_blog"
+norm_type = "rmsnorm"
+hf_assets_path = "/workspace/hf-assets/Llama-3.1-8B"
+converters = __MODEL_CONVERTERS__
+
+[model.rope_scaling_args]
+scaling_factor = 8.0
+low_freq_factor = 1.0
+high_freq_factor = 4.0
+original_max_position_embeddings = 8192
+
+[optimizer]
+# Repo-standard 8B/global-B1024 optimizer anchor. Production still requires
+# explicit acknowledgement that every matched route will be monitored through
+# and after peak LR. The explicit SR implementation computes each update in
+# one fused multi-tensor kernel with FP32 register math, BF16 moments, and a
+# stateless stochastic parameter write keyed by seed/phase/tensor/element.
+name = "AdamWBF16SR"
+implementation = "fused"
+lr = 0.0003
+beta1 = 0.9
+beta2 = 0.95
+eps = 1e-8
+weight_decay = 0.1
+
+[training]
+local_batch_size = __LOCAL_BATCH_SIZE__
+global_batch_size = __GLOBAL_BATCH_SIZE__
+seq_len = 4096
+max_norm = 1.0
+steps = __TRAINING_STEPS__
+dtype = "bfloat16"
+mixed_precision_param = "bfloat16"
+mixed_precision_reduce = "bfloat16"
+enable_fp32_master_params = false
+enable_cce = __ENABLE_CCE__
+dataset = "mosaic/cerebras___slim_pajama-627_b"
+dataset_path = "__HISTORICAL_SLIMPAJAMA_MDS_ROOT__"
+load_dataset_kwargs = '{}'
+compile = false
+
+[training.mosaicml_dataset]
+split = "train"
+shuffle = false
+batching_method = "stratified"
+num_workers = 8
+prefetch_factor = 8
+num_canonical_nodes = 32
+
+[validation]
+enable = true
+freq = __VALIDATION_FREQ__
+steps = 16
+local_batch_size = __VALIDATION_LOCAL_BATCH_SIZE__
+seq_len = 4096
+dataset = "mosaic/cerebras___slim_pajama-627_b"
+dataset_path = "__HISTORICAL_SLIMPAJAMA_MDS_ROOT__"
+load_dataset_kwargs = '{}'
+
+[validation.mosaicml_dataset]
+split = "validation"
+shuffle = false
+batching_method = "stratified"
+num_workers = 1
+prefetch_factor = 8
+num_canonical_nodes = 32
+
+# Keep the FA4 model eager and compile only TorchTitan's standard external
+# cross-entropy loss.  The language-model head remains the ordinary dense
+# projection; neither CCE integration is allowed for this recipe.
+[compile]
+enable = true
+components = ["loss"]
+backend = "inductor"
+
+[fp4_cce]
+enabled = __FP4_CCE_ENABLED__
+backend = "torch_compile_bf16"
+implementation = "v2"
+quant_mode = "enc"
+ignore_index = -100
+filter_eps = 0.0
+
+[lr_scheduler]
+# Repo-standard global-B1024 schedule: 2,000 updates are exactly
+# 8,388,608,000 warmup tokens at sequence length 4,096.
+warmup_steps = __WARMUP_STEPS__
+decay_type = "cosine"
+min_lr_factor = 0.01
+
+[parallelism]
+pipeline_parallel_degree = 1
+data_parallel_replicate_degree = __DATA_PARALLEL_REPLICATE_DEGREE__
+data_parallel_shard_degree = 1
+tensor_parallel_degree = 1
+context_parallel_degree = 1
+
+[checkpoint]
+enable = true
+folder = "checkpoint"
+interval = 239
+export_dtype = "float32"
+async_mode = "disabled"
+keep_latest_k = 3
+
+[activation_checkpoint]
+mode = "none"
+selective_ac_option = "op"
+
+[comm]
+init_timeout_seconds = 1800
+train_timeout_seconds = 3600
+
+[debug]
+seed = 42
+
+[fa4]
+enabled = true
+mode = "softmax"
+exact_source_root = "/workspace/fa4-runtime/fp4_matmul"
+exact_runtime_source_sha256 = "__FA4_RUNTIME_SOURCE_SHA256__"
+exact_flash_attn_root = "/workspace/fa4-runtime/fp4_matmul/flash-attention"
+exact_flash_attn_source_sha256 = "__FA4_FLASH_ATTN_SOURCE_SHA256__"
+exact_cutlass_dsl_root = "/workspace/fa4-runtime/python/cutlass_dsl/python_packages"
+exact_cutlass_dsl_version = "4.5.2"
+exact_cutlass_dsl_native_sha256 = "1c9ea8a2a1dd8392f408e04a59bc3b153bd794c3b5a8567249bc93d638921527"
+exact_forward_extension = "__FA4_FORWARD_EXTENSION__"
+exact_forward_module = "__FA4_FORWARD_MODULE__"
+exact_forward_sha256 = "__FA4_FORWARD_SHA256__"
+exact_forward_batch_size = __FA4_FORWARD_BATCH_SIZE__
+__FA4_EXACT_PV_FORMAT_LINE__
+__FA4_EXACT_MX_V_PUBLICATION_LINE__
+__FA4_EXACT_LEARNED_PROJECTION_FORMAT_LINE__
+__FA4_D128_REPRESENTED_QK_BACKWARD_LINE__
+__FA4_D128_NATIVE_SCORE_BACKWARD_LINE__
+__FA4_D128_E5M2_DOUT_BACKWARD_LINE__
+exact_backward_extension = "__FA4_BACKWARD_EXTENSION__"
+exact_backward_sha256 = "__FA4_BACKWARD_SHA256__"
+exact_native_tk_d128_backward_extension = "__FA4_NATIVE_D128_BACKWARD_EXTENSION__"
+exact_native_tk_d128_backward_module = "__FA4_NATIVE_D128_BACKWARD_MODULE__"
+exact_native_tk_d128_backward_sha256 = "__FA4_NATIVE_D128_BACKWARD_SHA256__"
+exact_native_tk_d128_backward_bytes = __FA4_NATIVE_D128_BACKWARD_BYTES__
+exact_backward_control_source = ""
+exact_backward_control_sha256 = ""
+exact_backward_control_bytes = 0
+exact_allow_fp32_master_shadows = false

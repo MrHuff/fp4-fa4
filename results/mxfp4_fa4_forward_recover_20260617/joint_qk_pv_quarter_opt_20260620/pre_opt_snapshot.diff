@@ -1,0 +1,2266 @@
+diff --git a/results/mxfp4_fa4_forward_recover_20260617/forward_ordered_ledger.md b/results/mxfp4_fa4_forward_recover_20260617/forward_ordered_ledger.md
+index ce55ba5..8ede7d9 100644
+--- a/results/mxfp4_fa4_forward_recover_20260617/forward_ordered_ledger.md
++++ b/results/mxfp4_fa4_forward_recover_20260617/forward_ordered_ledger.md
+@@ -3015,3 +3015,1151 @@ Decision / next diagnostic direction:
+ - Current MXFP4 artifact is competitive or faster on H4/S2048, H16/S2048, H8/S4096, roughly tied on H16/S4096, and still lags on H32/S2048 and H32/S4096.
+ - The actionable bottleneck is not V/TMA or DRAM; it is MXFP4 producer/control latency and tensor-core underfeed. Any next source probe should target CLC/schedwg4 eligible-work exposure or producer/P-pack/scale dependency reduction, and must be validated with interleaved timing rather than ordered sweeps.
+ - No source edit, build, commit, or push in this profiling pass.
++
++## 2026-06-19 - BF16-style P quarter-ready probe for MXFP4 (`pqready4`)
++
++Mandate:
++- Forward-only experiment. Do not touch backward files/panes/sessions 7-17.
++- Audit BF16 quarter-ready and current MXFP4 P/PV path, add explicit non-default `pqready4` route cloned from the selected CLC route, and validate compile/smoke/timing.
++
++Audit anchors:
++- BF16 quarter-ready: `tk_fa4/fp4_fa4_fwd/fwd_bf16_baseline.inc:1770-1771` quarter tile declarations, `:1806-1830` quarter sem init, `:1996-2017` and `:2040-2061` PV waits/issues quarters, `:2747-2771` and `:2841-2865` producer quarter stores/arrives.
++- MXFP4 P/PV path: `tk_fa4/fp4_fa4_fwd/fwd_streaming_kernel.inc:2383-2450` P payload/scale semaphores, `:2570-2643` sem init, `:5692-5837` P-scale wait/stage, `:6039-6300` PV issue, `:10800-11203` score-derived scale/payload pack loop, `:11484-11595` whole-stage direct P-scale ready.
++- FP4 TCGEN blocker for true K32 quarter issue: `ThunderKittens/include/types/shared/descriptor.cuh:77-82` documents FP4 tensor-core K granularity, `ThunderKittens/include/ops/thread/mma/tcgen05.cuh:122-160` encodes only K64/K96 NVFP4 scale-factor modes, and `tk_fa4/fp4_fa4_fwd/fwd_device_helpers.inc:887-953` only exposes full K128 or split K64 chunks. Therefore a strict BF16-like 0..31 / 32..63 / 64..95 / 96..127 immediate PV issue is not locally implementable with current FP4 helper contracts. The bounded implementation published four quarter-readies, but PV could only legally issue paired K64 chunks after q0+q1 and q2+q3.
++
++Planned and actual hunk scope:
++- `tk_fa4/fp4_fa4_fwd/fwd_configs.inc`: add explicit 3WG/4WG `pqready4` config structs with `ONLINE_MXFP4_P_QUARTER_READY = true` plus trait plumbing.
++- `tk_fa4/fp4_fa4_fwd/fwd_host_dispatch.inc`: add two explicit route strings; no Python selector/default constants touched.
++- `tk_fa4/fp4_fa4_fwd/fwd_streaming_kernel.inc`: add route-only `p_quarter_ready[p_stage][4]`, issue-side phase masks, producer quarter publishes after each qid payload store, early P-scale TMEM ready before quarter payload publishes, and PV wait/q0+q1 then K64 chunk0, wait/q2+q3 then K64 chunk1. Existing non-`pqready4` route branches preserved.
++
++Builds:
++- First build log `/tmp/fp4_fwd_pqready4_build.log`, artifact SHA256 `28b7a50a609c5564dbaa6fb8ee5d7fbf4cbd449feb146e21788bff460f973d19`, mtime `2026-06-19 23:19:00.764132253 +0000`, size `15968584`.
++- ptxas first build: 4WG `pqready4` `128 regs`, `1968 bytes smem`, `0 spill`; 3WG `pqready4` `168 regs`, `1968 bytes smem`, `0 spill`.
++- First H16/S2048 explicit smoke timed out inside `_run_forward_streaming_live_mxfp4` after 30000 ms. Root cause was the route's early P-scale TMEM store waiting on `p_sc_tmem_reusable` while the inherited `pscreusefold_skippscarrive` family intentionally folds P-scale reuse into `p_stage_reusable` and suppresses standalone P-scale reusable arrive.
++- Fix hunk: in `fwd_streaming_kernel.inc` pqready4 early P-scale store, skip `wait_for_p_scale_tmem_reusable(idx, p_sc_slot)` when `STATIC_ONLINE_MXFP4_SKIP_FOLDED_P_SCALE_REUSE_ARRIVE` is true; the earlier `wait_for_p_stage_reusable(idx, buf)` remains the lifetime guard because the route has `P_STAGE_SLOTS == P_SCALE_TMEM_SLOTS == 2`.
++- Fix rebuild log `/tmp/fp4_fwd_pqready4_fix1_build.log`, artifact SHA256 `2b26d84ba54cd16100ec2cf1a7719b9bf2661defc9d3280e951cdb3d53a8bbc8`, mtime `2026-06-19 23:30:30.494761137 +0000`, size `15968584`.
++- ptxas fix build unchanged for `pqready4`: 4WG `128 regs`, `1968 bytes smem`, `0 spill`; 3WG `168 regs`, `1968 bytes smem`, `0 spill`.
++
++Smoke after fix (`CUDA_VISIBLE_DEVICES=0`, `benchmark_forward_streaming_live_mxfp4_vs_bf16`, `warmup=0`, `iters=1`, TK BF16 reference):
++- H16/S2048 3WG `pqready4`: finite, mean abs diff `0.00748848..0.00748856`, LSE max abs diff `0.0230056`.
++- H32/S2048 4WG `pqready4`: finite, mean abs diff `0.00748181`, LSE max abs diff `0.0295750`.
++- H16/S4096 4WG `pqready4`: finite, mean abs diff `0.00522801`, LSE max abs diff `0.0295750`.
++
++Interleaved timing command/log:
++- Command: `CUDA_VISIBLE_DEVICES=0 PYTHONPATH=tk_fa4 python3 - <<'PY' ... current vs pqready4, shapes H16/S2048 H32/S2048 H16/S4096, seeds 0/1, warmup=1, iters=3, bf16_baseline="tk" ... PY | tee /tmp/fp4_fwd_pqready4_timing.jsonl`.
++- Current route vs `pqready4` median over two seed medians:
++
++| Shape | Current MXFP4 ms | `pqready4` ms | Decision |
++|---|---:|---:|---|
++| H16/S2048 | 0.142128 | 0.144272 | mixed/no win |
++| H32/S2048 | 0.191536 | 0.217728 | `pqready4` slower |
++| H16/S4096 | 0.238992 | 0.265024 | `pqready4` slower |
++
++Decision:
++- Reject/revert `pqready4` source probe. It is smoke-correct after the folded-reuse fix, but it is not a throughput win and cannot satisfy the requested strict BF16-style K32 immediate-quarter PV issue with the current FP4 TCGEN K64 minimum helper contract.
++- Bounded localization: payload quarter publication works well enough for finite output; scale lifetime required folded-reuse fix; remaining performance loss is from extra quarter semaphores/sync plus K64 paired issue, not a legal K32 quarter PV path.
++- No commit/push.
++
++Post-revert restore check:
++- Reverted `pqready4` changes in `tk_fa4/fp4_fa4_fwd/fwd_configs.inc`, `tk_fa4/fp4_fa4_fwd/fwd_host_dispatch.inc`, and `tk_fa4/fp4_fa4_fwd/fwd_streaming_kernel.inc`.
++- Stable rebuild command: `make -C tk_fa4/fp4_fa4_fwd forward -j1 2>&1 | tee /tmp/fp4_fwd_restore_after_pqready4_reject_build.log`.
++- Restored artifact SHA256 `cd5a32fbd6da6adefdec0101a3eab2e9486f81b58f7021e97403f124a02302b5`, mtime `2026-06-19 23:42:09.655493273 +0000`, size `15829952`.
++- Restore smoke H16/S2048 default selected route `...persistouter_clc_onevpub_fullvsc_vtma_vstma_pstage2_q200_p112_o56_qkscfix`: finite true, MXFP4 `0.313408 ms` for the one-iter smoke, TK BF16 `0.134048 ms`, mean abs diff `0.00748886`, LSE max abs diff `0.0230056`.
++- Active-writer check found no forward writer beyond the check command. Scoped diff after restore is ledger-only.
++
++## 2026-06-20 - MXFP4 true K32 audit and K64 half-ready route (`k64halfready`)
++
++Mandate:
++- Forward-only continuation after rejected `pqready4`; do not touch backward files/panes/sessions 7-17.
++- Do not stop at current helpers saying K64 only: audit low-level FP4 TCGEN/TMEM descriptor path and prove whether K32 PV issue is legal. If K32 is not locally legal, test a lower-overhead K64 half-ready route with two ready events per P stage.
++
++Active-writer/artifact state before edit:
++- No active forward writer was present. An unrelated backward `nvcc`/`ptxas` writer was observed and left untouched.
++- Starting stable forward artifact SHA256 was `cd5a32fbd6da6adefdec0101a3eab2e9486f81b58f7021e97403f124a02302b5`.
++
++K32 audit anchors and conclusion:
++- `ThunderKittens/include/ops/thread/mma/tcgen05.cuh:122-160`: block-scaled FP4 instruction descriptor encodes NVFP4 K dimension bit as `0 is K=64, 1 is K=96`; no K32 encoding is exposed for FP4.
++- `ThunderKittens/include/ops/thread/mma/tcgen05.cuh:242-303`: FP4 TCGEN asm forms are `kind::mxf4nvf4.block_scale.scale_vec::2X` for E8M0 and `scale_vec::4X` for block size 16; there is no FP4 `scale_vec::1X` K32 form. The `scale_vec::1X` form is used for MXFP8.
++- `ThunderKittens/include/ops/thread/mma/tcgen05.cuh:497-502` and `:563-573`: microscaling wrapper sets FP4 `red_dim = 64`, requires `K % 64 == 0`, and alternates E8M0 SFID 0/2 across K64 chunks.
++- `ThunderKittens/include/types/shared/descriptor.cuh:77-82`: descriptor comments state Blackwell K granularity is K64 for FP4, K32 for FP8, K16 for BF16/FP16, with FP4 K96 possible but unsupported here.
++- `tk_fa4/fp4_fa4_fwd/fwd_device_helpers.inc:886-953`: local FP4 PV split helper statically supports only `CHUNK == 0 || CHUNK == 1`, asserts logical `K == 128`, and issues two K64 chunks with scale-factor IDs 0 then 2.
++- Decision: true BF16-like K32 PV issue for quarters 0..31, 32..63, 64..95, 96..127 is not locally legal without speculative unsupported TCGEN encoding. Do not hack K32.
++
++Implemented hunk scope:
++- `tk_fa4/fp4_fa4_fwd/fwd_configs.inc`: add explicit 3WG/4WG `k64halfready` config structs and `ONLINE_SCORE_DERIVED_K64_HALF_READY` trait.
++- `tk_fa4/fp4_fa4_fwd/fwd_host_dispatch.inc`: add explicit route strings only; no Python selector/default constants changed.
++- `tk_fa4/fp4_fa4_fwd/fwd_streaming_kernel.inc`: add route-only score-derived K64 half-ready flag, reuse existing two-half PV issue path for `p_online_k64_ready`, publish early X1 P-scale TMEM readiness after scale pack, publish half-ready after q1 and q3 payload stores, and skip duplicate whole-stage P-scale TMEM ready for this route.
++
++Build:
++- Command: `make -C tk_fa4/fp4_fa4_fwd -j1 2>&1 | tee /tmp/fp4_fwd_k64halfready_build5.log`.
++- Artifact SHA256 `fdef191d9b816d0e9ec25e3ea19353890ba26c5dcb94e76db40e64db3d5666de`, mtime `2026-06-20 00:03:06.776715244 +0000`, size `15968648`.
++- ptxas:
++  - 3WG `...persistouter_clc_k64halfready_onevpub_fullvsc...`: `168 regs`, `2 barriers`, `1936 bytes smem`, `0 spill stores`, `0 spill loads`.
++  - 4WG `...persistouter_clc_schedwg4_k64halfready_onevpub_fullvsc...`: `128 regs`, `2 barriers`, `1936 bytes smem`, `0 spill stores`, `0 spill loads`.
++
++Smoke:
++- Command/log: `CUDA_VISIBLE_DEVICES=0 PYTHONPATH=tk_fa4 timeout 420s python3 ... benchmark_forward_streaming_live_mxfp4_vs_bf16(... warmup=0, iters=1, bf16_baseline="tk" ...) | tee /tmp/fp4_fwd_k64halfready_smoke.jsonl`.
++- H16/S2048 3WG explicit route: finite true; one cold smoke had a pathological first timing (`198.862 ms`) but correctness fields matched FP4-vs-BF16 envelope (`max_abs_diff 1.1328125`, LSE max abs diff `0.0230056` in follow-up schema check).
++- H32/S2048 4WG explicit route: finite true, one-iter MXFP4 `0.478784 ms`, TK BF16 `0.293824 ms`.
++- H16/S4096 4WG explicit route: finite true, one-iter MXFP4 `0.361248 ms`, TK BF16 `0.425376 ms`.
++
++Interleaved timing:
++- Command/log: `CUDA_VISIBLE_DEVICES=0 PYTHONPATH=tk_fa4 timeout 900s python3 ... current vs k64halfready, shapes H16/S2048 H32/S2048 H16/S4096, seeds 0/1, warmup=1, iters=3, bf16_baseline="tk" ... | tee /tmp/fp4_fwd_k64halfready_timing.jsonl`.
++
++| Shape | Seed | Current MXFP4 ms | `k64halfready` ms | Correctness |
++|---|---:|---:|---:|---|
++| H16/S2048 | 0 | 0.146432 | 0.126592 | finite, same FP4-vs-BF16 diff envelope |
++| H16/S2048 | 1 | 0.117696 | 0.117632 | finite, same diff envelope |
++| H32/S2048 | 0 | 0.250208 | 0.187168 | finite, same diff envelope |
++| H32/S2048 | 1 | 0.179392 | 0.172864 | finite, same diff envelope |
++| H16/S4096 | 0 | 0.234400 | 0.274048 | finite, same diff envelope |
++| H16/S4096 | 1 | 0.231296 | 0.243296 | finite, same diff envelope |
++
++Decision:
++- Keep the explicit non-default `k64halfready` route as a shape-scoped forward candidate. It is a repeatable H32/S2048 win (`~16%` over the two seed medians), roughly neutral/slightly positive on H16/S2048 after warmup, and slower on H16/S4096.
++- Do not change the default selector in this pass. The route should not be selected for H16/S4096. Any future selector change must gate to validated S2048 shapes and re-check nearby H8/H16/H32 if requested.
++- K32 quarter PV is concretely exhausted for current local FP4 TCGEN contracts; only K64/K96 FP4 issue is represented by the low-level descriptor/asm path.
++- No commit/push.
++
++## 2026-06-20 - H32/S2048 NCU comparison against TK BF16 after `k64halfready`
++
++Mandate:
++- Profile current H32/S2048 MXFP4 forward, explicit `k64halfready`, and fastest local TK BF16 baseline with the same focused NCU sections: `SpeedOfLight`, `SchedulerStats`, `WarpStateStats`, `MemoryWorkloadAnalysis`.
++- Compare tensor-core utilization and scheduler symptoms against BF16.
++
++Artifacts:
++- `results/mxfp4_fa4_forward_recover_20260617/ncu_h32_s2048_bf16_tk_current_20260620.csv`
++- `results/mxfp4_fa4_forward_recover_20260617/ncu_h32_s2048_mxfp4_current_20260620.csv`
++- `results/mxfp4_fa4_forward_recover_20260617/ncu_h32_s2048_mxfp4_k64halfready_20260620.csv`
++- Event timing rerun: `results/mxfp4_fa4_forward_recover_20260617/h32_s2048_current_k64_bf16_interleaved_20260620.json`
++
++NCU command shape:
++- `CUDA_VISIBLE_DEVICES=0 ncu --profile-from-start off --target-processes all --section SpeedOfLight --section SchedulerStats --section WarpStateStats --section MemoryWorkloadAnalysis --csv --page raw --force-overwrite --log-file <csv> python3 - <<'PY' ... cudaProfilerStart/Stop around one launch ... PY`
++- BF16 used `_run_bf16_causal_baseline_once(..., launch_mode="persistent")`.
++- MXFP4 current used selected route `...persistouter_clc_schedwg4_onevpub_fullvsc_vtma_vstma_pstage2_q200_p112_o56_qkscfix`.
++- MXFP4 `k64halfready` used explicit route `...persistouter_clc_schedwg4_k64halfready_onevpub_fullvsc_vtma_vstma_pstage2_q200_p112_o56_qkscfix`.
++
++NCU counters:
++
++| Kernel | time ns | SM % | tensor % | TC % | TMA % | DRAM % | eligible warps | issue % | long sb | wait | no inst | barrier |
++|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
++| TK BF16 persistent | 103808 | 39.70 | 37.32 | 39.70 | 0.08 | 8.78 | 0.57 | 45.00 | 3.73 | 1.00 | 0.29 | 0.22 |
++| MXFP4 current | 104512 | 27.89 | 5.45 | 11.64 | 0.23 | 1.88 | 0.38 | 32.00 | 3.74 | 1.80 | 0.74 | 0.38 |
++| MXFP4 `k64halfready` | 108704 | 27.35 | 5.19 | 11.45 | 0.22 | 1.81 | 0.37 | 31.27 | 3.91 | 1.80 | 0.70 | 0.38 |
++
++Same-day interleaved timing rerun, seeds `94601` and `94602`, warmup 5, iters 20:
++
++| Seed | TK BF16 ms | MXFP4 current ms | MXFP4 `k64halfready` ms |
++|---:|---:|---:|---:|
++| 94601 | 0.144976 | 0.158032 | 0.159152 |
++| 94602 | 0.142560 | 0.156832 | 0.157168 |
++
++Interpretation:
++- The same-day NCU profiles do not show a tensor-core utilization gain from `k64halfready`. Current MXFP4 and `k64halfready` remain essentially the same: TC active about `11.5%`, tensor pipe active about `5.2..5.5%`, eligible warps about `0.37..0.38`, and issue active about `31..32%`.
++- TK BF16 is still the reference shape for the quarter-ready strategy: TC active about `39.7%`, tensor pipe active about `37.3%`, eligible warps `0.57`, and issue active `45%`.
++- The MXFP4 lag is still underfeed/control/producer-side dependency rather than memory bandwidth: DRAM and TMA are tiny for MXFP4 (`~1.8%` DRAM, `~0.22%` TMA), while wait/no-instruction/barrier stalls are higher than BF16.
++- The earlier `k64halfready` timing win should be treated as not robust under this rerun. Keep it explicit/non-default for now, but do not promote it without a broader repeat that reproduces a wall-time win and moves profiler symptoms.
++
++## 2026-06-20 - Derived/fused normalized P-scale route audit
++
++Mandate:
++- Forward-only non-default derived/fused P-scale experiment. Keep legal FP4 K64 issue only; no default selector change.
++- Target algebra: use current score/block-max state to derive `P_j = exp(score_j - m_new) / l_new` and `scale_block ~= max_exp_block / l_new`.
++
++Source anchors before patch:
++- `tk_fa4/fp4_fa4_fwd/fwd_streaming_kernel.inc:10720-10731`: fused score block maxima are accumulated into `p_score_mx_max[qid]` while updating `row_max`.
++- `tk_fa4/fp4_fa4_fwd/fwd_streaming_kernel.inc:10818-10852`: current score-derived P-scale path builds E8M0 scales from `FP4PV_MXFP4_ONLINE_LOG2_P_SCALE + (block_max - row_max) * SCALE_LOG2 + output_lazy_log2_rcp`; it does not include `-log2(l_new)`.
++- `tk_fa4/fp4_fa4_fwd/fwd_streaming_kernel.inc:10958-11065`: current P payload pack mutates `scores_reg` to exponent values, packs four legal FP4 K64 scale chunks as two `qid` pairs, and publishes existing K64 half-ready only after q1/q3.
++- `tk_fa4/fp4_fa4_fwd/fwd_streaming_kernel.inc:11175-11227`: current row-sum update happens after payload pack. MXFP4 PV correction is `acc_scale`, because the default route accumulates unnormalized exp tiles and final output divides by `row_sum`.
++- `tk_fa4/fp4_fa4_fwd/fwd_streaming_kernel.inc:7425-7445` and `:7825-7832`: MXFP4 final output multiplies by `(1/36 / FP4PV_MXFP4_ONLINE_P_SCALE) * (1/row_sum)`.
++
++Planned route-local hunk:
++- Add explicit `normpscale` configs/dispatch entries only.
++- Compute a route-only `l_new` estimate before P-scale generation from original scores as `row_sum * acc_scale + sum(exp2((score - row_max) * SCALE_LOG2))`.
++- Subtract `log2(l_new)` from each block scale, keep existing K64-only payload/scale chunks, use normalized online correction `(row_sum_old * acc_scale) / row_sum`, and remove final `1/row_sum` only for this route.
++
++Variant 1, exact pre-pack `normpscale`:
++- Files touched: `tk_fa4/fp4_fa4_fwd/fwd_configs.inc`, `tk_fa4/fp4_fa4_fwd/fwd_host_dispatch.inc`, `tk_fa4/fp4_fa4_fwd/fwd_streaming_kernel.inc`.
++- Command/log: `make -C tk_fa4/fp4_fa4_fwd -j1 2>&1 | tee /tmp/fp4_fwd_normpscale_build1.log`.
++- Artifact SHA256 `ab5c0b98d828707d022b9f856913d90283fcda9869b4903ba867446dae8ee336`, mtime `2026-06-20 02:10:54.754055361 +0000`, size `16106496`.
++- ptxas: 4WG `normpscale` `128 regs`, `2 barriers`, `1904 bytes smem`, `0 spills`; 3WG `normpscale` `168 regs`, `2 barriers`, `1904 bytes smem`, `0 spills`.
++- Smoke log `/tmp/fp4_fwd_normpscale_smoke2.jsonl`: H16/S2048, H32/S2048, H16/S4096 finite against TK BF16; diff envelope similar to current (`mean_abs_diff` about `0.0053..0.0076`, LSE max diff `0.022..0.028`).
++- Interleaved timing log `/tmp/fp4_fwd_normpscale_interleaved1.jsonl`, seeds `62001/62002`, warmup 3, iters 10:
++
++| Shape | `normpscale` / current |
++|---|---:|
++| H4/S2048 | `1.16x`, `1.24x` slower |
++| H16/S2048 | `1.17x`, `1.24x` slower |
++| H32/S2048 | `1.13x`, `1.26x` slower |
++| H8/S4096 | `1.30x`, `1.34x` slower |
++| H16/S4096 | `1.18x`, `1.31x` slower |
++| H32/S4096 | `1.47x`, `1.40x` slower |
++
++- Decision: reject. The exact route-local formula is correct in shape and preserves legal K64 chunks, but the required duplicate exponent-sum pass before scale generation is consistently slower. Reverted/replaced only this route-local patch before the second algebraic variant.
++
++Variant 2, late scale repack `latenormpscale`:
++- Hunk: avoid the duplicate pre-pack exponent pass. Keep current unnormalized payload pack, compute `log2(row_sum)` after the existing row-sum update, repack only the X1 P-scale word as `base_e8m0 - log2(row_sum)`, use normalized old-output correction, and skip final output `1/row_sum` only for this explicit route.
++- Command/log: `make -C tk_fa4/fp4_fa4_fwd -j1 2>&1 | tee /tmp/fp4_fwd_latenormpscale_build1.log`.
++- Artifact SHA256 `8d8cd030b42823164beeefee1de4040c409a887cd1d27a3ccd5b5d013cb13bdc`, mtime `2026-06-20 02:22:09.384665766 +0000`, size `16106560`.
++- ptxas: 4WG `latenormpscale` `128 regs`, `2 barriers`, `1904 bytes smem`, `0 spills`; 3WG `latenormpscale` `168 regs`, `2 barriers`, `1904 bytes smem`, `0 spills`.
++- Smoke log `/tmp/fp4_fwd_latenormpscale_smoke1.jsonl`: H16/S2048, H32/S2048, H16/S4096 finite against TK BF16; diff envelope still acceptable (`mean_abs_diff` about `0.0054..0.0076`, LSE max diff `0.022..0.032`).
++- Interleaved timing log `/tmp/fp4_fwd_latenormpscale_interleaved1.jsonl`, seeds `64001/64002`, warmup 3, iters 10:
++
++| Shape | Current ms | `latenormpscale` ms | Result |
++|---|---:|---:|---|
++| H4/S2048 | `0.092096`, `0.092608` | `0.091488`, `0.094592` | mixed |
++| H16/S2048 | `0.121344`, `0.118400` | `0.112352`, `0.110688` | timing win |
++| H32/S2048 | `0.175968`, `0.185984` | `0.167008`, `0.164512` | timing win |
++| H8/S4096 | `0.140704`, `0.173504` | `0.140352`, `0.167520` | noisy/slight win |
++| H16/S4096 | `0.219552`, `0.205920` | `0.232032`, `0.224736` | slower |
++| H32/S4096 | `0.384672`, `0.376928` | `0.417664`, `0.405984` | slower |
++
++NCU command shape:
++- `CUDA_VISIBLE_DEVICES=0 PROFILE_HEADS=<H> PROFILE_SEQLEN=2048 [PROFILE_CFG=<route>] ncu --profile-from-start off --target-processes all --section SpeedOfLight --section SchedulerStats --section WarpStateStats --section MemoryWorkloadAnalysis --csv --page raw --force-overwrite --log-file <csv> python3 - <<'PY' ... cudaProfilerStart/Stop around one _run_forward_streaming_live_mxfp4 launch ... PY`
++- Artifacts:
++  - `results/mxfp4_fa4_forward_recover_20260617/ncu_derived_scale_20260620/h16_s2048_current.csv`
++  - `results/mxfp4_fa4_forward_recover_20260617/ncu_derived_scale_20260620/h16_s2048_latenorm.csv`
++  - `results/mxfp4_fa4_forward_recover_20260617/ncu_derived_scale_20260620/h32_s2048_current.csv`
++  - `results/mxfp4_fa4_forward_recover_20260617/ncu_derived_scale_20260620/h32_s2048_latenorm.csv`
++
++NCU counters:
++
++| Shape/route | time ns | SM % | tensor % | TC % | TMA % | DRAM % | eligible warps | issue % | long sb | wait | no inst | barrier |
++|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
++| H16 current | 55680 | 24.81 | 5.02 | 11.19 | 0.21 | 1.77 | 0.34 | 30.00 | 3.46 | 1.76 | 0.86 | 0.32 |
++| H16 `latenormpscale` | 59648 | 24.98 | 4.74 | 10.64 | 0.20 | 1.65 | 0.34 | 29.84 | 3.58 | 1.70 | 0.89 | 0.29 |
++| H32 current | 104544 | 27.67 | 5.41 | 11.54 | 0.23 | 1.88 | 0.38 | 32.02 | 3.75 | 1.80 | 0.73 | 0.38 |
++| H32 `latenormpscale` | 111488 | 27.80 | 5.10 | 11.11 | 0.22 | 1.76 | 0.37 | 31.93 | 3.84 | 1.74 | 0.76 | 0.35 |
++
++Decision:
++- Reject `latenormpscale`. It had S2048 wall-time movement in the short benchmark, but it failed the success rule: NCU did not move eligible warps, issue active, tensor/TC active, or stall buckets in the right direction. Profiled duration worsened, tensor/TC active fell slightly, eligible/issue were flat to down, and long-scoreboard/no-instruction rose slightly.
++- No third route-local normalized P-scale variant was implemented. The two bounded algebraic variants cover the available local choices: exact `l_new` before scale generation costs an extra exponent pass, and late repack avoids that pass but does not improve the scheduler/tensor underfeed counters. A tile-sum-only normalization would require an additional current-PV scalar gating path rather than just a derived P-scale route-local patch, so it is not the next smallest algebraic P-scale variant.
++- Reverted only the derived-scale route patch. Confirmed no `latenormpscale`, `LATE_NORMALIZED`, or `p_score_late` strings remain in `fwd_streaming_kernel.inc`, `fwd_configs.inc`, or `fwd_host_dispatch.inc`; `git diff --check` passed.
++
++Restored build/smoke:
++- Forward writer check before rebuild: only this Codex command text matched the forward pattern; no compiler/writer process.
++- Command/log: `make -C tk_fa4/fp4_fa4_fwd -j1 2>&1 | tee /tmp/fp4_fwd_revert_derived_scale_build1.log`.
++- Artifact SHA256 `78ecb55bda3a91a541b3e016ec754133b6651713417b0b1e65d9ec7eef7c90aa`, mtime `2026-06-20 02:35:59.195510235 +0000`, size `15968648`.
++- Rebuilt ptxas for kept explicit `k64halfready`: 4WG `128 regs`, `2 barriers`, `1936 bytes smem`, `0 spill stores`, `0 spill loads`; 3WG `168 regs`, `2 barriers`, `1936 bytes smem`, `0 spill stores`, `0 spill loads`.
++- Smoke command/log: `CUDA_VISIBLE_DEVICES=0 PYTHONPATH=tk_fa4 timeout 420s python3 ... benchmark_forward_streaming_live_mxfp4_vs_bf16(... warmup=1, iters=1, bf16_baseline="tk", include_output_only=False) | tee /tmp/fp4_fwd_derived_scale_revert_smoke2.jsonl`.
++
++| Shape | MXFP4 ms | TK BF16 ms | finite | max abs diff | mean abs diff | LSE max diff |
++|---|---:|---:|---|---:|---:|---:|
++| H16/S2048 | 0.058304 | 0.071968 | true | 0.98046875 | 0.00738188 | 0.03320578 |
++| H32/S2048 | 0.105952 | 0.103488 | true | 0.96875 | 0.00742634 | 0.03022017 |
++| H16/S4096 | 0.167072 | 0.138080 | true | 0.94140625 | 0.00523596 | 0.03242642 |
++
++Final state:
++- Derived/fused normalized P-scale is exhausted for bounded route-local K64-only variants in this pass.
++- Default selector unchanged. No commit/push.
++
++## 2026-06-20 - Forward speed-of-light P-free / PV-only diagnostic ladder
++
++Mandate:
++- Forward-only profiling/diagnosis. Do not touch backward files/sessions. No default selector change. No commit/push.
++- Test whether legal MXFP4 FP4 PV can approach BF16-like tensor-core utilization when P construction is free.
++
++Baseline artifact and setup:
++- Starting restored forward artifact before fake-P route: SHA256 `78ecb55bda3a91a541b3e016ec754133b6651713417b0b1e65d9ec7eef7c90aa`, mtime `2026-06-20 02:35:59.195510235 +0000`.
++- Baseline NCU directory: `results/mxfp4_fa4_forward_recover_20260617/ncu_pv_sol_20260620/`.
++- NCU command shape: `CUDA_VISIBLE_DEVICES=0 PYTHONPATH=/workspace/codebases/pv/fp4_matmul ncu --profile-from-start off --target-processes all --section SpeedOfLight --section SchedulerStats --section WarpStateStats --section MemoryWorkloadAnalysis --csv --page raw --force-overwrite --log-file <csv> python3 - <<'PY' ... cudaProfilerStart/Stop around one launch ... PY`.
++- BF16 baseline is `tk_fa4.fp4_pv_experiments._run_bf16_causal_baseline_once(..., launch_mode="persistent")`, because it is the fastest available TK FA4 BF16 forward path in this harness and is the same reference used throughout the FA4 forward ledger.
++- MXFP4 current baseline uses selected route `...persistouter_clc_schedwg4_onevpub_fullvsc_vtma_vstma_pstage2_q200_p112_o56_qkscfix`.
++
++Source anchors and fake-P hunk scope:
++- `tk_fa4/fp4_fa4_fwd/fwd_streaming_kernel.inc:10691-10833`: score/block-max and P-scale generation.
++- `tk_fa4/fp4_fa4_fwd/fwd_streaming_kernel.inc:10958-11227`: score-derived payload packing, K64 ready publication, and row-sum update.
++- `tk_fa4/fp4_fa4_fwd/fwd_configs.inc` and `tk_fa4/fp4_fa4_fwd/fwd_host_dispatch.inc`: explicit route-only config/dispatch entries.
++- Route added only for diagnosis: `...persistouter_clc_schedwg4_fakepconst_onevpub_fullvsc_vtma_vstma_pstage2_q200_p112_o56_qkscfix`.
++- The route bypassed P max/scale/exp/pack by forcing fixed scale bytes and payload, while preserving legal FP4 K64 PV issue and existing V/output/reuse machinery. Initial all-zero payload/scale was too degenerate: output was all-zero and H32/S2048 full NCU replay did not complete, leaving only `h32_s2048_mxfp4_fakepconst.csv` with profiler failure. Corrected route used E8M0 scale byte `0x7f` and repeated nonzero FP4 payload word `0x66666666`.
++
++Build and smoke:
++- Build log: `/tmp/fp4_fwd_fakepconst_nonzero_build2.log`.
++- Artifact SHA256 `9aba9a1d052b8c53e609ec2803caa2c2cd4836486f58d57f23d4e9f8e702d625`, mtime `2026-06-20 11:57:04.007124318 +0000`, size `16040960`.
++- ptxas: 4WG `fakepconst` `128 regs`, `2 barriers`, `1904 bytes smem`, `0 spills`; 3WG `fakepconst` `168 regs`, `2 barriers`, `1904 bytes smem`, `0 spills`.
++- Smoke: H32/S2048, H16/S2048, H16/S4096 all returned finite output and LSE with nonzero output on the 4WG explicit route. The 3WG all-zero first attempt timed out on H16/S2048 and was not profiled.
++
++NCU counter ladder:
++
++| Route | time ns | SM % | tensor % | TC % | TMA % | DRAM % | eligible | issue % | long sb | wait | no inst | barrier | regs | smem |
++|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
++| H32/S2048 current live | 103648 | 27.58 | 5.39 | 11.50 | 0.23 | 1.89 | 0.38 | 31.90 | 3.74 | 1.80 | 0.73 | 0.38 | 128 | 103280 |
++| H32/S2048 fakeP live | 59136 | 19.27 | 9.48 | 18.68 | 0.40 | 3.31 | 0.32 | 24.71 | 4.83 | 1.98 | 1.07 | 0.89 | 128 | 103280 |
++| H32/S2048 PV-only chunked | 521184 | 19.94 | 1.17 | 19.94 | 0.00 | 1.96 | 0.35 | 18.08 | 2.07 | 2.15 | 0.50 | 24.66 | 52 | 52256 |
++| H32/S2048 PV-only K256 | 345152 | 26.90 | 1.77 | 26.90 | 0.00 | 2.94 | 0.14 | 9.36 | 6.62 | 2.76 | 0.66 | 52.42 | 64 | 60448 |
++| H32/S2048 TK BF16 | 104000 | 40.01 | 37.61 | 40.01 | 0.08 | 8.48 | 0.57 | 45.06 | 3.73 | 1.00 | 0.30 | 0.22 | 128 | 232672 |
++| H16/S2048 current live | 55872 | 24.84 | 5.03 | 11.21 | 0.21 | 1.76 | 0.34 | 30.10 | 3.49 | 1.76 | 0.84 | 0.32 | 168 | 103280 |
++| H16/S2048 fakeP live | 32224 | 17.68 | 8.70 | 17.17 | 0.37 | 3.05 | 0.31 | 23.71 | 4.91 | 1.98 | 1.38 | 0.95 | 128 | 103280 |
++| H16/S2048 PV-only K256 | 177952 | 26.16 | 1.72 | 26.16 | 0.00 | 2.69 | 0.14 | 9.18 | 6.68 | 2.77 | 0.75 | 41.41 | 64 | 60448 |
++| H16/S2048 TK BF16 | 71136 | 28.89 | 27.16 | 28.89 | 0.06 | 5.96 | 0.52 | 41.52 | 3.83 | 1.05 | 0.41 | 0.37 | 128 | 232672 |
++| H16/S4096 current live | 163936 | 32.68 | 6.71 | 14.24 | 0.26 | 1.20 | 0.39 | 33.55 | 3.86 | 1.78 | 0.55 | 0.27 | 128 | 103280 |
++| H16/S4096 PV-only K256 | 685856 | 27.19 | 1.78 | 27.19 | 0.00 | 2.91 | 0.13 | 8.63 | 8.06 | 2.84 | 0.72 | 57.49 | 64 | 60448 |
++| H16/S4096 TK BF16 | 179136 | 40.91 | 38.55 | 40.91 | 0.07 | 4.95 | 0.59 | 47.27 | 3.70 | 0.97 | 0.24 | 0.13 | 128 | 232672 |
++
++Additional command artifacts:
++- Live fake-P NCU: `h32_s2048_mxfp4_fakepconst_nonzero.csv`, `h16_s2048_mxfp4_fakepconst_nonzero.csv`.
++- Live fake-P H16/S4096 full-section NCU timed out after 420 s and wrote `h16_s4096_mxfp4_fakepconst_nonzero.csv` with no profiled kernels; the route itself smoked finite/no-hang outside NCU.
++- Existing forward-only PV microbench wrappers used without source changes:
++  - `_native_mxfp4_pv_from_p_chunked_debug`, exported by `mxfp4_pv_from_p_chunked_debug`.
++  - `_native_mxfp4_pv_from_p_k256_debug`, exported by `mxfp4_pv_from_p_k256_debug`.
++- PV-only inputs used constant BF16 P (`0.125`) and random BF16 V, quantized outside the profiled region with `_mxfp4_quantize_p_for_gemm` and `_mxfp4_quantize_v_for_gemm(..., pad_dvo_to_256=False)`.
++
++Conclusion:
++- P construction/quantization is a real contributor: replacing score-derived P construction with fixed nonzero P nearly halves profiled live duration for S2048 and raises TC active from about `11%` to `17-19%`.
++- It is not the sole blocker. Even with fixed P inside the live route, eligible warps and issue active fall (`H32 eligible 0.38 -> 0.32`, issue `31.9% -> 24.7%`), and TC active remains far below H32 BF16 `40%`.
++- Existing PV-only debug surfaces still do not reach BF16-like TC active. Chunked legal PV is about `20%` TC and barrier-heavy. K256 PV-only improves to `26-27%` TC but has very low eligible/issue (`~0.13-0.14` eligible, `8.6-9.4%` issue) and large barrier stalls (`41-57`), so the legal FP4 PV/control schedule itself is underfed even when QK/softmax/P construction is removed.
++- Current evidence rules out “P construction alone prevents BF16-like tensor-core utilization.” The next useful direction is PV issue/control ownership and barrier reduction, not more algebraic P-scale or payload variants.
++- Decision: reject/revert the live `fakepconst` diagnostic route after this ledger entry. Keep the existing forward-only PV debug harnesses and CSV results for future speed-of-light comparisons.
++
++Revert/restored artifact:
++- Removed only the `fakepconst` route/config/trait/source branches. Confirmed no `fakepconst`, `FAKE_P_FIXED`, `fake_p_fixed`, or `FAKE_P_` strings remain in `tk_fa4/fp4_fa4_fwd`.
++- `git diff --check -- tk_fa4/fp4_fa4_fwd results/mxfp4_fa4_forward_recover_20260617/forward_ordered_ledger.md` passed.
++- Rebuild command/log: `make -C tk_fa4/fp4_fa4_fwd -j1 2>&1 | tee /tmp/fp4_fwd_fakepconst_revert_build1.log`.
++- Rebuilt artifact SHA256 `007f108883e144d4b09e3bbcf1ce6a8ca56b5be8b2e6693cb7556f594f65d475`, mtime `2026-06-20 12:18:46.138342972 +0000`, size `15968648`.
++- Focused default-route smoke log: `/tmp/fp4_fwd_fakepconst_revert_smoke1.jsonl`.
++
++| Shape | selected route | MXFP4 ms | finite/correctness smoke | max abs diff | mean abs diff | LSE max diff |
++|---|---|---:|---|---:|---:|---:|
++| H16/S2048 | `...persistouter_clc_onevpub_fullvsc...qkscfix` | `0.359072` | pass | `0.8984375` | `0.00723762` | `0.02039355` |
++| H32/S2048 | `...persistouter_clc_schedwg4_onevpub_fullvsc...qkscfix` | `0.188160` | pass | `1.265625` | `0.00745200` | `0.01907255` |
++| H16/S4096 | `...persistouter_clc_schedwg4_onevpub_fullvsc...qkscfix` | `0.233344` | pass | `0.859375` | `0.00522204` | `0.02560723` |
++
++Final state:
++- No default selector change. No commit/push.
++- Rejected live diagnostic route is reverted; profiler CSVs and ledger remain.
++
++## 2026-06-20 - Forward PV issue/control audit and K64 one-load-wait probe plan
++
++Mandate:
++- Forward-only. Do not touch backward files/sessions. Do not commit/push. Do not make default selector changes.
++- Use the speed-of-light fake-P/PV-only evidence to target FP4 PV issue/control underfeed, not more P algebra.
++
++Starting state:
++- Current forward artifact SHA256 `007f108883e144d4b09e3bbcf1ce6a8ca56b5be8b2e6693cb7556f594f65d475`, mtime `2026-06-20 12:18:46.138342972 +0000`, size `15968648`.
++- No active forward writer was observed before the audit.
++- Existing source already has explicit `k64halfready` routes; plain K64-half readiness is not a new probe and was already profiled as no-win in the K32/K64 audit.
++
++BF16 control-model audit:
++- Fastest local BF16 reference remains `tk_fa4.fp4_pv_experiments._run_bf16_causal_baseline_once(..., launch_mode="persistent")`. This is the TK FA4 BF16 persistent path used in same-day NCU comparisons and reaches BF16-like TC active (`H32/S2048` about `40%`, eligible `0.57`, issue `45%`).
++- BF16 issue side in `tk_fa4/fp4_fa4_fwd/fwd_bf16_baseline.inc:1990-2018` and `2045-2063` waits `norm_scores_arrived` for quarter 0, then `norm_scores_quarter_arrived[q-1]` for quarters 1..3, issuing each `d_tt_scores_bf_1q` against the matching V quarter immediately.
++- BF16 producer side in `tk_fa4/fp4_fa4_fwd/fwd_bf16_baseline.inc:2628-2639`, `2656-2667`, and `2760-2771` stores each 32-wide quarter to TMEM, does `tensor_store_wait`/`tensor_after_thread_sync`, then arrives the matching full/quarter semaphore. This is a real producer-consumer handshake at BF16 quarter granularity.
++
++FP4 live PV-control audit:
++- Current live FP4 cannot legally copy the BF16 K32 quarter contract: prior low-level audit found only FP4 K64/K96 TCGEN scale-factor forms in local ThunderKittens/tcgen05 paths, and `tk_fa4/fp4_fa4_fwd/fwd_device_helpers.inc:887-953` exposes full K128 or split K64 chunks. The strict K32 route remains exhausted.
++- Live FP4 K256 score-derived route is statically blocked at `tk_fa4/fp4_fa4_fwd/fwd_streaming_kernel.inc:168-178` until paired producer/Dvo/2 output accumulator ownership is wired; do not fall back to vector pack paths.
++- Existing legal FP4 K64-half path:
++  - producer writes score-derived P scale to TMEM and arrives `p_sc_tmem_ready` in `fwd_streaming_kernel.inc:10866-10894`;
++  - producer publishes half-ready after qid 1 and 3 via `quant_wg_sync`, `fp4pv_publish_shared_backing_proxy_only`, and `warpgroup::arrive(p_online_k64_ready[buf][qid >> 1])` in `fwd_streaming_kernel.inc:10929-10936`;
++  - PV issue waits those half-ready semaphores in `fwd_streaming_kernel.inc:6107-6115`;
++  - PV issue currently performs `wait half0 -> tensor_load_wait -> issue chunk0 -> wait half1 -> tensor_load_wait -> issue chunk1/commit` in `fwd_streaming_kernel.inc:6135-6166`.
++- The non-half-ready default remains coarser: it waits P/V scale and payload readiness once, then uses `fp4pv_p_stage_ABt_split_k64` or full K128. The already-tested `k64halfready` route did not improve counters.
++
++PV bottleneck interpretation from `results/mxfp4_fa4_forward_recover_20260617/ncu_pv_sol_20260620/`:
++- Current live H32/S2048: TC `11.50%`, tensor `5.39%`, eligible `0.38`, issue `31.90%`, barrier `0.38`.
++- Fake-P live H32/S2048: TC rises to `18.68%`, but eligible/issue fall to `0.32`/`24.71%`, so P construction is only part of the problem.
++- PV-only K256 H32/S2048 reaches TC `26.90%`, but eligible `0.14`, issue `9.36%`, barrier `52.42`; the debug K256 kernel’s source shows CTA-wide `__syncthreads`/cluster sync around every K256 tile in `fwd_device_helpers.inc:6018-6063`. It exposes legal FP4 TCGEN capability but a pathological control model, not a production-ready handoff.
++- First concrete control bottleneck to remove: an unnecessary live K64-half PV-side load-wait between the two split-K64 TCGEN issues. The existing split helper `fp4pv_mma_p_stage_ABt_split_k64_view` in `fwd_device_helpers.inc:917-923` issues chunk 0 and chunk 1 back-to-back with no intervening `tensor_load_wait`, so skipping the second wait in the K64-half explicit route is legal to test and directly targets issue/no-instruction/eligible underfeed without attempting unsupported K32.
++
++Planned explicit route and hunk scope:
++- Add route-local trait `ONLINE_SCORE_DERIVED_K64_HALF_READY_ONE_TLOAD_WAIT`.
++- Add explicit route strings:
++  - `...persistouter_clc_k64halfready_onetwait_onevpub_fullvsc_vtma_vstma_pstage2_q200_p112_o56_qkscfix`
++  - `...persistouter_clc_schedwg4_k64halfready_onetwait_onevpub_fullvsc_vtma_vstma_pstage2_q200_p112_o56_qkscfix`
++- Touch only:
++  - `tk_fa4/fp4_fa4_fwd/fwd_configs.inc`: trait plus 3WG/4WG explicit configs inheriting existing `k64halfready`.
++  - `tk_fa4/fp4_fa4_fwd/fwd_streaming_kernel.inc`: one static constexpr flag and one conditional around the second K64-half `tensor_load_wait` at line `6161`.
++  - `tk_fa4/fp4_fa4_fwd/fwd_host_dispatch.inc`: explicit dispatch entries in the two existing route-dispatch blocks.
++- Expected counter movement if the bottleneck is real: lower no-instruction/wait around PV issue and higher eligible/issue/TC for the explicit route versus plain `k64halfready` and current selected CLC. Revert/mark rejected if smoke fails or H32/H16 NCU does not materially improve eligible/issue/TC.
++
++Implementation:
++- Added route-local trait `ONLINE_SCORE_DERIVED_K64_HALF_READY_ONE_TLOAD_WAIT`.
++- Added explicit route strings only:
++  - `dualaccum_directrescale_scorepack_prescaled_floor_x1sc_fusedmax_diagzero_prepub_earlyreuse_arrivereuse_pscreusefold_skippscarrive_persistouter_clc_k64halfready_onetwait_onevpub_fullvsc_vtma_vstma_pstage2_q200_p112_o56_qkscfix`
++  - `dualaccum_directrescale_scorepack_prescaled_floor_x1sc_fusedmax_diagzero_prepub_earlyreuse_arrivereuse_pscreusefold_skippscarrive_persistouter_clc_schedwg4_k64halfready_onetwait_onevpub_fullvsc_vtma_vstma_pstage2_q200_p112_o56_qkscfix`
++- Kernel hunk changed only the second K64-half issue-side `tensor_load_wait()` to be skipped under the route-local trait. It kept `tensor_before_thread_sync()`, which is a TCGEN fence instruction (`ThunderKittens/include/ops/thread/util/sync.cuh:262-270`) and was not removed.
++
++Build:
++- Command/log: `make -C tk_fa4/fp4_fa4_fwd -j1 2>&1 | tee /tmp/fp4_fwd_k64onetwait_build1.log`.
++- Artifact SHA256 `449bf7d559fbd3d80ce80b53c6c6836eaf0f375141a15cb9ccf2ed4625701b78`, mtime `2026-06-20 15:25:15.768867341 +0000`, size `16041136`.
++- ptxas:
++  - 4WG `k64halfready_onetwait`: `128 regs`, `2 barriers`, `1936 bytes smem`, `0 spills`.
++  - 3WG `k64halfready_onetwait`: `168 regs`, `2 barriers`, `1936 bytes smem`, `0 spills`.
++  - Current selected 4WG `schedwg4_onevpub_fullvsc`: `128 regs`, `2 barriers`, `1904 bytes smem`, `0 spills`.
++
++Smoke:
++- Command/log: `CUDA_VISIBLE_DEVICES=0 PYTHONPATH=/workspace/codebases/pv/fp4_matmul python3 ... | tee /tmp/fp4_fwd_k64onetwait_smoke2.jsonl`.
++
++| Route | H | S | MXFP4 ms | TK BF16 ms | finite | max diff | mean diff | LSE max diff |
++|---|---:|---:|---:|---:|---|---:|---:|---:|
++| current selected | 16 | 2048 | `0.383520` | `0.123264` | pass | `1.1171875` | `0.00720727` | `0.02673435` |
++| `k64halfready_onetwait` | 16 | 2048 | `0.119968` | `0.111520` | pass | `1.1171875` | `0.00720727` | `0.02673435` |
++| current selected | 32 | 2048 | `0.214432` | `0.183712` | pass | `1.0546875` | `0.00745405` | `0.02606923` |
++| `k64halfready_onetwait` | 32 | 2048 | `0.213760` | `0.178112` | pass | `1.0546875` | `0.00745405` | `0.02606923` |
++| current selected | 16 | 4096 | `0.237088` | `0.190144` | pass | `0.9765625` | `0.00524523` | `0.01694345` |
++| `k64halfready_onetwait` | 16 | 4096 | `0.268096` | `0.210912` | pass | `0.9765625` | `0.00524522` | `0.01694345` |
++
++Median timing sweep:
++- Command/log: `CUDA_VISIBLE_DEVICES=0 PYTHONPATH=/workspace/codebases/pv/fp4_matmul python3 ... | tee /tmp/fp4_fwd_k64onetwait_timing1.jsonl`.
++
++| Route | H | S | MXFP4 median ms | samples ms | TK BF16 median ms | correctness |
++|---|---:|---:|---:|---|---:|---|
++| current selected | 16 | 2048 | `0.107712` | `[0.119168,0.110944,0.103360,0.107712,0.099232]` | `0.102688` | pass |
++| `k64halfready_onetwait` | 16 | 2048 | `0.117920` | `[0.122176,0.117920,0.118912,0.111840,0.111520]` | `0.110336` | pass |
++| current selected | 32 | 2048 | `0.194464` | `[0.195520,0.194464,0.193760,0.202144,0.192544]` | `0.175136` | pass |
++| `k64halfready_onetwait` | 32 | 2048 | `0.178624` | `[0.178624,0.185120,0.170912,0.175520,0.189696]` | `0.149856` | pass |
++| current selected | 16 | 4096 | `0.227392` | `[0.227392,0.228544,0.223008,0.228832,0.226848]` | `0.187808` | pass |
++| `k64halfready_onetwait` | 16 | 4096 | `0.235584` | `[0.239904,0.241248,0.234784,0.235584,0.229376]` | `0.183968` | pass |
++
++NCU:
++- Commands used `CUDA_VISIBLE_DEVICES=0 ... ncu --profile-from-start off --target-processes all --section SpeedOfLight --section SchedulerStats --section WarpStateStats --section MemoryWorkloadAnalysis --csv --page raw --force-overwrite --log-file <csv> python3 ...`.
++- CSVs:
++  - `results/mxfp4_fa4_forward_recover_20260617/ncu_pv_sol_20260620/h32_s2048_mxfp4_current_postonet.csv`
++  - `results/mxfp4_fa4_forward_recover_20260617/ncu_pv_sol_20260620/h32_s2048_mxfp4_k64onetwait.csv`
++  - `results/mxfp4_fa4_forward_recover_20260617/ncu_pv_sol_20260620/h32_s2048_bf16_tk_postonet.csv`
++  - `results/mxfp4_fa4_forward_recover_20260617/ncu_pv_sol_20260620/h16_s2048_mxfp4_current_postonet.csv`
++  - `results/mxfp4_fa4_forward_recover_20260617/ncu_pv_sol_20260620/h16_s2048_mxfp4_k64onetwait.csv`
++  - `results/mxfp4_fa4_forward_recover_20260617/ncu_pv_sol_20260620/h16_s2048_bf16_tk_postonet.csv`
++
++| Route | time ns | SM % | tensor % | TC % | TMA % | DRAM % | eligible | issue % | long sb | wait | no inst | barrier | regs | smem |
++|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
++| H32/S2048 current | `104672` | `27.77` | `5.43` | `11.58` | `0.23` | `1.87` | `0.38` | `31.92` | `3.74` | `1.80` | `0.72` | `0.38` | `128` | `1904` |
++| H32/S2048 `onetwait` | `109088` | `27.26` | `5.18` | `11.48` | `0.22` | `1.80` | `0.37` | `31.32` | `3.90` | `1.80` | `0.66` | `0.39` | `128` | `1936` |
++| H32/S2048 TK BF16 | `103648` | `40.10` | `37.70` | `40.10` | `0.08` | `8.51` | `0.57` | `45.05` | `3.73` | `1.00` | `0.29` | `0.21` | `128` | `224` |
++| H16/S2048 current | `55552` | `25.00` | `5.06` | `11.31` | `0.22` | `1.78` | `0.34` | `30.08` | `3.49` | `1.76` | `0.89` | `0.32` | `168` | `1904` |
++| H16/S2048 `onetwait` | `58432` | `24.55` | `4.84` | `11.00` | `0.21` | `1.69` | `0.34` | `29.60` | `3.61` | `1.76` | `0.81` | `0.31` | `168` | `1936` |
++| H16/S2048 TK BF16 | `70944` | `28.94` | `27.20` | `28.94` | `0.06` | `5.98` | `0.52` | `41.39` | `3.86` | `1.05` | `0.43` | `0.42` | `128` | `224` |
++
++Decision:
++- Reject/revert `k64halfready_onetwait`. It is smoke-correct, but it fails the profiler success criterion: H32/H16 TC active, tensor active, eligible warps, and issue active are flat-to-down versus current, while long-scoreboard rises. H16/S4096 timing also regresses.
++- The one H32/S2048 timing-sweep median win is not accepted because the NCU counters move opposite the stated target and the NCU profiled duration is worse (`104672 ns -> 109088 ns`).
++- This rules out the local second-half `tensor_load_wait` as the meaningful PV underfeed source. Removing the remaining `tensor_before_thread_sync` would remove a required TCGEN fence (`tcgen05.fence::before_thread_sync`), not a coarse producer-consumer barrier, and is not a safe bounded control probe.
++- Remaining gap after this probe: live FP4 remains PV/control underfed relative to BF16 (`H32 TC 11.6% vs 40.1%, eligible 0.38 vs 0.57, issue 31.9% vs 45.1%`), but not because of this extra local K64-half load wait. The next valid route should change PV ownership/control more structurally, not another local single-edge wait skip.
++
++Revert/restored baseline:
++- Reverted only the explicit `k64halfready_onetwait` route hunks from `tk_fa4/fp4_fa4_fwd/fwd_configs.inc`, `tk_fa4/fp4_fa4_fwd/fwd_streaming_kernel.inc`, and `tk_fa4/fp4_fa4_fwd/fwd_host_dispatch.inc`. `grep -R "onetwait\|ONE_TLOAD_WAIT" -n tk_fa4/fp4_fa4_fwd` returned no matches.
++- Rebuild command/log: `make -C tk_fa4/fp4_fa4_fwd -j1 2>&1 | tee /tmp/fp4_fwd_k64onetwait_revert_build1.log`.
++- Restored artifact SHA256 `8a02e4a7776062b43199ec19c25eb56d383ab6040671e43751f77b0b6a8b348d`, mtime `2026-06-20 15:38:07.379659560 +0000`, size `15968648`.
++- No active forward writer observed after rebuild except the `pgrep` command itself.
++- Focused restored-route smoke log: `/tmp/fp4_fwd_k64onetwait_revert_smoke2.jsonl`.
++
++| Shape | selected route | MXFP4 ms | TK BF16 ms | finite | max abs diff | mean abs diff |
++|---|---|---:|---:|---|---:|---:|
++| H16/S2048 | `...persistouter_clc_onevpub_fullvsc...qkscfix` | `0.230592` | `0.115136` | pass | `1.0390625` | `0.00733655` |
++| H32/S2048 | `...persistouter_clc_schedwg4_onevpub_fullvsc...qkscfix` | `0.221760` | `0.186720` | pass | `0.9296875` | `0.00748989` |
++| H16/S4096 | `...persistouter_clc_schedwg4_onevpub_fullvsc...qkscfix` | `0.237120` | `0.189440` | pass | `0.91796875` | `0.00524923` |
++
++Final state for this probe:
++- Default selector unchanged. No commit/push.
++- Source restored to the pre-probe forward state apart from this ledger entry and the retained NCU CSVs.
++- Further local K64-half single-wait edits are not justified by the counters. A productive next variant must alter PV ownership/control at a coarser level while preserving legal K64/K128 FP4 TCGEN issue.
++
++Second-variant source check:
++- Current selected online CLC is already the coarser legal K128 PV issue path. `STATIC_SPLIT_PV_MMA_K64` in `tk_fa4/fp4_fa4_fwd/fwd_streaming_kernel.inc:2057-2061` is restricted to offline/external-LSE modes, so the selected online route reaches `fp4pv_mm_p_stage_ABt`/`fp4pv_mma_p_stage_ABt` instead of split-K64 unless the explicit `k64halfready` route is selected.
++- The selected online route already has a single P/V handoff before PV issue: wait P readiness in `wait_and_stage_p_sc` (`fwd_streaming_kernel.inc:5785`) and V TMA payload readiness in `wait_v_tma_payload_for_pv` (`fwd_streaming_kernel.inc:6116-6133`), then one `tensor_load_wait()` plus one `tensor_before_thread_sync()` before K128 PV issue (`fwd_streaming_kernel.inc:6215-6223`/`6252-6265`). These are TCGEN load completion/fence instructions, not removable CTA/WG barriers (`ThunderKittens/include/ops/thread/util/sync.cuh:262-272`).
++- The only locally compileable earlier-handoff variant, explicit `k64halfready`, adds two P-half producer-consumer semaphores and was already a no-win; the extra local second load-wait variant above was also no-win by counters.
++- K256 grouping is not a bounded route-local patch: `STATIC_ONLINE_MXFP4_SCORE_DERIVED_K256` is hard-blocked by `static_assert(!STATIC_ONLINE_MXFP4_SCORE_DERIVED_K256)` at `fwd_streaming_kernel.inc:165-178`, with the stated blocker that paired producer/Dvo/2 output accumulator ownership must be wired and validated. The dormant K256 issue path (`fwd_streaming_kernel.inc:6439-6505`) assumes `p_fp4_stage_k256`, `v_fp4_smem_k256`, paired P payload publication, K256 scale slot lifetime, and output only waiting every other score index (`fwd_streaming_kernel.inc:7605-7624`), so simply enabling it would violate P/V/output ownership and reuse.
++- Existing scheduler reuse/control knobs that might reduce task-level control overhead are tied to old `vsc16` route families (`fwd_configs.inc:930-1020`) and are out of scope for this pass; they are not a clean non-vsc16 PV handoff probe.
++
++Conclusion after the first concrete route and second-variant source check:
++- The live MXFP4/BF16 gap is not from a removable local PV-side barrier in the current selected CLC route. Current live is already low-barrier but underfed: H32/S2048 current NCU `TC 11.58%`, eligible `0.38`, issue `31.92%`, barrier `0.38`, versus TK BF16 `TC 40.10%`, eligible `0.57`, issue `45.05%`, barrier `0.21`.
++- The next route that can plausibly move TC/eligible/issue must be a coherent ownership/control rewrite: either wire the dormant K256 path with paired producer plus compatible Dvo/2/output accumulator lifetime, or add a new scheduler-owned PV/output ownership path. Another local wait/fence/semaphore tweak would either repeat rejected `k64halfready` behavior or remove TCGEN correctness ordering.
++
++## 2026-06-20 - MXFP4 TCGEN speed-of-light ladder and GEMM ceiling
++
++Mandate:
++- Forward-only diagnostics. Do not touch backward/session 7-17. Do not commit/push. Do not promote any route into the selector.
++- Revisit fake/static P as a diagnostic ladder, but answer the broader question: can MXFP4 TCGEN reach about `40%` tensor-core active on this GB200 at all, and which control layers lose it?
++
++Starting artifacts/state:
++- Forward FA4 artifact SHA256 `8a02e4a7776062b43199ec19c25eb56d383ab6040671e43751f77b0b6a8b348d`, mtime `2026-06-20 15:38:07.379659560 +0000`, size `15968648`.
++- TK MXFP4 GEMM artifact SHA256 `559e8d5de5328bca1c17c7178781184eaf3d8215169a62c34bc02bcbd355bd16`, mtime `2026-06-16 16:06:20.503137558 +0000`, size `7036056`.
++- No active forward writer was observed except the `pgrep` command itself.
++- `grep -R "fakepconst\|FAKEP\|fake_p" -n tk_fa4/fp4_fa4_fwd tk_fa4/fp4_pv_experiments.py` returned no matches; fake/static-P remains a diagnostic artifact/CSV rung, not a permanent route.
++
++Existing diagnostic entry-point audit:
++- Live and fake/static-P FA4 diagnostics are represented by prior NCU CSVs under `results/mxfp4_fa4_forward_recover_20260617/ncu_pv_sol_20260620/`. The source route was reverted after the prior diagnostic pass.
++- PV-only K256 diagnostic is already callable as `mxfp4_pv_from_p_k256_debug`:
++  - Pybind: `tk_fa4/fp4_fa4_fwd/fwd_pybind.inc:28`.
++  - Dispatch shape checks and launch: `tk_fa4/fp4_fa4_fwd/fwd_host_dispatch.inc:631-692`.
++  - Kernel body: `tk_fa4/fp4_fa4_fwd/fwd_device_helpers.inc:5989-6124`.
++  - It preloads compact FP4 P/V and E8M0 scales from HBM, issues legal K256 FP4 PV TCGEN, and stores final output only. It is useful as a PV-only rung but has deliberate per-K256 `__syncthreads()`/cluster sync around load/issue/reuse, so its barrier stalls are not representative of an optimized scheduler.
++- TK MXFP4 GEMM is already available in `ThunderKittens/kernels/gemm/mxfp4_gb200/_C_mx...so`:
++  - Default and config entry points: `ThunderKittens/kernels/gemm/mxfp4_gb200/mxfp4_gb200_gemm.cu:815-935` and `1280-1310`.
++  - N=128 attention-PV-shaped entry point: `mxfp4_gemm_n128_config_entrypoint` at `mxfp4_gb200_gemm.cu:920-935`.
++  - Forward Python quantizer used for GEMM input prep: `_quantize_rows_2d_mxfp4` at `tk_fa4/fp4_pv_experiments.py:15466-15505`.
++
++GEMM timing preflight:
++- H32/S2048-equivalent PV-shaped GEMM uses `M=heads*seqlen=65536`, `N=128`, `K=2048`; this matches the attention PV arithmetic shape without FA4 scheduling. Inputs were quantized with `_quantize_rows_2d_mxfp4`, then `_C_mx.mxfp4_gemm_n128_config` was swept over configs `0..6`.
++- Sweep log: `/tmp/mxfp4_gemm_n128_h32eq_sweep.jsonl`.
++
++| config | median ms | finite |
++|---:|---:|---|
++| 0 | `0.035904` | pass |
++| 1 | `0.033056` | pass |
++| 2 | `0.033088` | pass |
++| 3 | `0.033504` | pass |
++| 4 | `0.034944` | pass |
++| 5 | `0.037184` | pass |
++| 6 | `0.038880` | pass |
++
++- Fastest local PV-shaped GEMM config: `mxfp4_gemm_n128_config(..., config_id=1)`.
++- Square 4096 GEMM was also swept to answer the lower-level "can TCGEN reach 40% at all?" question. Sweep log: `/tmp/mxfp4_gemm_square4096_sweep.jsonl`; fastest was config `10` at `0.059200 ms`.
++
++NCU commands:
++- H32-equivalent skinny GEMM:
++  `CUDA_VISIBLE_DEVICES=0 ncu --profile-from-start off --target-processes all --section SpeedOfLight --section SchedulerStats --section WarpStateStats --section MemoryWorkloadAnalysis --csv --page raw --force-overwrite --log-file results/mxfp4_fa4_forward_recover_20260617/ncu_tcgen_ladder_20260620/h32eq_s2048_mxfp4_gemm_n128_cfg1.csv python3 ...`
++- Square 4096 GEMM:
++  `CUDA_VISIBLE_DEVICES=0 ncu --profile-from-start off --target-processes all --section SpeedOfLight --section SchedulerStats --section WarpStateStats --section MemoryWorkloadAnalysis --csv --page raw --force-overwrite --log-file results/mxfp4_fa4_forward_recover_20260617/ncu_tcgen_ladder_20260620/square4096_mxfp4_gemm_cfg10.csv python3 ...`
++- Both NCU runs used `torch.cuda.cudart().cudaProfilerStart()`/`cudaProfilerStop()` around exactly one GEMM call after warmup, so quantization and tensor allocation were not profiled.
++
++Speed-of-light ladder, primary H32/S2048-equivalent rows:
++
++| rung | workload | time ns | SM % | tensor % | TC % | eligible | issue % | long sb | wait | no inst | barrier | regs | smem bytes | CSV |
++|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|
++| live current | FA4 H32/S2048 | `103648` | `27.58` | `5.39` | `11.50` | `0.38` | `31.90` | `3.74` | `1.80` | `0.73` | `0.38` | `128` | `102256` | `ncu_pv_sol_20260620/h32_s2048_mxfp4_current.csv` |
++| live fake/static nonzero P | FA4 H32/S2048 diagnostic | `59136` | `19.27` | `9.48` | `18.68` | `0.32` | `24.71` | `4.83` | `1.98` | `1.07` | `0.89` | `128` | `102256` | `ncu_pv_sol_20260620/h32_s2048_mxfp4_fakepconst_nonzero.csv` |
++| PV-only K256 | compact P/V H32/S2048-equivalent | `345152` | `26.90` | `1.77` | `26.90` | `0.14` | `9.36` | `6.62` | `2.76` | `0.66` | `52.42` | `64` | `59424` | `ncu_pv_sol_20260620/h32_s2048_mxfp4_pvonly_k256.csv` |
++| PV-shaped GEMM | MXFP4 GEMM `M=65536,N=128,K=2048`, cfg1 | `32576` | `26.89` | `20.76` | `26.89` | `0.12` | `11.60` | `5.97` | `2.03` | `2.17` | `0.58` | `153` | `151712` | `ncu_tcgen_ladder_20260620/h32eq_s2048_mxfp4_gemm_n128_cfg1.csv` |
++| square GEMM | MXFP4 GEMM `M=N=K=4096`, cfg10 | `59872` | `47.26` | `43.86` | `45.57` | `0.10` | `9.47` | `9.93` | `1.64` | `2.09` | `0.66` | `255` | `214176` | `ncu_tcgen_ladder_20260620/square4096_mxfp4_gemm_cfg10.csv` |
++| TK BF16 | FA4 H32/S2048 baseline | `104000` | `40.01` | `37.61` | `40.01` | `0.57` | `45.06` | `3.73` | `1.00` | `0.30` | `0.22` | `128` | `231648` | `ncu_pv_sol_20260620/h32_s2048_bf16_tk.csv` |
++
++Secondary shape checks from existing CSVs:
++- H16/S2048: live current `TC 11.21%`; fake/static P `17.17%`; PV-only K256 `26.16%` with barrier `41.41`; TK BF16 `28.89%`.
++- H16/S4096: live current `TC 14.24%`; PV-only K256 `27.19%` with barrier `57.49`; TK BF16 `40.91%`.
++
++Decision and layer attribution:
++- MXFP4 TCGEN can reach BF16-like tensor-core active on this GPU: square MXFP4 GEMM reaches `45.57%` TC active and `43.86%` tensor active. The lower-level TCGEN/scale-vector machinery is not globally capped at `~27%`.
++- The PV-shaped skinny-N workload is the first major utilization cliff outside FA4: N=128 GEMM reaches only `26.89%` TC active despite eliminating FA4 P construction, softmax, QK, scheduler roles, and the PV-only debug kernel's huge barriers. Its barrier is only `0.58`, so the PV-shaped ceiling is not a barrier problem; it is limited by available independent output/tile work and GEMM/PV issue structure for skinny N.
++- The PV-only K256 debug kernel reaches the same `~27%` TC active as skinny GEMM but with terrible eligible/issue and barrier (`eligible 0.14`, issue `9.36%`, barrier `52.42`). That rung proves the FA4 debug control path is pathological, but not that FP4 TCGEN is capped.
++- Fake/static P raises live FA4 from `11.50%` to `18.68%` TC active on H32/S2048, so P construction/quantization accounts for about `+7.2 percentage points` TC active. The remaining live gap from fake/static P to the `~26.9%` PV-shaped ceiling is FA4 PV/control/output scheduling overhead, and the gap from `~26.9%` PV-shaped to `45.6%` square GEMM is the narrow N=128/PV-shaped workload limit.
++- No new FA4 source route was added or promoted. The missing lower-level synthetic was satisfied by the existing TK MXFP4 GEMM module; adding a custom TCGEN-only forward kernel would duplicate this lower-layer answer without walking back toward FA4.
++
++Next structural implication:
++- To improve live FA4, do not spend more time on P algebra alone. The likely attainable live target before a broader algorithmic shape change is closer to the PV-shaped `~27%` TC ceiling than square-GEMM `~45%`.
++- The next useful forward experiment should try to transfer square-GEMM-style independent work into FA4/PV: more independent PV/output accumulators or row/output ownership, better PV issue grouping that keeps multiple output tiles live, or a structural scheduler that avoids skinny-N underfill. A local wait/fence tweak cannot bridge the live `18.7% -> 26.9% -> 45.6%` ladder.
++
++## 2026-06-20 - MXFP4 FA4 PV/output accumulator shape audit and GEMM N-width sweep
++
++Mandate:
++- Forward-only, session 6. Do not touch backward/session 7-17. Do not edit source until the FA4 ownership map and GEMM shape curve justify the first diagnostic route.
++- Continue from the speed-of-light ladder and answer how much of the BF16 gap is P construction, skinny-N/PV shape, and FA4 PV/output ownership overhead.
++
++State:
++- No active forward writer observed (`pgrep -af 'fp4_fa4_fwd|_C_b300_causal_fp4_fwd'` matched only the `pgrep` command). An unrelated backward `nvcc/ptxas` was active and was not touched.
++- Forward FA4 artifact remained SHA256 `8a02e4a7776062b43199ec19c25eb56d383ab6040671e43751f77b0b6a8b348d`, mtime `2026-06-20 15:38:07.379659560 +0000`, size `15968648`.
++- No source edits were made in this audit/sweep step.
++
++FA4 FP4 PV/output ownership and shape anchors:
++- `tk_fa4/fp4_fa4_fwd/fwd_streaming_kernel.inc:65-67`: score tile is `tt<float, C::Mb, C::Nb>`, pair-score tile is `tt<float, C::Mb, C::Nb * 2>`, and the output accumulator tile is exactly `tt<float, C::Mb, C::Dvo>`. Current selected MXFP4 routes therefore have one `Mb x Dvo` output accumulator lane, not an output-width group.
++- `fwd_streaming_kernel.inc:408-415`: online V payload and V scale TMA are statically limited to `C::Nb == 128 && C::Dvo == 128` for cluster1 or rowpar2-ranklocal. A real Dvo=256 route is not a local selector change; it requires V payload/scale movement ownership changes.
++- `fwd_streaming_kernel.inc:1170-1184`: direct-after-rescale dual output accumulation only supports specific Nb/cluster shapes and computes `OUTPUT_TMEM_SLOTS`, with scale TMEM immediately after `OUTPUT_TMEM_SLOTS * C::Dvo`.
++- `fwd_streaming_kernel.inc:1194-1197`: dormant K256 staging uses `p_fp4_k256_tile = st_fp4e2m1_2<C::Mb, C::Nb>` and `v_fp4_k256_tile = st_fp4e2m1_2<C::Dvo / 2, C::Nb>`, so the paired path has an explicit `Dvo/2` V/output-shape assumption.
++- `fwd_streaming_kernel.inc:165-177`: `STATIC_ONLINE_MXFP4_SCORE_DERIVED_K256` is intentionally hard-blocked until the paired producer is wired through a `Dvo/2` output accumulator path and validated. Do not enable K256 by falling back to `fp4pv_pack_scores_to_stage_mxfp4`.
++- `fwd_streaming_kernel.inc:5272-5291`: issue WG allocates one main `d_tt_outputs` accumulator at `SCORE_TMEM_WIDTH`, one spare at `SCORE_TMEM_WIDTH + d_tt_outputs::cols`, then P/V scale TMEM. There is no current array of independent output accumulators for a wider effective N.
++- `fwd_streaming_kernel.inc:6051-6288`: `issue_pv` waits P/V readiness, optionally waits K64 halves, issues one legal FP4 PV operation into one selected `tt_output_cur`, then commits `pv_tmem_ready[0]`.
++- `fwd_streaming_kernel.inc:7480-7604`: output waits one `pv_tmem_ready[0]` per score index, releases scale slots, and releases/reuses the single P stage/output accumulator path.
++- `fwd_streaming_kernel.inc:7605-7624`: K256 output ownership differs; it waits PV only on odd score indices and defers reuse across pairs. This confirms K256 is a paired lifetime rewrite, not a local wait tweak.
++- `tk_fa4/fp4_fa4_fwd/fwd_device_helpers.inc:839-955`: FP4 PV helper wrappers support the legal full K128 tile and split-K64 chunk views. The K64 chunk helper asserts `K == 128` source tile and splits chunk descriptors; there is still no legal K32 helper/encoding path.
++
++GEMM shape-control anchors:
++- `ThunderKittens/kernels/gemm/mxfp4_gb200/mxfp4_gb200_gemm.cu:915-917`: the local GEMM code already calls out attention PV with `Dvo=128` as one output-column tile and uses a special N=128 path to avoid computing an unused second half tile.
++- `mxfp4_gb200_gemm.cu:920-936`: `mxfp4_gemm_n128_config_entrypoint` sweeps N=128 configs 0..6.
++- `mxfp4_gb200_gemm.cu:1280-1303`: `mxfp4_gemm_config_entrypoint` sweeps standard N=256 configs 0..10, used here for N=256 and N=512 outputs.
++- `mxfp4_gb200_gemm.cu:1536-1541`: batched/grouped GEMM requires output rows/cols and K to be multiples of the config tile sizes.
++- `tk_fa4/fp4_pv_experiments.py:15466-15505`: `_quantize_rows_2d_mxfp4` requires both rows and K to be multiples of 128. This makes N=64 unsupported through the local quantized GEMM surface; N=128 is the narrowest compiled MXFP4 GEMM output row shape available for this sweep.
++
++Timing sweep command/log:
++- Command: `CUDA_VISIBLE_DEVICES=0 PYTHONPATH=/workspace/codebases/pv/fp4_matmul:/workspace/codebases/pv/fp4_matmul/ThunderKittens/kernels/gemm/mxfp4_gb200 python3 ...`
++- Log: `/tmp/mxfp4_gemm_h32eq_nwidth_sweep_20260620.jsonl`.
++- Shape: H32/S2048-equivalent PV GEMM with `M=65536,K=2048`, varying output width `N`.
++
++| N | entry | best cfg | median ms | decision |
++|---:|---|---:|---:|---|
++| 64 | n/a | n/a | n/a | unsupported: local MXFP4 quantizer/GEMM requires rows multiple of 128 |
++| 128 | `mxfp4_gemm_n128_config` | 2 | `0.034720` | narrow attention-PV floor |
++| 256 | `mxfp4_gemm_config` | 10 | `0.048032` | wider output tile improves TC active |
++| 512 | `mxfp4_gemm_config` | 10 | `0.070016` | reaches near square-GEMM TC active |
++
++NCU commands/logs:
++- Used `CUDA_VISIBLE_DEVICES=0 ncu --profile-from-start off --target-processes all --section SpeedOfLight --section SchedulerStats --section WarpStateStats --section MemoryWorkloadAnalysis --csv --page raw --force-overwrite --log-file ... python3 ...`
++- Each run used warmup then `torch.cuda.cudart().cudaProfilerStart()`/`cudaProfilerStop()` around exactly one GEMM call.
++- Logs:
++  - `results/mxfp4_fa4_forward_recover_20260617/ncu_tcgen_shape_sweep_20260620/h32eq_s2048_mxfp4_gemm_n128_cfg1.csv`
++  - `results/mxfp4_fa4_forward_recover_20260617/ncu_tcgen_shape_sweep_20260620/h32eq_s2048_mxfp4_gemm_n128_cfg2.csv`
++  - `results/mxfp4_fa4_forward_recover_20260617/ncu_tcgen_shape_sweep_20260620/h32eq_s2048_mxfp4_gemm_n256_cfg10.csv`
++  - `results/mxfp4_fa4_forward_recover_20260617/ncu_tcgen_shape_sweep_20260620/h32eq_s2048_mxfp4_gemm_n512_cfg10.csv`
++- Note: this entry uses `sm__pipe_tc_cycles_active.avg.pct_of_peak_sustained_elapsed` as TC active. The similarly named `sm__pipe_tensor_cycles_active` column is listed only as a secondary pipe metric and is not the TC-active denominator used below.
++
++| case | time ns | SM % | TC pipe % | `sm__pipe_tensor` % | eligible | issue % | long sb | wait | no inst | barrier | regs | smem dyn/static |
++|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
++| live current FA4 H32/S2048 | `103648` | `27.58` | `11.50` | `5.39` | `0.38` | `31.90` | `3.74` | `1.80` | `0.73` | `0.38` | `128` | `100352/1904` |
++| live fake/static P H32/S2048 | `59136` | `19.27` | `18.68` | `9.48` | `0.32` | `24.71` | `4.83` | `1.98` | `1.07` | `0.89` | `128` | `100352/1904` |
++| PV-only K256 debug | `345152` | `26.90` | `26.90` | `1.77` | `0.14` | `9.36` | `6.62` | `2.76` | `0.66` | `52.42` | `64` | `59392/32` |
++| GEMM N128 cfg1 | `32288` | `26.92` | `26.92` | `20.82` | `0.12` | `11.50` | `6.29` | `2.03` | `2.09` | `0.58` | `153` | `151552/160` |
++| GEMM N128 cfg2 | `32448` | `26.33` | `26.33` | `20.35` | `0.12` | `11.62` | `6.14` | `2.02` | `2.26` | `0.57` | `153` | `151552/160` |
++| GEMM N256 cfg10 | `44256` | `34.60` | `32.22` | `29.91` | `0.10` | `9.63` | `8.21` | `1.75` | `2.73` | `0.96` | `255` | `214016/160` |
++| GEMM N512 cfg10 | `65312` | `46.57` | `43.49` | `40.17` | `0.11` | `10.75` | `7.84` | `1.68` | `1.81` | `1.02` | `255` | `214016/160` |
++| square GEMM cfg10 | `59872` | `47.26` | `45.57` | `43.86` | `0.10` | `9.47` | `9.93` | `1.64` | `2.09` | `0.66` | `255` | `214016/160` |
++| TK BF16 FA4 H32/S2048 | `104000` | `40.01` | `40.01` | `37.61` | `0.57` | `45.06` | `3.73` | `1.00` | `0.30` | `0.22` | `128` | `231424/224` |
++
++Gap attribution using TC pipe active:
++
++| layer | TC pipe movement | interpretation |
++|---|---:|---|
++| P construction/quantization | `11.50 -> 18.68` = `+7.18 pp` | Replacing live P construction with fake/static nonzero P recovers about seven TC-active points. P matters, but it is not the dominant remaining gap. |
++| FA4 PV/output ownership overhead at skinny N | `18.68 -> 26.92` = `+8.24 pp` | N=128 GEMM removes FA4 scheduler/PV/output ownership while keeping the PV-shaped skinny output. Live fake-P still loses about eight points to FA4 ownership/control/output integration. |
++| Skinny-N/PV-shaped ceiling vs wider output | `26.92 -> 43.49` = `+16.57 pp` | Increasing independent GEMM output width from N=128 to N=512 reaches near square-GEMM TC active. The biggest remaining gap is insufficient output-width/accumulator independence, not TCGEN hardware capability. |
++| Square reference headroom | `43.49 -> 45.57` = `+2.08 pp` | N=512 H32-equivalent output width is already close to square GEMM; the remaining lower-level gap is small compared with the N=128 to N=512 jump. |
++
++Decision:
++- The MXFP4 TCGEN lower layer can reach BF16-like TC active on this GPU when there is enough independent output width: N=512 GEMM reaches `43.49%` TC pipe active and square GEMM reaches `45.57%`.
++- Current FA4 with `Dvo=128` is constrained to one effective output-column tile per CTA. The code anchors above show that V TMA, scale TMEM layout, PV issue, output wait/reuse, and K256 dormant paths are all built around one `d_tt_outputs = Mb x Dvo` accumulator, with only a spare/score-backed accumulator used for rescale/merge lifetime rather than independent output-width parallelism.
++- Therefore the next source experiment, if we proceed, should not be another P algebra route or a K64/K256 wait tweak. The justified diagnostic is an explicit non-default "multi-output PV" route that increases independent PV/output work by owning two or four independent `Dvo=128` output accumulators per scheduler task, roughly modeling effective N=256/N=512 while preserving legal FP4 K128/K64 TCGEN issue.
++
++Concrete diagnostic design for the broader ownership rewrite:
++- Route scope only; do not promote selector/default. Expected hunk families if implemented:
++  - `tk_fa4/fp4_fa4_fwd/fwd_configs.inc`: one new explicit route flag, e.g. `fp4pv_online_multi_output_pv_diag<C>::value`.
++  - `tk_fa4/fp4_fa4_fwd/fwd_host_dispatch.inc`: one explicit route string derived from the current full-V CLC selected route, no selector-table change.
++  - `tk_fa4/fp4_fa4_fwd/fwd_streaming_kernel.inc`: route-gated changes around output TMEM allocation (`5272-5291`), PV issue (`6051-6288`), and output wait/reuse (`7480-7604`).
++  - `tk_fa4/fp4_pv_experiments.py`: explicit route exposure only if the route string is not already reachable through host dispatch helpers.
++- Minimal semantics: keep one P producer and one legal K128/K64 P stage, but consume it into two independent V/output lanes before releasing P payload and P scale. Each lane owns its own V payload/scale slot, output accumulator, `pv_tmem_ready[lane]`, V-scale reuse, and output reuse. P payload/scale reuse happens only after all lanes that consume that P stage have committed PV.
++- First diagnostic correctness target can be finite/no-hang or two-head reuse semantics, not numerical equivalence to standard attention, because the purpose is to transfer N=256/N=512 GEMM-style output independence into the FA4 scheduler. A semantic follow-up would require coherent Q/K/P ownership per head, not just duplicated V.
++- TMEM budget blocker to resolve before coding: two extra independent `Dvo=128` output accumulators require either dedicated output TMEM columns or score-TMEM-backed alternation. Current `OUTPUT_TMEM_SLOTS` and `SCALE_TMEM_BASE` assume one main output plus optional spare; widening cannot alias Q/K/P/V scale TMEM. If two lanes cannot fit without stealing scale slots, the first route must be a two-task/two-head scheduler grouping rather than literal Dvo=256 inside one CTA.
++- Reuse/deadlock invariants:
++  - `P_reusable[p_buf]` and P-scale reuse must be delayed until every output lane has observed the matching payload/scale and committed its PV.
++  - Each V lane must publish payload and scale before its lane's PV issue; V-scale ping-pong slots cannot be shared across lanes unless the lane has completed and output has released it.
++  - Output finalization must wait `pv_tmem_ready[lane]` for every lane and release each output accumulator separately.
++  - No fake-arrive of K/V/P/PV/output semaphores; this route must use real owner/non-owner lifetime accounting from the scheduler-owned scaffold.
++- Stop criteria for implementation: if the route requires changing live scheduler-loop behavior for default routes or aliasing Q/K/V/P/output TMEM, do not patch it. If compileable, smoke H16/S2048 and H32/S2048 first, then NCU H32/S2048. A valid win must move TC pipe toward the GEMM N256/N512 curve and not merely improve timing noise.
++
++No implementation was attempted in this entry; the audit and sweep now justify the next diagnostic route as output-accumulator-width ownership, not more P construction work.
++
++## 2026-06-20 - Multi-output PV TMEM feasibility check
++
++Mandate:
++- Forward-only, session 6. Do not touch backward/session 7-17. Try the justified explicit-only multi-output PV diagnostic only after proving TMEM/lifetime feasibility.
++- If two independent `Dvo=128` output lanes cannot fit in one CTA without aliasing Q/K/P/V/scale/output TMEM, design the two-task/two-head scheduler-group diagnostic instead. Stop and ledger blockers if implementation would alias TMEM or alter default live routes.
++
++State:
++- No active forward writer observed; `pgrep -af 'fp4_fa4_fwd|_C_b300_causal_fp4_fwd'` matched only the `pgrep` command.
++- Forward artifact remained SHA256 `8a02e4a7776062b43199ec19c25eb56d383ab6040671e43751f77b0b6a8b348d`, mtime `2026-06-20 15:38:07.379659560 +0000`, size `15968648`.
++- The command sandbox was unavailable because `bubblewrap` is missing; read-only commands were rerun with escalation. No forward source was edited.
++
++Current selected CLC route anchors:
++- Route classes:
++  - `tk_fa4/fp4_fa4_fwd/fwd_configs.inc:687-692`: 3WG full-V CLC route with one V publisher, V payload TMA, V scale TMA.
++  - `fwd_configs.inc:695-703`: 4WG `schedwg4` full-V CLC route, inherited from the 3WG route, with `TOTAL_WGS=4`, `ONLINE_V_LOAD_WARPS=2`, and scheduler WG enabled.
++  - `fwd_configs.inc:724-737`: kept scheduler-owned taskdiag scaffold extends the same 4WG CLC route and adds slotlife/task-done diagnostics.
++- Dispatch strings:
++  - `tk_fa4/fp4_fa4_fwd/fwd_host_dispatch.inc:1470-1483` and `2161-2174`: explicit full-V CLC and slotlife/livemirror route strings instantiate `config<128,128,192,128,200,56,112,1>`.
++- Base shape:
++  - `tk_fa4/fp4_fa4_fwd/fwd_bf16_baseline.inc:257-288`: `config_fp4pv` asserts `Dvo == 128`, `Dqk == 192`, and computes `QK_SCALE_CHUNKS=3`, `Q_SC_TMEM_WIDTH=48`, `P_SC_TMEM_WIDTH=32`, `V_SC_TMEM_WIDTH=64` for the generic BF16-scale definitions. The online MXFP4 path overrides P/V scale TMEM widths below.
++
++Current online MXFP4 TMEM arithmetic:
++- From `fwd_streaming_kernel.inc:1106-1121`:
++  - The selected route has dual-score TMEM, so `SCORE_TMEM_SLOTS = 2`.
++  - `SCORE_TMEM_WIDTH = SCORE_TMEM_SLOTS * C::Nb = 2 * 128 = 256` (`fwd_streaming_kernel.inc:1160-1161`).
++  - `STATIC_COMPACT_Q_SCALE_TMEM = true` because dual-score/output-accum routes compact Q scale TMEM (`1106-1109`), so `Q_SCALE_TMEM_WIDTH = 16` (`1190`).
++  - `STATIC_MXFP4_K256 = false`, so `MXFP4_PV_MMA_PER_TILE = 1` (`1110-1115`).
++  - `P_SCALE_TMEM_WIDTH = 16` for MXFP4 (`1192`).
++  - The selected route is full V-scale, not `vsc16`, so `V_SCALE_TMEM_WIDTH = 32` (`1116`, `1193`).
++- From `fwd_configs.inc:540-542`, inherited into the selected route, `P_STAGE_SLOTS = 2`.
++- From `fwd_streaming_kernel.inc:2103-2131`:
++  - `STATIC_ASYNC_P_SCALE_TMEM = true` because the route has direct P-scale TMEM.
++  - No online P-scale slot override is active and this is not K256, so `P_SCALE_TMEM_SLOTS = 2`.
++- From `fwd_streaming_kernel.inc:2146`, `V_SCALE_TMEM_SLOTS = 2` for full V-scale ping-pong.
++- From `fwd_streaming_kernel.inc:1166-1184`:
++  - `STATIC_ONLINE_MXFP4_DUAL_OUTPUT_ACCUM_SCORE_TMEM = true` because the route has dual-output accum plus dual-score TMEM and no dedicated spare.
++  - Therefore `OUTPUT_TMEM_SLOTS = 1`, not 2.
++  - `SCALE_TMEM_BASE = SCORE_TMEM_WIDTH + OUTPUT_TMEM_SLOTS * C::Dvo = 256 + 1 * 128 = 384`.
++- From `fwd_streaming_kernel.inc:5272-5291`:
++  - Main output accumulator is at columns `256..383`.
++  - Q scale starts at `384`.
++  - K scale starts at `400`.
++  - P scale base is `416`.
++  - Two P-scale slots consume `416..447`.
++  - V scale base is `448`.
++  - Two full V-scale slots consume `448..511`.
++  - `static_assert(V_SC_BASE + V_SCALE_TMEM_SLOTS * V_SCALE_TMEM_WIDTH <= MAX_TENSOR_COLS)` is exact: `448 + 2 * 32 = 512`.
++- `MAX_TENSOR_COLS` is `512` in `ThunderKittens/include/types/tensor/tt.cuh:16`.
++
++Literal two-output-lane feasibility result:
++- Dedicated lane-1 accumulator would require another `Dvo=128` columns after the main output:
++  - New output base would need `SCORE_TMEM_WIDTH + 2 * Dvo = 256 + 256 = 512`.
++  - That leaves zero columns for Q/K/P/V scale TMEM. The current selected route already needs `Q16 + K16 + P2*16 + V2*32 = 128` scale columns.
++  - Even with impossible single P/V scale slots, Q/K/P/V scale TMEM would still need nonzero columns after 512. It cannot fit without aliasing scales into score/output TMEM.
++- Widening `Dvo` is not a valid shortcut:
++  - `config_fp4pv` asserts `_Dvo == 128` at `fwd_bf16_baseline.inc:257-262`.
++  - Online V payload and V scale TMA also assert `C::Nb == 128 && C::Dvo == 128` for the selected cluster1/rowpar2-ranklocal route at `fwd_streaming_kernel.inc:408-415`.
++- Reusing the existing "spare" as lane 1 is not valid:
++  - `output_spare_tensor_for_score_idx` maps the spare to score TMEM when `STATIC_ONLINE_MXFP4_DUAL_OUTPUT_ACCUM_SCORE_TMEM` is true (`fwd_streaming_kernel.inc:5468-5474`).
++  - The output path treats that score-backed spare as a temporary merge/rescale scratch and arrives `dual_output_spare_reusable[score_slot]` after merging (`7574-7594`).
++  - Holding a true independent output lane there would steal the active score slot from QK/score/P construction and violate the score slot lifecycle.
++- Conclusion: a literal two-lane `Dvo=128 + Dvo=128` output diagnostic inside one CTA cannot fit the current TMEM map without aliasing Q/K/P/V/scale/output TMEM. It is blocked before coding.
++
++P/V/output lifetime anchors:
++- P payload/scale semaphores are slot arrays keyed by `P_STAGE_SLOTS` and `P_SCALE_TMEM_SLOTS` (`fwd_streaming_kernel.inc:2448-2451`, `2449`, `2656-2661`).
++- V payload and V-scale semaphores are two-slot ping-pong arrays (`2446`, `2460-2461`, `2663-2668`).
++- The route has only `pv_tmem_ready[1]`, `pv_final_ready[1]`, `output_reusable[1]`, `tt_output_reusable[1]`, and `tt_output_remote_reusable[1]` (`2440-2445`).
++- `issue_pv` commits only `pv_tmem_ready[0]` after one output lane (`6281-6288`), then releases P payload/P scale/V scale according to one-lane ownership (`6300-6329`).
++- Output waits one `pv_tmem_ready[0]`, releases scale slots, and releases P stage in the one-lane flow (`7480-7604`, especially `7484-7495` and `7574-7595`).
++- Therefore a real multi-output route would need new lane-indexed PV ready, output reuse, V-scale reuse, and delayed P payload/P-scale reuse. Adding only a second `issue_pv_stage` call would be incorrect.
++
++Two-task/two-head scheduler-group diagnostic design:
++- Since one CTA cannot physically hold two independent output lanes, the next viable diagnostic must keep each CTA/task at one `Dvo=128` output accumulator and create wider effective work through scheduler grouping rather than literal TMEM widening.
++- A safe design would group two independent task records, likely adjacent heads or adjacent task IDs, while preserving one CTA-local output accumulator per task:
++  - Each task keeps its own Q/K/P/PV/output ownership and its own TMEM map.
++  - The scheduler publishes a two-task group record `(task0, task1, epoch)` to two participant CTAs or two scheduler-owned task contexts.
++  - P payload, P scale, V payload, V scale, PV issue, output store, and task_done remain per task; no P/V/output semaphore is shared across tasks.
++  - The only shared control is the group scheduler deciding when both tasks are ready/done/reusable. This avoids aliasing TMEM but does not by itself increase per-CTA TCGEN N width; it is a control/occupancy diagnostic, not the N=256 in-CTA shape from GEMM.
++- To actually transfer the GEMM N=256/N=512 benefit, a later structural route would need either:
++  - two CTAs in a cluster issuing coordinated PV for a grouped task while maintaining separate TMEM maps and a real cluster-wide producer slot lifetime, or
++  - a different kernel shape with more output columns per CTA and a new scale layout, which current `Dvo==128` and V TMA asserts forbid.
++
++Patch decision:
++- No source route was patched in this step. The requested explicit multi-output PV route is not TMEM-feasible as a one-CTA route, and a two-task/two-head route that actually increases output-width independence requires a broader scheduler/cluster ownership rewrite, not a bounded local flag/string/kernel gate.
++- Stop condition met: implementation would either alias score/scale/output TMEM or alter the live scheduler/output ownership model beyond an explicit safe diagnostic.
++
++## 2026-06-20 - A/B/C follow-up from TMEM blocker: scale alias, scheduler grouping, new shape
++
++Mandate:
++- Forward-only, session 6. Do not touch backward/session 7-17. Restart A/B/C comparison from the TMEM blocker ledger and rank the paths.
++- Patch only if a path is locally bounded, explicit-only, and does not change default selector/live routes.
++
++State:
++- No active forward writer observed: `pgrep -af 'fp4_fa4_fwd|_C_b300_causal_fp4_fwd|nvcc|ptxas'` matched only the `pgrep` command.
++- Forward artifact remained SHA256 `8a02e4a7776062b43199ec19c25eb56d383ab6040671e43751f77b0b6a8b348d`, mtime `2026-06-20 15:38:07.379659560 +0000`, size `15968648`.
++- No source patch, build, smoke, or NCU was run for this entry. This entry is a source/lifetime feasibility closeout and ranking.
++
++Path A - scale-TMEM alias/time-mux diagnostic:
++- Relevant code already has scale-alias helpers, but they are not enabled for the current online CLC route:
++  - `tk_fa4/fp4_fa4_fwd/fwd_streaming_kernel.inc:1011-1025`: `STATIC_ALIAS_SCALE_TMEM` is restricted to `MXFP4_PV && EXTERNAL_COL_LSE && !ONLINE` consumer-mode routes.
++  - `fwd_streaming_kernel.inc:1587-1620`: `STATIC_WAIT_ALIAS_SCALE_SLOT_REUSE` is also restricted to offline/external routes.
++  - `fwd_streaming_kernel.inc:1185-1193` and `5477-5531`: Q/K/P/V scale alias offsets fit inside one 128-col score slot (`Q=0`, `K=16`, `P=32`, `V=64`; full V scale uses 32 cols).
++  - `fwd_streaming_kernel.inc:5484-5531`: Q/K scale for score `idx` is staged in `qk_scale_slot_for_score_idx(idx)`, which uses `(idx + 1) % SCORE_TMEM_SLOTS` under alias, while P/V scale for PV uses `score_idx % SCORE_TMEM_SLOTS`.
++  - `fwd_streaming_kernel.inc:5584-5592`: the only score-slot alias reuse wait before next QK scale staging is behind `STATIC_WAIT_ALIAS_SCALE_SLOT_REUSE`.
++  - `fwd_streaming_kernel.inc:5715`, `6060-6067`, `6308-6318`, `7211-7223`, and `7488-7495`: P/V scale publication and release are keyed to `score_idx % SCORE_TMEM_SLOTS` only when alias is active.
++  - `fwd_configs.inc:644-653` plus `fwd_streaming_kernel.inc:2150-2164`: the currently selected full-V CLC route inherits P-scale reuse folding/skip-arrive, and the fold static assert requires `!STATIC_ALIAS_SCALE_TMEM`. An online alias route would need to branch from the pre-fold `earlyreuse_arrivereuse` base and re-create P-scale reuse ownership.
++- Lifetime proof:
++  - To free columns `384..511` for a second `Dvo=128` output lane, all current scale TMEM columns must move into score/scratch columns. The previous entry proved the current one-lane map exactly fills `384..511` with Q/K/P/V scales.
++  - With two score slots, score `i` keeps P/V scale in slot `i % 2` until PV consumes it and output releases scale reuse. The next QK for score `i+1` wants Q/K scale in `(i+2) % 2`, which is the same slot as `i % 2`.
++  - Therefore a safe online alias/time-mux route must wait for PV/output scale release of score `i` before staging Q/K scale for score `i+1`. That is a real QK-behind-PV serialization point, not a free late alias.
++  - The existing online route does not have that wait/reuse phase enabled; the existing wait is offline-only. Enabling it online also conflicts with P-scale reuse folding/skip-arrive and would require a new route family with explicit scale-slot reuse semantics.
++  - A second output lane would also require lane-indexed `pv_tmem_ready`, output reuse, V-scale reuse, and delayed P payload/P-scale reuse. The current path commits only `pv_tmem_ready[0]` after one lane (`fwd_streaming_kernel.inc:6281-6288`) and releases one-lane P/V scale ownership (`6300-6329`, `7480-7604`).
++- Feasibility decision:
++  - Path A is feasible only as a serialized explicit diagnostic that blocks QK scale staging behind prior PV/output scale release. That would not fairly test the intended wider-output/PV independence and is likely to reduce overlap.
++  - Path A is not feasible as a bounded win-oriented source probe without a new online scale-slot lifetime protocol and lane-indexed output ownership. No patch was made.
++- Expected TC potential vs risk:
++  - High potential only if paired with a real new scale layout/lifetime protocol that preserves QK/PV overlap.
++  - Low or negative potential for the local time-mux variant because it trades scale columns for a hard producer-consumer serialization point.
++
++Path B - scheduler/two-head grouping diagnostic:
++- Source anchors:
++  - `fwd_streaming_kernel.inc:2423-2424`: current CLC scheduler uses one CTA-local `persistouter_clc_task_bid`, one `persistouter_clc_task_ready[1]`, and one `persistouter_clc_task_done[1]`.
++  - `fwd_streaming_kernel.inc:3801-3919`: the 4WG scheduler publishes one `cur_bid` and waits one task-done phase at a time.
++  - `fwd_streaming_kernel.inc:4421-4488`, `4950-4971`, `6994-7065`, `7896-7953`, and `11753-11786`: producer/issue/output/quant roles consume that one published task record and arrive one task-done contribution.
++  - `fwd_streaming_kernel.inc:2440-2446`: PV/output reuse state is single-lane (`pv_tmem_ready[1]`, `pv_final_ready[1]`, `output_reusable[1]`, `tt_output_reusable[1]`, `tt_output_remote_reusable[1]`).
++- Feasibility decision:
++  - Scheduler grouping alone can group task IDs or heads at the control layer, but each CTA still owns exactly one `Dvo=128` output accumulator and the same skinny-N PV work. It does not transfer the GEMM N256/N512 accumulator-width benefit into the CTA.
++  - True concurrent two-head grouping would need either per-task arrays for all task state and multiple output accumulators inside one CTA, which the TMEM proof blocks, or coordinated multiple CTAs with a cluster-wide task/group lifetime protocol.
++  - A bounded scheduler-only patch would mostly measure task-publish overhead, not the known TC underfill. No patch was made.
++- Expected TC potential vs risk:
++  - Low TC potential for scheduler-only grouping because the prior ladder shows the biggest remaining gap is output-width/accumulator independence, not scheduler publish overhead alone.
++  - Moderate risk if extended into multi-task state because it quickly becomes the same cluster/control rewrite as Path C.
++
++Path C - larger cluster/new-kernel-shape feasibility:
++- Source/performance anchors:
++  - `tk_fa4/fp4_fa4_fwd/fwd_bf16_baseline.inc:257-262`: `config_fp4pv` asserts `Dvo == 128`.
++  - `fwd_streaming_kernel.inc:408-415`: current online V payload/scale TMA route asserts `C::Nb == 128 && C::Dvo == 128`.
++  - `fwd_host_dispatch.inc:1470-1483` and `2161-2174`: current selected and diagnostic CLC routes instantiate `config<128,128,192,128,200,56,112,1>`.
++  - Prior GEMM shape sweep: H32/S2048-equivalent MXFP4 GEMM rose from N128 `26.92%` TC pipe active to N512 `43.49%`, close to square GEMM `45.57%`. This is the only measured path that reaches BF16-like MXFP4 TC utilization.
++- Feasibility decision:
++  - Path C is the only path aligned with the measured bottleneck. It should not start as a huge production rewrite, but the next prototype must change ownership/shape enough to increase independent output work.
++  - Minimal bounded prototype plan:
++    - Add an explicit forward diagnostic kernel or explicit route that schedules a two-CTA/two-head group while each CTA keeps its own `Dvo=128` TMEM map, output accumulator, V-scale slots, P-scale slots, and PV/output semaphores.
++    - First prototype does not share K/V/P slots across CTAs; it only proves grouped scheduling and simultaneous independent PV issue can move TC/issue counters without aliasing TMEM.
++    - Follow-up prototype can add a real cluster-wide producer-slot lifetime for shared K/V/P when the two-CTA independent-output group is smoke/profiler validated.
++    - Alternative structural prototype is a new scale layout/output-width kernel that makes effective `Dvo=256/512`, but current `Dvo==128` and V TMA asserts mean that is a new kernel shape, not a local route flag.
++- Expected TC potential vs risk:
++  - Highest TC potential because it directly targets the N128 -> N512 GEMM utilization gap.
++  - Highest implementation risk, but the risk is aligned with the measured bottleneck rather than another local semaphore/scale microprobe.
++
++Ranking and next engineering step:
++1. **Path C** is most promising for real throughput. The next engineering step is a minimal explicit two-CTA/two-head independent-output diagnostic: keep per-CTA TMEM independent, group tasks only at a new explicit control layer, and profile whether concurrent independent PV/output work moves TC pipe toward the GEMM N256/N512 curve. Do not share K/V/P in the first prototype.
++2. **Path A** is second as a diagnostic only if the two-CTA route is blocked. The intended in-CTA second output lane cannot be freed by scale aliasing without a new online scale-slot lifetime protocol; the simple time-mux variant serializes QK behind PV and is not expected to win.
++3. **Path B** is least promising by itself. Scheduler-only grouping does not increase per-CTA output width and is unlikely to close the measured TC gap unless it becomes the broader clustered Path C ownership rewrite.
++
++Implementation status:
++- No source probe was implemented from A/B/C in this entry because A and B are not bounded win-oriented local patches, and C requires a new explicit structural diagnostic rather than a quick selector/route hunk.
++- Defaults, non-diagnostic routes, and backward files were not touched by this entry.
++
++## 2026-06-20 - Corrective A/B/C implementation and measurement pass
++
++Mandate correction:
++- The prior A/B/C entry was theory-only and did not satisfy the user requirement. This entry records concrete forward-only implementation attempts, build/smoke/NCU, and measured ranking.
++- Guardrails honored: no backward source/session management; no default selector promotion; A/B/C were explicit non-default diagnostics/prototypes; no fake semaphore arrives or fake TC numbers.
++
++Starting artifact:
++- Pre-A/B/C forward artifact before the corrective source pass: SHA256 `b4902c64cc3d86d94bdffc2a82d3e443af6d3894964ab2a05a97acfa36256dc6`, mtime `2026-06-20 17:46:27.606870839 +0000`, size `16037664`.
++- No active forward writer before profiling/build; unrelated backward-only `nvcc/ptxas` was observed and left untouched.
++
++Path A implementation: scale-TMEM alias/time-mux diagnostic
++- Route/config implemented:
++  - `dualaccum_directrescale_scorepack_prescaled_floor_x1sc_fusedmax_diagzero_prepub_earlyreuse_arrivereuse_persistouter_clc_schedwg4_scalealias_timemux_onevpub_fullvsc_vtma_vstma_pstage2_q200_p112_o56_qkscfix`
++  - config `config_fp4pv_4wg_..._scalealias_timemux_...` in `tk_fa4/fp4_fa4_fwd/fwd_configs.inc`.
++  - route-local trait `ONLINE_SCALE_TMEM_ALIAS_TIMEMUX_DIAG` enabled existing alias scale TMEM and alias-slot reuse waits in `fwd_streaming_kernel.inc`.
++- This is the closest faithful bounded A fallback, not a full second-output-lane route:
++  - The full second `Dvo=128` lane remains blocked by `MAX_TENSOR_COLS=512` and single-lane `pv_tmem_ready/output_reusable` ownership.
++  - The diagnostic moved Q/K/P/V scales into score-slot aliasing and exercised real alias reuse waits, but it did not create lane-indexed PV/output ownership.
++- Build: `/tmp/fp4_fwd_A_scalealias_build1.log`, artifact SHA256 `b4902c64cc3d86d94bdffc2a82d3e443af6d3894964ab2a05a97acfa36256dc6`.
++- ptxas for A route: `128 regs`, `2 barriers`, `1904 bytes smem`, `0 spill stores`, `0 spill loads`.
++- Smoke: `/tmp/fp4_fwd_A_scalealias_smoke1.jsonl`.
++  - H16/S2048 finite/no hang, smoke returned.
++  - H32/S2048 finite/no hang, smoke returned.
++- NCU command/log: `results/mxfp4_fa4_forward_recover_20260617/ncu_abc_20260620/A_scalealias_h32_s2048.csv`.
++
++Path B implementation: scheduler/two-head grouping diagnostic
++- First attempted single-CTA legal-K256 grouping with `config_fp4pv<128,128,192,128,1>` failed to compile:
++  - Log: `/tmp/fp4_fwd_abc_headgroup_build1.log`.
++  - Exact blocker: ThunderKittens `tcgen05.cuh:508` static assertion during `fp4pv_mm_cluster_ABt<C=config_fp4pv<...,1>>`; local K256 FP4 PV tile requires the existing `ncta=2` contract.
++- Corrected implementation:
++  - Added `kernel_mxfp4_pv_from_p_k256_headgroup_debug<..., HEADS_PER_GROUP, SEQUENTIAL_GROUP>` in `tk_fa4/fp4_fa4_fwd/fwd_device_helpers.inc`.
++  - Added dispatch `mxfp4_pv_from_p_k256_headgroup_debug(P, P_sc, V, V_sc, O, sequential_group, heads_per_group)` in `fwd_host_dispatch.inc` and pybind/Python wrapper `_native_mxfp4_pv_from_p_k256_headgroup_debug`.
++  - B mode is `HEADS_PER_GROUP=2, SEQUENTIAL_GROUP=true`: one legal two-CTA K256 cluster processes two adjacent real head records sequentially under one grouped scheduler/control mapping. Each record still uses the legal two-CTA K256 TCGEN contract.
++- Build: `/tmp/fp4_fwd_abc_headgroup_build2.log`, artifact SHA256 `29addb705e0795d102f896c3f36cd59d6b509b563179a6d6bf4c8eac2b207aa8`, mtime `2026-06-20 18:04:13.237882927 +0000`, size `16108944`.
++- ptxas B route: `83 regs`, `4 barriers`, `32 bytes smem`, `0 spills`.
++- Smoke: `/tmp/fp4_fwd_abc_headgroup_smoke1.jsonl`.
++  - H16/S2048: finite, max/mean abs diff vs existing K256 debug `0.0/0.0`, nonzero output.
++  - H32/S2048: finite, max/mean abs diff vs existing K256 debug `0.0/0.0`, nonzero output.
++- NCU command/log: `results/mxfp4_fa4_forward_recover_20260617/ncu_abc_20260620/B_headgroup2_seq_h32_s2048.csv`.
++
++Path C implementation: two-CTA/two-head independent-output / FA4-adjacent prototype
++- The literal single-CTA/per-CTA independent K256 prototype was the same compile blocker as B's first attempt:
++  - `config_fp4pv<...,1>` K256 FP4 PV cannot compile because the local K256 TCGEN path requires `ncta=2`.
++  - This rules out a true two-CTA/two-head independent-output K256 prototype where each CTA independently owns a K256 FP4 PV issue under the current helper path.
++- Corrected closest legal prototype:
++  - C mode is `HEADS_PER_GROUP=2, SEQUENTIAL_GROUP=false`: adjacent legal two-CTA K256 clusters process the two grouped heads in parallel. This is a real grouped-head control prototype using legal FP4 TCGEN, but it is two cooperative clusters/four CTAs for two heads, not one CTA per head.
++  - It proves grouped independent head records are active without touching the live FA4 scheduler/hot paths.
++- Build: same artifact/log as B (`29addb705e0795d102f896c3f36cd59d6b509b563179a6d6bf4c8eac2b207aa8`, `/tmp/fp4_fwd_abc_headgroup_build2.log`).
++- ptxas C route: `89 regs`, `4 barriers`, `32 bytes smem`, `0 spills`.
++- Smoke: `/tmp/fp4_fwd_abc_headgroup_smoke1.jsonl`.
++  - H16/S2048: finite, max/mean abs diff vs existing K256 debug `0.0/0.0`, nonzero output.
++  - H32/S2048: finite, max/mean abs diff vs existing K256 debug `0.0/0.0`, nonzero output.
++- NCU command/log: `results/mxfp4_fa4_forward_recover_20260617/ncu_abc_20260620/C_headgroup2_parallel_h32_s2048.csv`.
++
++Default-route preservation:
++- Focused selected-route smoke after the B/C build: `/tmp/fp4_fwd_abc_default_smoke2.jsonl`.
++  - H16/S2048 selected default `...persistouter_clc_onevpub_fullvsc...qkscfix`: finite, MXFP4 `0.273984 ms`, TK BF16 `0.114560 ms`, max abs diff `1.1328125`, mean abs diff `0.00748886`, LSE max diff `0.02300559`.
++  - H32/S2048 selected default `...persistouter_clc_schedwg4_onevpub_fullvsc...qkscfix`: finite, MXFP4 `0.207712 ms`, TK BF16 `0.177728 ms`, max abs diff `1.15625`, mean abs diff `0.00748234`, LSE max diff `0.02957503`.
++
++NCU H32/S2048 table:
++
++| Path | Route/prototype | Smoke | time ns | TC % | tensor % | eligible | issue SM % | issue SMSP % | long sb | wait | no inst | barrier | regs | smem | Decision |
++|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|
++| A | `scalealias_timemux` live route | H16/H32 finite | 108032 | 11.52 | 5.23 | 0.36 | 26.85 | 30.67 | 3.92 | 1.83 | 0.79 | 0.38 | 128 | 103280 | reject; active but no TC/issue improvement over current live |
++| B | `mxfp4_pv_from_p_k256_headgroup_debug`, group2 sequential | H16/H32 exact vs K256 debug | 333024 | 27.83 | 1.83 | 0.10 | 5.72 | 6.92 | 9.30 | 3.21 | 0.39 | 36.20 | 83 | 60448 | reject as throughput direction; slight PV-only time/barrier improvement but issue/eligible worse and far from BF16/GEMM |
++| C | `mxfp4_pv_from_p_k256_headgroup_debug`, group2 parallel legal clusters | H16/H32 exact vs K256 debug | 347680 | 26.74 | 1.75 | 0.11 | 5.84 | 7.05 | 9.06 | 3.23 | 0.52 | 35.08 | 89 | 60448 | reject; active but neutral/slower than old K256 PV-only ceiling |
++
++Reference points from the same speed-of-light ladder:
++- Current live H32/S2048: `11.50%` TC, `103648 ns`, eligible `0.38`, issue `31.90%`, barrier `0.38`.
++- FakeP live H32/S2048: `18.68%` TC, `59136 ns`, eligible `0.32`, issue `24.71%`, barrier `0.89`.
++- Existing PV-only K256 H32/S2048: `26.90%` TC, `345152 ns`, eligible `0.14`, issue `9.36%`, barrier `52.42`.
++- GEMM N128/N256/N512: `26.92% / 32.22% / 43.49%` TC.
++
++Measured ranking:
++1. **B** is the best of the implemented A/B/C probes by H32/S2048 time (`333024 ns`) and barrier reduction versus old K256, but it is not a live-forward win and does not move issue/eligible toward BF16.
++2. **C** is active and legal but effectively matches/slightly trails old K256; it confirms grouped heads without output-width expansion do not transfer the GEMM N256/N512 benefit.
++3. **A** is worst for utilization: the serialized alias/time-mux route stays at live TC (`11.52%`) and does not address the PV-shaped ceiling.
++
++Conclusion:
++- The hard compile blocker for true single-CTA K256 independent-output is now measured and logged: local FP4 K256 TCGEN requires the two-CTA `ncta=2` contract. The closest legal grouped-head prototypes still top out at the old K256 PV-only ceiling and remain issue/eligible-starved.
++- The remaining gap is not solved by scale aliasing or scheduler grouping. The next real engineering step is a new legal output-width/accumulator shape, likely a new kernel/prototype that changes the FP4 TCGEN N/output shape or scale layout enough to reproduce the GEMM N256/N512 utilization curve inside an FA4-adjacent workload.
++- A/B/C source diagnostics are rejected and should be reverted after this entry; keep CSV/log artifacts and this ledger evidence.
++
++Post-revert validation:
++- Reverted the rejected A/B/C source diagnostics (`scalealias_timemux`, `ONLINE_SCALE_TMEM_ALIAS_TIMEMUX`, `headgroup_debug`, and `mxfp4_pv_from_p_k256_headgroup_debug`); `grep -RIn` over `tk_fa4/fp4_fa4_fwd` and `tk_fa4/fp4_pv_experiments.py` returned no matches.
++- Rebuilt forward-only with `env -u TK_FA4_RESCALE_PROBE_BUILD make -C tk_fa4/fp4_fa4_fwd -j1`; log `/tmp/fp4_fwd_abc_revert_build1.log`.
++- Restored forward artifact: SHA256 `99d42cf93b80b5bcb4a60e0cda29d72887716eeaf5471e52fc8bc4068f638b9e`, mtime `2026-06-20 18:15:54.438528889 +0000`, size `15968648`.
++- No active forward writer after rebuild; `pgrep` matched only the verification command.
++- `git diff --check -- tk_fa4/fp4_fa4_fwd tk_fa4/fp4_pv_experiments.py results/mxfp4_fa4_forward_recover_20260617/forward_ordered_ledger.md` passed.
++- Post-revert selected-route smoke log: `/tmp/fp4_fwd_abc_postrevert_default_smoke.jsonl`.
++  - H16/S2048 selected `...persistouter_clc_onevpub_fullvsc...qkscfix`: finite, `mxfp4_ms=0.24697600305080414`, max/mean abs diff `1.0078125/0.0073724789544939995`, LSE max diff `0.02455081418156624`.
++  - H32/S2048 selected `...persistouter_clc_schedwg4_onevpub_fullvsc...qkscfix`: finite, `mxfp4_ms=0.17270399630069733`, max/mean abs diff `1.0234375/0.007520264945924282`, LSE max diff `0.02233506739139557`.
++
++## 2026-06-20 shape-debug build 8: B-scale dynamic-smem slack validation
++
++Mandate executed:
++- Continue only the current standalone TK FP4 shape-debug patch.
++- Rebuild as `build_shape_debug_8.log`; fingerprint artifact.
++- Rerun K64/N128/ncta1 stages `8,9,10,11,6`.
++- Because B-scale passed, rerun stages `3,4,5,0` for K64/N128/ncta1 and K256/N128/ncta2.
++- Because full stage 0 passed, run the H32/S2048-equivalent shape/TC-util sweep.
++
++Source anchors:
++- `tk_fa4/fp4_fa4_fwd/fwd_device_helpers.inc:1988-2029`: `config_mxfp4_tcgen_shape_debug` and `globals_mxfp4_tcgen_shape_debug::compute_dynamic_shared_memory()`.
++- `tk_fa4/fp4_fa4_fwd/fwd_device_helpers.inc:2016-2027`: route-local dynamic shared-memory mirror now returns `align_up_constexpr(bytes, 1024) + 4096`.
++- `tk_fa4/fp4_fa4_fwd/fwd_host_dispatch.inc:722-804`: explicit `mxfp4_tcgen_shape_debug` dispatch supports K64/K128/K256, N128/N256, ncta1/ncta2, plus layout-1 cases; N512 is explicitly blocked because one tile would consume all 512 TMEM columns before required A/B scale operands.
++
++Build:
++- Command: `env -u TK_FA4_RESCALE_PROBE_BUILD make -C tk_fa4/fp4_fa4_fwd -j1`.
++- Log: `results/mxfp4_fa4_forward_recover_20260617/tk_fp4_shape_sweep_20260620/build_shape_debug_8.log`.
++- Artifact: `tk_fa4/_C_b300_causal_fp4_fwd_experiments.cpython-312-aarch64-linux-gnu.so`.
++- SHA256: `68674257a8539a2c16718814cd3fef808dea7916fa7383ac317b9bcca01d1383`.
++- mtime/size: `2026-06-20 21:37:01.829903329 +0000`, `16180176` bytes.
++- No active forward writer after build; `pgrep` matched only verification commands.
++- ptxas shape-debug summary from build log:
++  - K64/N128/ncta1/layout0: `44 regs`, `4 barriers`, `32 bytes smem`, `0 spills`.
++  - K64/N128/ncta2/layout0: `45 regs`, `4 barriers`, `32 bytes smem`, `0 spills`.
++  - K128/N128/ncta1/layout0: `47 regs`, `4 barriers`, `32 bytes smem`, `0 spills`.
++  - K128/N128/ncta2/layout0: `48 regs`, `4 barriers`, `32 bytes smem`, `0 spills`.
++  - K256/N128/ncta1/layout0: `48 regs`, `4 barriers`, `32 bytes smem`, `0 spills`.
++  - K256/N128/ncta2/layout0: `46 regs`, `4 barriers`, `32 bytes smem`, `0 spills`.
++  - K256/N256/ncta2/layout0: `48 regs`, `4 barriers`, `32 bytes smem`, `0 spills`.
++
++B-scale split after slack:
++- Log: `results/mxfp4_fa4_forward_recover_20260617/tk_fp4_shape_sweep_20260620/shape_debug_scale_split_after_slack_k64n128ncta1.log`.
++- K64/N128/ncta1 stage 8 A-scale first word: pass, finite/nonzero, exit 0.
++- K64/N128/ncta1 stage 9 B-scale first word: pass, finite/nonzero, exit 0.
++- K64/N128/ncta1 stage 10 full A-scale copy: pass, finite/nonzero, exit 0.
++- K64/N128/ncta1 stage 11 full B-scale copy: pass, finite/nonzero, exit 0.
++- K64/N128/ncta1 stage 6 all scale SMEM copies: pass, finite/nonzero, exit 0.
++- Conclusion: the previous B-scale first/full-copy illegal access was a dynamic shared-memory allocation mirror/size issue, not a B-scale global pointer or publish/TMEM issue. The +4 KiB route-local slack corrected the allocation mirror sufficiently for this diagnostic route.
++
++Full-stage validation after B-scale passed:
++- K64/N128/ncta1 stages `3,4,5,0` log: `results/mxfp4_fa4_forward_recover_20260617/tk_fp4_shape_sweep_20260620/shape_debug_k64n128ncta1_stages_after_slack.log`.
++  - Stage 3 scale SMEM publish: pass.
++  - Stage 4 scale TMEM load/wait: pass.
++  - Stage 5 TCGEN issue/no store: pass.
++  - Stage 0 full path: pass, finite/nonzero, median one-shot `226.17433166503906 ms` under `CUDA_LAUNCH_BLOCKING=1`.
++- K256/N128/ncta2 stages `3,4,5,0` log: `results/mxfp4_fa4_forward_recover_20260617/tk_fp4_shape_sweep_20260620/shape_debug_k256n128ncta2_stages_after_slack.log`.
++  - Stage 3 scale SMEM publish: pass.
++  - Stage 4 scale TMEM load/wait: pass.
++  - Stage 5 TCGEN issue/no store: pass.
++  - Stage 0 full path: pass, finite/nonzero, median one-shot `206.80184936523438 ms` under `CUDA_LAUNCH_BLOCKING=1`.
++
++H32/S2048-equivalent full-stage shape sweep:
++- Timing JSONL: `results/mxfp4_fa4_forward_recover_20260617/tk_fp4_shape_sweep_20260620/shape_debug_full_sweep_rows65536_after_slack.jsonl`.
++- NCU CSV directory/log: `results/mxfp4_fa4_forward_recover_20260617/tk_fp4_shape_sweep_20260620/ncu_shape_after_slack/`, log `ncu_shape_sweep_rows65536.log`.
++- NCU sections: `SpeedOfLight`, `SchedulerStats`, `WarpStateStats`, `MemoryWorkloadAnalysis`.
++- Parsed summary CSV: `results/mxfp4_fa4_forward_recover_20260617/tk_fp4_shape_sweep_20260620/shape_debug_tcutil_after_slack_summary.csv`.
++
++| K | N | ncta | layout | bench ms | ncu ns | TC % | tensor % | issue SM % | smsp issue % | eligible | barrier | long sb | wait | no inst | regs | dyn smem |
++|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
++| 64 | 128 | 1 | 0 | 0.0984 | 61984 | 9.20 | 0.31 | 8.80 | 11.23 | 0.16 | 25.97 | 8.86 | 2.58 | 1.86 | 44 | 14336 |
++| 64 | 128 | 2 | 0 | 0.1019 | 74112 | 7.83 | 0.26 | 7.55 | 9.42 | 0.13 | 35.71 | 5.33 | 3.06 | 1.76 | 45 | 12288 |
++| 64 | 256 | 1 | 0 | 0.1237 | 98688 | 8.81 | 0.39 | 7.88 | 9.75 | 0.13 | 30.43 | 11.05 | 2.34 | 1.51 | 46 | 18432 |
++| 64 | 256 | 2 | 0 | 0.1410 | 113312 | 7.51 | 0.33 | 6.04 | 7.51 | 0.10 | 43.56 | 7.30 | 2.67 | 1.60 | 46 | 14336 |
++| 128 | 128 | 1 | 0 | 0.0872 | 63904 | 9.32 | 0.60 | 9.83 | 12.66 | 0.18 | 21.71 | 9.74 | 2.43 | 1.81 | 47 | 22528 |
++| 128 | 128 | 2 | 0 | 0.1007 | 75648 | 7.77 | 0.50 | 8.21 | 10.48 | 0.15 | 31.15 | 5.39 | 2.88 | 1.57 | 48 | 18432 |
++| 128 | 128 | 2 | 1 | 0.0999 | 75168 | 7.88 | 0.51 | 8.32 | 10.43 | 0.15 | 31.25 | 5.40 | 2.88 | 1.57 | 48 | 18432 |
++| 128 | 256 | 1 | 0 | 0.1248 | 100096 | 8.89 | 0.76 | 8.16 | 10.20 | 0.14 | 24.94 | 12.12 | 2.25 | 1.41 | 47 | 30720 |
++| 128 | 256 | 2 | 0 | 0.1380 | 113504 | 7.83 | 0.67 | 6.73 | 8.34 | 0.12 | 38.47 | 7.11 | 2.53 | 1.37 | 45 | 22528 |
++| 256 | 128 | 1 | 0 | 0.1017 | 77184 | 14.92 | 0.98 | 8.93 | 11.45 | 0.17 | 28.40 | 9.04 | 2.40 | 1.66 | 48 | 38912 |
++| 256 | 128 | 2 | 0 | 0.1126 | 88896 | 12.89 | 0.85 | 8.12 | 10.25 | 0.15 | 33.08 | 6.46 | 2.68 | 1.55 | 46 | 30720 |
++| 256 | 256 | 1 | 0 | 0.1489 | 118976 | 14.83 | 1.28 | 8.12 | 9.95 | 0.15 | 22.33 | 11.28 | 2.14 | 1.23 | 47 | 56320 |
++| 256 | 256 | 2 | 0 | 0.1565 | 135552 | 13.23 | 1.14 | 6.12 | 7.52 | 0.11 | 45.19 | 8.97 | 2.46 | 1.34 | 48 | 39936 |
++| 256 | 256 | 2 | 1 | 0.1560 | 133184 | 13.03 | 1.12 | 6.03 | 7.52 | 0.11 | 45.28 | 9.02 | 2.46 | 1.36 | 48 | 39936 |
++
++Conclusion:
++- Terminal outcome reached: B-scale now passes; K64 and K256 full stages pass; profiler sweep completed.
++- The dynamic-shared-memory slack fixed the immediate B-scale fault and validates the allocation-mirror diagnosis.
++- The supported standalone shape-debug single-tile forms still do not approach the prior GEMM N512 `43.49%` TC reference. Best observed TC is K256/N128/ncta1 at `14.92%`, with eligible `0.17` and barrier `28.40`; K256/N256/ncta1 is similar at `14.83%`.
++- N256 in this harness increases dynamic smem and barrier pressure without increasing TC utilization. ncta2 generally lowers eligible/issue and increases barrier stalls.
++- N512 remains a real local surface gap: this harness cannot expose a legal N512 single-tile shape because required scale operands need TMEM columns after the output tile; the TK GEMM N512 result remains the evidence that a wider output/accumulator shape can reach the target, but this standalone FA4-adjacent shape-debug path does not yet expose it.
++- `git diff --check -- tk_fa4/fp4_fa4_fwd/fwd_device_helpers.inc tk_fa4/fp4_fa4_fwd/fwd_host_dispatch.inc tk_fa4/fp4_pv_experiments.py results/mxfp4_fa4_forward_recover_20260617/forward_ordered_ledger.md` passed.
++
++## 2026-06-20 N512 phased shape-debug TC-util probe
++
++Mandate executed:
++- Continue forward-only from the completed shape-debug sweep; do not touch backward/session 7-17.
++- Audit why N512-equivalent FP4 TCGEN work is blocked locally, then implement a standalone diagnostic if possible.
++- Do not run NCU until stage 0 is finite/nonzero.
++
++Active-writer state:
++- `pgrep -af 'fp4_fa4_fwd|_C_b300_causal_fp4_fwd|nvcc|ptxas'` after the probe matched only the verification command, so there was no active forward writer when results were recorded.
++
++Audit anchors and blocker:
++- `ThunderKittens/include/types/tensor/tt.cuh:15-16` caps tensor columns at 512; `ThunderKittens/include/types/tensor/tt.cuh:61-64` enforces tile row/column static asserts.
++- `ThunderKittens/include/types/tensor/tensor.cuh:42-52` enforces allocator bounds against the 512-column TMEM surface.
++- `ThunderKittens/include/ops/thread/mma/tcgen05.cuh:122-159` encodes the block-scaled FP4 descriptor fields, including the N mode and scale-factor ids.
++- `ThunderKittens/include/ops/thread/mma/tcgen05.cuh:535-572` constructs the scale operand using M/N offsets, so A/B scale operands must be present in TMEM at issue time.
++- `ThunderKittens/kernels/gemm/mxfp4_gb200/mxfp4_gemm.cuh:27-29` only exposes `_Nb == 128 || _Nb == 256` tile shapes locally; the earlier GEMM N512 reference is an aggregate GEMM output shape, not a single 512-column TCGEN output tile.
++- `ThunderKittens/kernels/gemm/mxfp4_gb200/mxfp4_gemm.cuh:378-381` keeps output at 0 and scale TMEM at fixed columns after the supported output width.
++- Conclusion: a true single `tt<float,128,512>` MXFP4 TCGEN tile consumes all 512 output columns and leaves no legal TMEM columns for the required A/B scale operands. The local surface can test only an N512-equivalent route by reusing a legal N256 accumulator and scale layout in two output phases.
++
++Implemented explicit diagnostic:
++- `tk_fa4/fp4_fa4_fwd/fwd_device_helpers.inc:1987-2007`: `config_mxfp4_tcgen_shape_debug` now accepts `_NTile == 512` and derives `ACC_DVO=256`, `OUT_PHASES=2`, and `ACTIVE_B_SCALE_GROUPS=2`.
++- `tk_fa4/fp4_fa4_fwd/fwd_device_helpers.inc:2009-2028`: the B shared tile uses `ACC_DVO` and the dynamic shared-memory mirror still includes the route-local `+4096` slack that fixed the B-scale allocation fault.
++- `tk_fa4/fp4_fa4_fwd/fwd_device_helpers.inc:6199-6218`: `load_mxfp4_shape_b_tile` takes `out_phase` and loads the active N256 half of the N512 B tile.
++- `tk_fa4/fp4_fa4_fwd/fwd_device_helpers.inc:6245-6410`: the shape-debug kernel uses `tt<float,C::Mb,C::ACC_DVO>`, places scales after the active accumulator, and loops over two output phases. Each phase reloads B payload/scales, issues legal MXFP4 TCGEN, waits, and stores that output half.
++- `tk_fa4/fp4_fa4_fwd/fwd_host_dispatch.inc:722-812`: explicit dispatch now allows N512 for K64/K128/K256 and ncta1/ncta2, layout0 only. No default selector or live FA4 route was changed.
++
++Build:
++- Command: `env -u TK_FA4_RESCALE_PROBE_BUILD make -C tk_fa4/fp4_fa4_fwd -j1`.
++- Log: `results/mxfp4_fa4_forward_recover_20260617/tk_fp4_shape_sweep_20260620/build_shape_debug_n512_phased_1.log`.
++- Artifact: `tk_fa4/_C_b300_causal_fp4_fwd_experiments.cpython-312-aarch64-linux-gnu.so`.
++- SHA256: `9b109bb625da0eef3201c560f86bdb19656af0d97d1d12f466f9e0a0fd5678d7`.
++- mtime/size: `2026-06-20 22:09:27.861751897 +0000`, `16383384` bytes.
++- ptxas shape-debug summaries from the build log:
++  - K64/N512/ncta1: `56 regs`, `4 barriers`, `48 bytes smem`, `0 spills`.
++  - K64/N512/ncta2: `64 regs`, `4 barriers`, `48 bytes smem`, `0 spills`.
++  - K128/N512/ncta1: `64 regs`, `4 barriers`, `48 bytes smem`, `0 spills`.
++  - K128/N512/ncta2: `64 regs`, `4 barriers`, `48 bytes smem`, `0 spills`.
++  - K256/N512/ncta1: `56 regs`, `4 barriers`, `48 bytes smem`, `0 spills`.
++  - K256/N512/ncta2: `56 regs`, `4 barriers`, `48 bytes smem`, `0 spills`.
++
++Staged smoke:
++- Log: `results/mxfp4_fa4_forward_recover_20260617/tk_fp4_shape_sweep_20260620/shape_debug_n512_phased_k256_stages.log`.
++- K256/N512/ncta1 stages `8,9,10,11,6,3,4,5,0`: all pass finite/nonzero. Stage 0 one-shot under `CUDA_LAUNCH_BLOCKING=1`: `186.09939575195312 ms`, abs_sum `787495.75`, max_abs `65.0`.
++- K256/N512/ncta2 stages `8,9,10,11,6,3,4,5,0`: all pass finite/nonzero. Stage 0 one-shot under `CUDA_LAUNCH_BLOCKING=1`: `226.1270751953125 ms`, abs_sum `1570223.75`, max_abs `65.0`.
++
++Rows=65536 timing:
++- Log: `results/mxfp4_fa4_forward_recover_20260617/tk_fp4_shape_sweep_20260620/shape_debug_n512_phased_rows65536_timing.jsonl`.
++- K64/N512/ncta1: `0.3574 ms`.
++- K64/N512/ncta2: `0.2484 ms`.
++- K128/N512/ncta1: `0.2282 ms`.
++- K128/N512/ncta2: `0.2468 ms`.
++- K256/N512/ncta1: `0.2626 ms`.
++- K256/N512/ncta2: `0.2822 ms`.
++
++NCU:
++- Directory: `results/mxfp4_fa4_forward_recover_20260617/tk_fp4_shape_sweep_20260620/ncu_shape_n512_phased/`.
++- Sections: `SpeedOfLight`, `SchedulerStats`, `WarpStateStats`, `MemoryWorkloadAnalysis`.
++- Parsed CSV: `results/mxfp4_fa4_forward_recover_20260617/tk_fp4_shape_sweep_20260620/shape_debug_tcutil_with_n512_phased_summary.csv`.
++
++| K | N | ncta | bench ms | ncu ns | TC % | eligible | issue SM % | barrier | dyn smem |
++|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
++| 64 | 512 | 1 | 0.3574 | 195616 | 8.77 | 0.11 | 6.47 | 65.91 | 19456 |
++| 64 | 512 | 2 | 0.2484 | 217792 | 8.06 | 0.09 | 5.25 | 78.11 | 15360 |
++| 128 | 512 | 1 | 0.2282 | 197120 | 8.96 | 0.12 | 6.97 | 60.28 | 31744 |
++| 128 | 512 | 2 | 0.2468 | 219232 | 8.20 | 0.09 | 5.62 | 72.35 | 23552 |
++| 256 | 512 | 1 | 0.2626 | 238400 | 14.95 | 0.13 | 7.30 | 59.40 | 58368 |
++| 256 | 512 | 2 | 0.2822 | 257568 | 13.94 | 0.09 | 5.41 | 77.40 | 41984 |
++
++Comparison against the previous best supported shape:
++- Previous best K256/N128/ncta1: `0.1017 ms`, `77184 ns`, TC `14.92%`, eligible `0.17`, issue SM `8.93%`, barrier `28.40`.
++- New best N512-phased K256/N512/ncta1: `0.2626 ms`, `238400 ns`, TC `14.95%`, eligible `0.13`, issue SM `7.30%`, barrier `59.40`.
++
++Decision:
++- N512-phased is kept only as an explicit standalone diagnostic/proof surface, not promoted to a selector or live FA4 route.
++- It is finite, active, and legal, but it does not materially raise TC active or eligible warps. The two-phase reuse of a legal N256 accumulator roughly preserves the K256 TC ceiling while increasing wall time and barrier pressure.
++- Terminal conclusion for this lever: the current TK FP4 shape-debug surface cannot expose the GEMM-like N512 utilization mode. The blocker is not P quantization; it is output/scale TMEM ownership and issue density. A real next step requires a different output/scale TMEM layout or GEMM-style FA4-adjacent tiled pipeline that allows wider aggregate N without serializing two N256 phases through the same accumulator and full barrier/store loop.
++
++## 2026-06-20 Joint QK/PV quartering diagnostic
++
++Mandate:
++- Forward-only investigation; do not touch backward/session 7-17.
++- Stop optimizing isolated PV and test whether QK/PV joint quartering plus aggressive TMEM lifetime reuse can unlock throughput.
++- Softmax out of scope; use a cheap placeholder P and measure schedule/TCGEN/TMEM limits.
++
++Pre-edit snapshot:
++- Directory: `results/mxfp4_fa4_forward_recover_20260617/joint_qk_pv_quartering_20260620/`.
++- State file: `pre_joint_quarter_state.txt`.
++- Diff file: `pre_joint_quarter_snapshot.diff`.
++- Snapshot HEAD: `6af6aec8fa11421cf63b0f5e769a5c8189fc7b76`.
++- Snapshot artifact: `9b109bb625da0eef3201c560f86bdb19656af0d97d1d12f466f9e0a0fd5678d7`, mtime/size `2026-06-20 22:09:27.861751897 +0000`, `16383384`.
++- Active-writer check before edits matched only the check command.
++
++TMEM lifetime audit anchors:
++- Live score/output/scale widths: `tk_fa4/fp4_fa4_fwd/fwd_streaming_kernel.inc:1120-1193`.
++  - `SCORE_TMEM_WIDTH = SCORE_TMEM_SLOTS * C::Nb`.
++  - `OUTPUT_TMEM_SLOTS` is normally 1 unless a non-score dual output route is active.
++  - `SCALE_TMEM_BASE = SCORE_TMEM_WIDTH + OUTPUT_TMEM_SLOTS * C::Dvo`.
++  - Q/K/P/V scale widths are then placed after that base, unless an alias-scale route maps them inside score slots.
++- Live allocations: `fwd_streaming_kernel.inc:5272-5290`.
++  - score at `0`.
++  - output at `SCORE_TMEM_WIDTH`.
++  - q scale at `SCALE_TMEM_BASE`.
++  - k scale after q scale.
++  - p/v scales after q/k scale or aliased into score slots for special guarded routes.
++- Live score issue and scale staging: `fwd_streaming_kernel.inc:5633-5674`.
++- Live P/P-scale staging and ready/reuse semaphores: `fwd_streaming_kernel.inc:2448`, `fwd_streaming_kernel.inc:5749-5867`.
++- Live PV issue path and output/reuse waits: `fwd_streaming_kernel.inc:6051-6293`.
++- Existing standalone shape-debug output/scale TMEM map: `tk_fa4/fp4_fa4_fwd/fwd_device_helpers.inc:6245-6410`.
++
++Current live-route column map for the selected Nb128/Dvo128 family:
++- Score columns: `0..127` for one score slot, or `0..255` when dual score is active.
++- Output columns: immediately after score, typically `128..255` for single score or `256..383` for dual score.
++- Scales: after score+output (`SCALE_TMEM_BASE`), unless alias-scale routes place q/k/p/v scale operands inside retired score-slot columns.
++- Consequence: score and output lifetimes overlap in live routes because score must remain until P construction/publish is complete; output must remain across PV accumulation until store/reuse. This blocks a literal N512 output tile and makes aggressive scale aliasing fragile.
++
++Proposed quartered diagnostic map:
++- Keep the diagnostic outside live FA4.
++- Score accumulator: columns `0..127`.
++- Persistent output accumulator: columns `128..255`.
++- A/P scale operand: columns `256..271`.
++- B/K/V scale operand: columns `272..287`.
++- Each N128 quarter loads a K/V tile, stages scales, issues QK into score, immediately issues placeholder-P PV into the persistent output accumulator, waits for qk+pv completion before reusing score/B/scales for the next quarter, and stores output only after all quarters.
++- Placeholder P: reuses the Q payload and A scales as P. This is not attention-correct; it is explicitly a legal MXFP4 schedule/TCGEN/TMEM diagnostic.
++
++Implemented explicit diagnostic:
++- `tk_fa4/fp4_fa4_fwd/fwd_device_helpers.inc:2059`: `config_mxfp4_joint_qk_pv_quarter_debug`.
++- `tk_fa4/fp4_fa4_fwd/fwd_device_helpers.inc:6279`: quarter-aware B/K/V payload loader.
++- `tk_fa4/fp4_fa4_fwd/fwd_device_helpers.inc:6326`: `kernel_mxfp4_joint_qk_pv_quarter_debug`.
++- `tk_fa4/fp4_fa4_fwd/fwd_host_dispatch.inc:816`: explicit launcher.
++- `tk_fa4/fp4_fa4_fwd/fwd_host_dispatch.inc:846`: explicit dispatch validation for N128 quarters and 1/2/4 quarter counts.
++- `tk_fa4/fp4_fa4_fwd/fwd_pybind.inc:30`: Python binding.
++- `tk_fa4/fp4_pv_experiments.py:15965`: native wrapper.
++- `tk_fa4/fp4_pv_experiments.py:16000`: benchmark wrapper.
++- No default selector or live FA4 route was changed.
++
++Build 1:
++- Command: `env -u TK_FA4_RESCALE_PROBE_BUILD make -C tk_fa4/fp4_fa4_fwd -j1`.
++- Log: `joint_qk_pv_quartering_20260620/build_joint_quarter_1.log`.
++- Artifact: `1de1cbcfee8cdafc74521a193d2502b67fded86736640474942f4022fe190550`, mtime/size `2026-06-20 22:39:28.633444864 +0000`, `16452760`.
++- ptxas:
++  - q4: `63 regs`, `4 barriers`, `144 bytes smem`, `0 spills`.
++  - q2: `64 regs`, `4 barriers`, `80 bytes smem`, `0 spills`.
++  - q1: `47 regs`, `4 barriers`, `48 bytes smem`, `0 spills`.
++
++Stage smoke on q4:
++- Log: `joint_qk_pv_quartering_20260620/joint_quarter_q4_stages.log`.
++- Stages `1,3,2,4,5,0` all passed finite/nonzero in fresh `CUDA_LAUNCH_BLOCKING=1` processes.
++
++Rows=65536 timing on build 1:
++- Log: `joint_qk_pv_quartering_20260620/joint_quarter_rows65536_timing.jsonl`.
++- q1 stage0: `0.0883 ms`, finite/nonzero.
++- q2 stage0: `0.0989 ms`, finite/nonzero.
++- q4 stage0: `0.1313 ms`, finite/nonzero.
++
++NCU on build 1:
++- Directory: `joint_qk_pv_quartering_20260620/ncu_joint_quarter/`.
++- Summary: `joint_qk_pv_quartering_20260620/joint_quarter_ncu_summary.csv`.
++
++| quarters | ncu ns | TC % | eligible | issue SM % | barrier | long sb | regs | dyn smem |
++|---:|---:|---:|---:|---:|---:|---:|---:|---:|
++| 1 | 61888 | 10.35 | 0.18 | 9.31 | 25.32 | 8.59 | 47 | 22528 |
++| 2 | 74944 | 17.25 | 0.22 | 10.50 | 22.56 | 6.81 | 64 | 22528 |
++| 4 | 104672 | 25.12 | 0.21 | 10.67 | 28.57 | 5.27 | 63 | 22528 |
++
++Stage-6 PV-only control:
++- Added explicit `debug_stage=6` in the same standalone diagnostic: skip the QK TCGEN issue but keep quarter payload/scale load, PV accumulation, waits, TMEM reuse, and final store.
++- Build 2 log: `joint_qk_pv_quartering_20260620/build_joint_quarter_2_pvonly.log`.
++- Final artifact: `82769c5afea6baaaaa159295475562aea4066ee009bc43def5584f0956524e0a`, mtime/size `2026-06-20 22:48:31.573967429 +0000`, `16452760`.
++- ptxas:
++  - q4: `64 regs`, `4 barriers`, `144 bytes smem`, `0 spills`.
++  - q2: `64 regs`, `4 barriers`, `80 bytes smem`, `0 spills`.
++  - q1: `47 regs`, `4 barriers`, `48 bytes smem`, `0 spills`.
++- Smoke/timing log: `joint_qk_pv_quartering_20260620/joint_quarter_q4_final_smoke_timing.log`.
++- q4 stage6 smoke: pass finite/nonzero; q4 stage0 smoke: pass finite/nonzero.
++- q4 stage6 timing: `0.1315 ms`; q4 stage0 timing: `0.1326 ms`.
++
++Final NCU on build 2:
++- Directory: `joint_qk_pv_quartering_20260620/ncu_joint_quarter_final/`.
++- Summary: `joint_qk_pv_quartering_20260620/joint_quarter_final_ncu_summary.csv`.
++
++| stage | meaning | ncu ns | TC % | eligible | issue SM % | barrier | long sb | regs | dyn smem |
++|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|
++| 0 | QK + placeholder-P PV, 4 quarters | 105120 | 24.78 | 0.21 | 10.61 | 28.96 | 5.02 | 64 | 22528 |
++| 6 | placeholder-P PV only, 4 quarters | 103808 | 23.26 | 0.21 | 10.64 | 28.37 | 5.01 | 64 | 22528 |
++
++Comparison to controls:
++- Control K256/N128/ncta1 shape-debug: `77184 ns`, TC `14.92%`, eligible `0.17`, issue `8.93%`, barrier `28.40`.
++- Control N512 phased K256/N512/ncta1: `238400 ns`, TC `14.95%`, eligible `0.13`, issue `7.30%`, barrier `59.40`.
++- Joint q4 stage0: `105120 ns`, TC `24.78%`, eligible `0.21`, issue `10.61%`, barrier `28.96`.
++
++Decision:
++- Keep this as an explicit standalone diagnostic/proof surface only. Do not promote to selector/live FA4.
++- The joint quartering schedule materially raises TC active versus isolated K256/N128 and avoids the N512 phased barrier disaster. This proves that QK/PV joint issue density and output-accumulator lifetime reuse can unlock more TCGEN utilization than isolated PV/shape-debug.
++- It does not yet improve wall time: q4 is still slower than K256/N128 because issue active remains about `10.6%`, eligible stays only `0.21`, and barrier remains around `29` stalls/issue. Stage 6 being almost identical to stage 0 shows QK issue itself is not the dominant remaining limiter in this toy route; the limiter is the per-quarter source/scale/pv completion and shared/TMEM reuse barrier protocol.
++- Next engineering direction: not more P quant micro-tweaks. Move toward a double-buffered or multi-owner joint route that can load the next quarter while current PV drains, with two B/V shared payload slots and two B/V scale TMEM slots, or a structural live route where QK score retirement, P placeholder/pack, and PV issue are pipeline stages rather than one CTA-wide wait per quarter.
+diff --git a/tk_fa4/fp4_fa4_fwd/fwd_device_helpers.inc b/tk_fa4/fp4_fa4_fwd/fwd_device_helpers.inc
+index 83dde61..db5bb75 100644
+--- a/tk_fa4/fp4_fa4_fwd/fwd_device_helpers.inc
++++ b/tk_fa4/fp4_fa4_fwd/fwd_device_helpers.inc
+@@ -1984,6 +1984,134 @@ public:
+     __host__ __inline__ int dynamic_shared_memory() { return DYNAMIC_SHARED_MEMORY; }
+ };
+
++template <int _KTile, int _NTile, int _ClusterSize, int _ScaleLayout>
++struct config_mxfp4_tcgen_shape_debug {
++    static_assert(_KTile == 64 || _KTile == 128 || _KTile == 256, "KTile must be 64, 128, or 256");
++    static_assert(_NTile == 128 || _NTile == 256 || _NTile == 512, "single-tile shape debug supports NTile 128, 256, or phased 512");
++    static_assert(_ClusterSize == 1 || _ClusterSize == 2, "ClusterSize must be 1 or 2");
++    static_assert(_ScaleLayout == 0 || _ScaleLayout == 1, "ScaleLayout must be 0(compact) or 1(gemm-like)");
++
++    static constexpr int Mb = 128;
++    static constexpr int Nb = _KTile;
++    static constexpr int Dvo = _NTile;
++    static constexpr int ACC_DVO = (_NTile == 512) ? 256 : _NTile;
++    static constexpr int OUT_PHASES = _NTile / ACC_DVO;
++    static constexpr int CLUSTER_SIZE = _ClusterSize;
++    static constexpr int SCALE_LAYOUT = _ScaleLayout;
++    static constexpr int NUM_WARPGROUPS = 4;
++    static constexpr int NUM_WARPS = NUM_WARPGROUPS * WARPGROUP_WARPS;
++    static constexpr int NUM_THREADS = NUM_WARPS * WARP_THREADS;
++    static constexpr int K_SCALE_CHUNKS = (_KTile + 127) / 128;
++    static constexpr int B_SCALE_GROUPS = _NTile / 128;
++    static constexpr int ACTIVE_B_SCALE_GROUPS = ACC_DVO / 128;
++};
++
++template <typename C>
++struct globals_mxfp4_tcgen_shape_debug {
++    using a_fp4_tile = st_fp4e2m1_2<C::Mb, C::Nb / 2>;
++    using b_fp4_tile = std::conditional_t<
++        C::CLUSTER_SIZE == 1,
++        st_fp4e2m1_2<C::ACC_DVO, C::Nb / 2>,
++        st_fp4e2m1_2<C::ACC_DVO / C::CLUSTER_SIZE, C::Nb / 2>>;
++    using sc_tile = st_fp8e8m0<32, 16, false>;
++
++private:
++    static constexpr int compute_dynamic_shared_memory() {
++        int bytes = 0;
++        auto add = [&](int alloc_bytes) constexpr {
++            bytes = align_up_constexpr(bytes, 1024) + alloc_bytes;
++        };
++        add((int)sizeof(a_fp4_tile));
++        add((int)sizeof(b_fp4_tile));
++        add((int)sizeof(sc_tile) * C::K_SCALE_CHUNKS);
++        add((int)sizeof(sc_tile) * C::K_SCALE_CHUNKS * C::B_SCALE_GROUPS);
++        return align_up_constexpr(bytes, 1024) + 4096;
++    }
++
++public:
++    static constexpr int DYNAMIC_SHARED_MEMORY = compute_dynamic_shared_memory();
++
++    const uint8_t *a_fp4;
++    const uint8_t *a_sc;
++    const uint8_t *b_fp4;
++    const uint8_t *b_sc;
++    bf16 *o_direct;
++    int rows;
++    int a_packed_cols;
++    int b_packed_cols;
++    int a_scale_k_tiles;
++    int b_scale_k_tiles;
++    int debug_stage;
++
++    __host__ __inline__ dim3 grid() {
++        const int row_tiles = rows / C::Mb;
++        if constexpr (C::CLUSTER_SIZE == 1) {
++            return dim3(row_tiles);
++        } else {
++            return dim3(((row_tiles + C::CLUSTER_SIZE - 1) / C::CLUSTER_SIZE) * C::CLUSTER_SIZE);
++        }
++    }
++       __host__ __inline__ dim3 block() { return dim3(C::NUM_THREADS); }
++       __host__ __inline__ int dynamic_shared_memory() { return DYNAMIC_SHARED_MEMORY; }
++   };
++
++template <int _QuarterTile, int _Quarters>
++struct config_mxfp4_joint_qk_pv_quarter_debug {
++    static_assert(_QuarterTile == 128, "joint QK/PV quarter debug currently supports N128 quarters");
++    static_assert(_Quarters == 1 || _Quarters == 2 || _Quarters == 4,
++                  "joint QK/PV quarter debug supports 1, 2, or 4 quarters");
++
++    static constexpr int Mb = 128;
++    static constexpr int Nb = _QuarterTile;
++    static constexpr int Dvo = 128;
++    static constexpr int Dqk = _QuarterTile;
++    static constexpr int QUARTERS = _Quarters;
++    static constexpr int CLUSTER_SIZE = 1;
++    static constexpr int NUM_WARPGROUPS = 4;
++    static constexpr int NUM_WARPS = NUM_WARPGROUPS * WARPGROUP_WARPS;
++    static constexpr int NUM_THREADS = NUM_WARPS * WARP_THREADS;
++    static constexpr int K_SCALE_CHUNKS = (_QuarterTile + 127) / 128;
++};
++
++template <typename C>
++struct globals_mxfp4_joint_qk_pv_quarter_debug {
++    using a_fp4_tile = st_fp4e2m1_2<C::Mb, C::Nb / 2>;
++    using b_fp4_tile = st_fp4e2m1_2<C::Nb, C::Nb / 2>;
++    using sc_tile = st_fp8e8m0<32, 16, false>;
++
++private:
++    static constexpr int compute_dynamic_shared_memory() {
++        int bytes = 0;
++        auto add = [&](int alloc_bytes) constexpr {
++            bytes = align_up_constexpr(bytes, 1024) + alloc_bytes;
++        };
++        add((int)sizeof(a_fp4_tile));
++        add((int)sizeof(b_fp4_tile));
++        add((int)sizeof(sc_tile) * C::K_SCALE_CHUNKS);
++        add((int)sizeof(sc_tile) * C::K_SCALE_CHUNKS);
++        return align_up_constexpr(bytes, 1024) + 4096;
++    }
++
++public:
++    static constexpr int DYNAMIC_SHARED_MEMORY = compute_dynamic_shared_memory();
++
++    const uint8_t *a_fp4;
++    const uint8_t *a_sc;
++    const uint8_t *b_fp4;
++    const uint8_t *b_sc;
++    bf16 *o_direct;
++    int rows;
++    int a_packed_cols;
++    int b_packed_cols;
++    int a_scale_k_tiles;
++    int b_scale_k_tiles;
++    int debug_stage;
++
++    __host__ __inline__ dim3 grid() { return dim3(rows / C::Mb); }
++    __host__ __inline__ dim3 block() { return dim3(C::NUM_THREADS); }
++    __host__ __inline__ int dynamic_shared_memory() { return DYNAMIC_SHARED_MEMORY; }
++};
++
+ template <typename C>
+ struct globals_mxfp4_v_tma_tile_check_debug {
+     using v_fp4_tile = st_fp4e2m1_2<C::Dvo, C::Nb / 2>;
+@@ -6095,6 +6223,451 @@ __global__ void kernel_mxfp4_pv_from_p_k256_debug(
+     }
+ }
+
++template <typename Tile>
++__device__ inline void fp4pv_shape_zero_tile(Tile &tile) {
++    uint32_t base = __cvta_generic_to_shared(&tile.data[0]);
++    for (int byte = threadIdx.x * 4; byte < (int)sizeof(Tile); byte += blockDim.x * 4) {
++        asm volatile("st.shared.b32 [%0], %1;" :: "r"(base + byte), "r"(0u));
++    }
++}
++
++template <typename C, typename ATile, typename G>
++__device__ inline void load_mxfp4_shape_a_tile(ATile &a_smem, const G &g, int row_tile) {
++    fp4pv_shape_zero_tile(a_smem);
++    const int row_base = row_tile * C::Mb;
++    uint32_t smem_base = __cvta_generic_to_shared(&a_smem.data[0]);
++    constexpr int BYTES_PER_STORE = 16;
++    constexpr int LOGICAL_PACKED_COLS = C::Nb / 2;
++    static_assert(LOGICAL_PACKED_COLS % BYTES_PER_STORE == 0, "shape A tile packed K must be vector-loadable");
++    constexpr int STORES_PER_ROW = LOGICAL_PACKED_COLS / BYTES_PER_STORE;
++    constexpr int TOTAL_STORES = ATile::rows * STORES_PER_ROW;
++    for (int linear = threadIdx.x; linear < TOTAL_STORES; linear += blockDim.x) {
++        const int row = linear / STORES_PER_ROW;
++        const int col = (linear % STORES_PER_ROW) * BYTES_PER_STORE;
++        const uint4 value = *reinterpret_cast<const uint4 *>(
++            &g.a_fp4[((row_base + row) * g.a_packed_cols) + col]);
++        asm volatile("st.shared.v4.b32 [%0], {%1, %2, %3, %4};"
++                     :
++                     : "r"(ATile::idx(smem_base, {row, col})),
++                       "r"(value.x), "r"(value.y), "r"(value.z), "r"(value.w));
++    }
++}
++
++template <typename C, typename BTile, typename G>
++__device__ inline void load_mxfp4_shape_b_tile(BTile &b_smem, const G &g, int cta_rank, int out_phase = 0) {
++    fp4pv_shape_zero_tile(b_smem);
++    const int row_base = out_phase * C::ACC_DVO + cta_rank * (C::ACC_DVO / C::CLUSTER_SIZE);
++    uint32_t smem_base = __cvta_generic_to_shared(&b_smem.data[0]);
++    constexpr int BYTES_PER_STORE = 16;
++    constexpr int LOGICAL_PACKED_COLS = C::Nb / 2;
++    static_assert(LOGICAL_PACKED_COLS % BYTES_PER_STORE == 0, "shape B tile packed K must be vector-loadable");
++    constexpr int STORES_PER_ROW = LOGICAL_PACKED_COLS / BYTES_PER_STORE;
++    constexpr int TOTAL_STORES = BTile::rows * STORES_PER_ROW;
++    for (int linear = threadIdx.x; linear < TOTAL_STORES; linear += blockDim.x) {
++        const int row = linear / STORES_PER_ROW;
++        const int col = (linear % STORES_PER_ROW) * BYTES_PER_STORE;
++        const uint4 value = *reinterpret_cast<const uint4 *>(
++            &g.b_fp4[((row_base + row) * g.b_packed_cols) + col]);
++        asm volatile("st.shared.v4.b32 [%0], {%1, %2, %3, %4};"
++                     :
++                     : "r"(BTile::idx(smem_base, {row, col})),
++                       "r"(value.x), "r"(value.y), "r"(value.z), "r"(value.w));
++    }
++}
++
++template <typename C, typename BTile, typename G>
++__device__ inline void load_mxfp4_joint_b_quarter_tile(BTile &b_smem, const G &g, int quarter) {
++    fp4pv_shape_zero_tile(b_smem);
++    const int row_base = quarter * C::Nb;
++    uint32_t smem_base = __cvta_generic_to_shared(&b_smem.data[0]);
++    constexpr int BYTES_PER_STORE = 16;
++    constexpr int LOGICAL_PACKED_COLS = C::Nb / 2;
++    static_assert(LOGICAL_PACKED_COLS % BYTES_PER_STORE == 0, "joint B tile packed K must be vector-loadable");
++    constexpr int STORES_PER_ROW = LOGICAL_PACKED_COLS / BYTES_PER_STORE;
++    constexpr int TOTAL_STORES = BTile::rows * STORES_PER_ROW;
++    for (int linear = threadIdx.x; linear < TOTAL_STORES; linear += blockDim.x) {
++        const int row = linear / STORES_PER_ROW;
++        const int col = (linear % STORES_PER_ROW) * BYTES_PER_STORE;
++        const uint4 value = *reinterpret_cast<const uint4 *>(
++            &g.b_fp4[((row_base + row) * g.b_packed_cols) + col]);
++        asm volatile("st.shared.v4.b32 [%0], {%1, %2, %3, %4};"
++                     :
++                     : "r"(BTile::idx(smem_base, {row, col})),
++                       "r"(value.x), "r"(value.y), "r"(value.z), "r"(value.w));
++    }
++}
++
++template <typename ScTile>
++__device__ inline void load_mxfp4_shape_sc_tile(ScTile &sc_smem, const uint8_t *src) {
++    uint32_t smem_base = __cvta_generic_to_shared(&sc_smem.data[0]);
++    constexpr int BYTES_PER_STORE = 4;
++    static_assert(sizeof(ScTile) % BYTES_PER_STORE == 0, "shape scale tile must be word-loadable");
++    constexpr int TOTAL_STORES = sizeof(ScTile) / BYTES_PER_STORE;
++    for (int linear = threadIdx.x; linear < TOTAL_STORES; linear += blockDim.x) {
++        const int byte_offset = linear * BYTES_PER_STORE;
++        const uint32_t value = *reinterpret_cast<const uint32_t *>(&src[byte_offset]);
++        asm volatile("st.shared.b32 [%0], %1;"
++                     :
++                     : "r"(smem_base + byte_offset), "r"(value));
++    }
++}
++
++template <typename ScTile>
++__device__ inline void load_mxfp4_shape_sc_tile_first_word(ScTile &sc_smem, const uint8_t *src) {
++    if (threadIdx.x == 0) {
++        uint32_t smem_base = __cvta_generic_to_shared(&sc_smem.data[0]);
++        const uint32_t value = *reinterpret_cast<const uint32_t *>(src);
++        asm volatile("st.shared.b32 [%0], %1;" :: "r"(smem_base), "r"(value));
++    }
++}
++
++template <typename C>
++__launch_bounds__(C::NUM_THREADS, 1)
++__global__ void kernel_mxfp4_joint_qk_pv_quarter_debug(
++    const __grid_constant__ globals_mxfp4_joint_qk_pv_quarter_debug<C> g
++) {
++    using G = globals_mxfp4_joint_qk_pv_quarter_debug<C>;
++    using d_tt_score = tt<float, C::Mb, C::Nb>;
++    using d_tt_output = tt<float, C::Mb, C::Dvo>;
++    using d_tt_a_sc = full_tt_fp8e8m0<16 * C::K_SCALE_CHUNKS>;
++    using d_tt_b_sc = full_tt_fp8e8m0<16 * C::K_SCALE_CHUNKS>;
++    constexpr int SCORE_BASE = 0;
++    constexpr int OUTPUT_BASE = C::Nb;
++    constexpr int A_SC_BASE = OUTPUT_BASE + C::Dvo;
++    constexpr int B_SC_BASE = A_SC_BASE + 16 * C::K_SCALE_CHUNKS;
++    static_assert(B_SC_BASE + 16 * C::K_SCALE_CHUNKS <= 512,
++                  "joint QK/PV debug TMEM map must fit score+output+scales");
++
++    const int row_tile = blockIdx.x;
++    const int row = row_tile * C::Mb + warpgroup::laneid();
++
++    tensor_allocator<1, C::CLUSTER_SIZE> tm_alloc{};
++    d_tt_score tt_score = tm_alloc.template allocate<d_tt_score>(SCORE_BASE);
++    d_tt_output tt_output = tm_alloc.template allocate<d_tt_output>(OUTPUT_BASE);
++    d_tt_a_sc a_sc_tm = tm_alloc.template allocate<d_tt_a_sc>(A_SC_BASE);
++    d_tt_b_sc b_sc_tm = tm_alloc.template allocate<d_tt_b_sc>(B_SC_BASE);
++
++    extern __shared__ int __shm[];
++    tma_swizzle_allocator al((int *)&__shm[0]);
++    typename G::a_fp4_tile &a_smem = al.allocate<typename G::a_fp4_tile>();
++    typename G::b_fp4_tile &b_smem = al.allocate<typename G::b_fp4_tile>();
++    auto (&a_sc_smem)[C::K_SCALE_CHUNKS] = al.allocate<typename G::sc_tile, C::K_SCALE_CHUNKS>();
++    auto (&b_sc_smem)[C::K_SCALE_CHUNKS] = al.allocate<typename G::sc_tile, C::K_SCALE_CHUNKS>();
++
++    __shared__ semaphore qk_src_finished[C::QUARTERS];
++    __shared__ semaphore qk_done[C::QUARTERS];
++    __shared__ semaphore pv_src_finished[C::QUARTERS];
++    __shared__ semaphore pv_done[C::QUARTERS];
++    if (threadIdx.x == 0) {
++        #pragma unroll
++        for (int quarter = 0; quarter < C::QUARTERS; ++quarter) {
++            init_semaphore(qk_src_finished[quarter], 0, 1);
++            init_semaphore(qk_done[quarter], 0, 1);
++            init_semaphore(pv_src_finished[quarter], 0, 1);
++            init_semaphore(pv_done[quarter], 0, 1);
++        }
++    }
++    __syncthreads();
++    if (g.debug_stage == 1) {
++        return;
++    }
++
++    load_mxfp4_shape_a_tile<C>(a_smem, g, row_tile);
++    #pragma unroll
++    for (int k = 0; k < C::K_SCALE_CHUNKS; ++k) {
++        const uint8_t *a_sc_src = &g.a_sc[(row_tile * g.a_scale_k_tiles + k) * 32 * 16];
++        load_mxfp4_shape_sc_tile(a_sc_smem[k], a_sc_src);
++    }
++    __syncthreads();
++
++    const bool issuer_warp = (warpgroup::groupid() == 3) && (warpgroup::warpid() == 0);
++    const bool issuer = issuer_warp && warp::elect_leader();
++
++    #pragma unroll
++    for (int quarter = 0; quarter < C::QUARTERS; ++quarter) {
++        load_mxfp4_joint_b_quarter_tile<C>(b_smem, g, quarter);
++        #pragma unroll
++        for (int k = 0; k < C::K_SCALE_CHUNKS; ++k) {
++            const uint8_t *b_sc_src = &g.b_sc[((quarter * g.b_scale_k_tiles + k) * 32 * 16)];
++            load_mxfp4_shape_sc_tile(b_sc_smem[k], b_sc_src);
++        }
++        __syncthreads();
++        asm volatile("fence.proxy.async.shared::cta;\n" ::: "memory");
++        __syncthreads();
++        if (g.debug_stage == 3 && quarter == 0) {
++            return;
++        }
++
++        if (issuer_warp) {
++            #pragma unroll
++            for (int k = 0; k < C::K_SCALE_CHUNKS; ++k) {
++                auto a_sc_tm_sub = a_sc_tm.template subtile<full_tt_fp8e8m0<16>>(k * 16);
++                auto b_sc_tm_sub = b_sc_tm.template subtile<full_tt_fp8e8m0<16>>(k * 16);
++                fp4pv_load_mxnv_scale_async_cluster<C>(a_sc_tm_sub, a_sc_smem[k]);
++                fp4pv_load_mxnv_scale_async_cluster<C>(b_sc_tm_sub, b_sc_smem[k]);
++            }
++            tensor_load_wait();
++        }
++        __syncthreads();
++
++        const bool skip_qk_issue = (g.debug_stage == 6);
++        if (issuer) {
++            tensor_before_thread_sync();
++            if (!skip_qk_issue) {
++                fp4pv_mm_cluster_ABt<C>(tt_score, a_smem, b_smem, a_sc_tm, b_sc_tm, qk_src_finished[quarter]);
++                tensor_commit<C::CLUSTER_SIZE>(qk_done[quarter]);
++            }
++            tensor_before_thread_sync();
++            if (quarter == 0) {
++                fp4pv_mm_cluster_ABt<C>(tt_output, a_smem, b_smem, a_sc_tm, b_sc_tm, pv_src_finished[quarter]);
++            } else {
++                fp4pv_mma_cluster_ABt<C>(tt_output, a_smem, b_smem, a_sc_tm, b_sc_tm, pv_src_finished[quarter]);
++            }
++            tensor_commit<C::CLUSTER_SIZE>(pv_done[quarter]);
++        }
++        __syncthreads();
++
++        if (threadIdx.x == 0) {
++            if (!skip_qk_issue) {
++                wait(qk_done[quarter], 0);
++            }
++            wait(pv_done[quarter], 0);
++        }
++        __syncthreads();
++        if (g.debug_stage == 2 && quarter == 0) {
++            return;
++        }
++        if (g.debug_stage == 4 && quarter == 0) {
++            return;
++        }
++        if (g.debug_stage == 5 && quarter == 0) {
++            break;
++        }
++    }
++
++    if (warpgroup::groupid() == 2) {
++        warpgroup::tma::store_async_read_wait<0>();
++        warpgroup::sync(warpgroup::groupid() + 1);
++        if (row >= g.rows) {
++            return;
++        }
++        constexpr float MXFP4_GEMM_SCALE_CORRECTION = 1.0f / 36.0f;
++        #pragma unroll
++        for (int col = 0; col < C::Dvo; col += 16) {
++            float2 o_reg[8];
++            asm volatile("{tcgen05.ld.sync.aligned.32x32b.x16.b32 {%0,%1,%2,%3,%4,%5,%6,%7,%8,%9,%10,%11,%12,%13,%14,%15}, [%16];}"
++                : "=f"(o_reg[0].x), "=f"(o_reg[0].y), "=f"(o_reg[1].x), "=f"(o_reg[1].y),
++                  "=f"(o_reg[2].x), "=f"(o_reg[2].y), "=f"(o_reg[3].x), "=f"(o_reg[3].y),
++                  "=f"(o_reg[4].x), "=f"(o_reg[4].y), "=f"(o_reg[5].x), "=f"(o_reg[5].y),
++                  "=f"(o_reg[6].x), "=f"(o_reg[6].y), "=f"(o_reg[7].x), "=f"(o_reg[7].y)
++                : "r"(tt_output.addr + ((warpgroup::warpid() * 32) << 16) + col));
++            tensor_load_wait();
++            #pragma unroll
++            for (int i = 0; i < 8; ++i) {
++                o_reg[i].x *= MXFP4_GEMM_SCALE_CORRECTION;
++                o_reg[i].y *= MXFP4_GEMM_SCALE_CORRECTION;
++                bf16_2 packed = __float22bfloat162_rn(o_reg[i]);
++                *reinterpret_cast<bf16_2 *>(&g.o_direct[(row * C::Dvo) + col + i * 2]) = packed;
++            }
++        }
++    }
++}
++
++template <typename C>
++__cluster_dims__(C::CLUSTER_SIZE, 1, 1) __launch_bounds__(C::NUM_THREADS, 1)
++__global__ void kernel_mxfp4_tcgen_shape_debug(
++    const __grid_constant__ globals_mxfp4_tcgen_shape_debug<C> g
++) {
++    using G = globals_mxfp4_tcgen_shape_debug<C>;
++    using d_tt_outputs = tt<float, C::Mb, C::ACC_DVO>;
++    using d_tt_a_sc = full_tt_fp8e8m0<16 * C::K_SCALE_CHUNKS>;
++    using d_tt_b_sc = full_tt_fp8e8m0<32 * C::K_SCALE_CHUNKS>;
++    constexpr int MAX_TENSOR_COLS_LOCAL = 512;
++    constexpr int A_SC_BASE = (C::SCALE_LAYOUT == 0) ? C::ACC_DVO : 256;
++    constexpr int B_SC_BASE = (C::SCALE_LAYOUT == 0)
++        ? (A_SC_BASE + 16 * C::K_SCALE_CHUNKS)
++        : (A_SC_BASE + 4 * C::K_SCALE_CHUNKS);
++    constexpr int B_SC_END = B_SC_BASE + 32 * C::K_SCALE_CHUNKS;
++    static_assert(B_SC_END <= MAX_TENSOR_COLS_LOCAL,
++                  "shape debug output plus MXFP4 scale TMEM exceeds 512 tensor columns");
++
++    const int cta_rank = cluster_ctarank();
++    const int cluster_linear = blockIdx.x / C::CLUSTER_SIZE;
++    const int row_tile = cluster_linear * C::CLUSTER_SIZE + cta_rank;
++    const int row_tiles = g.rows / C::Mb;
++    if (row_tile >= row_tiles) {
++        return;
++    }
++
++    tensor_allocator<1, C::CLUSTER_SIZE> tm_alloc{};
++    d_tt_outputs tt_output = tm_alloc.template allocate<d_tt_outputs>(0);
++    d_tt_a_sc a_sc_tm = tm_alloc.template allocate<d_tt_a_sc>(A_SC_BASE);
++    d_tt_b_sc b_sc_tm = tm_alloc.template allocate<d_tt_b_sc>(B_SC_BASE);
++
++    extern __shared__ int __shm[];
++    tma_swizzle_allocator al((int *)&__shm[0]);
++    typename G::a_fp4_tile &a_smem = al.allocate<typename G::a_fp4_tile>();
++    typename G::b_fp4_tile &b_smem = al.allocate<typename G::b_fp4_tile>();
++    auto (&a_sc_smem)[C::K_SCALE_CHUNKS] = al.allocate<typename G::sc_tile, C::K_SCALE_CHUNKS>();
++    auto (&b_sc_smem)[C::K_SCALE_CHUNKS * C::B_SCALE_GROUPS] =
++        al.allocate<typename G::sc_tile, C::K_SCALE_CHUNKS * C::B_SCALE_GROUPS>();
++
++    __shared__ semaphore src_finished[C::OUT_PHASES];
++    __shared__ semaphore tile_arrived[C::OUT_PHASES];
++    if (threadIdx.x == 0) {
++        #pragma unroll
++        for (int phase = 0; phase < C::OUT_PHASES; ++phase) {
++            init_semaphore(src_finished[phase], 0, 1);
++            init_semaphore(tile_arrived[phase], 0, 1);
++        }
++    }
++    __syncthreads();
++    fp4pv_cluster_sync<C>();
++    if (g.debug_stage == 1) {
++        return;
++    }
++
++    load_mxfp4_shape_a_tile<C>(a_smem, g, row_tile);
++    load_mxfp4_shape_b_tile<C>(b_smem, g, cta_rank, 0);
++    __syncthreads();
++    if (g.debug_stage == 2) {
++        return;
++    }
++    if (g.debug_stage == 8) {
++        const uint8_t *a_sc_src = &g.a_sc[(row_tile * g.a_scale_k_tiles) * 32 * 16];
++        load_mxfp4_shape_sc_tile_first_word(a_sc_smem[0], a_sc_src);
++        __syncthreads();
++        return;
++    }
++    if (g.debug_stage == 9) {
++        const uint8_t *b_sc_src = &g.b_sc[0];
++        load_mxfp4_shape_sc_tile_first_word(b_sc_smem[0], b_sc_src);
++        __syncthreads();
++        return;
++    }
++    if (g.debug_stage == 10) {
++        #pragma unroll
++        for (int k = 0; k < C::K_SCALE_CHUNKS; ++k) {
++            const uint8_t *a_sc_src = &g.a_sc[(row_tile * g.a_scale_k_tiles + k) * 32 * 16];
++            load_mxfp4_shape_sc_tile(a_sc_smem[k], a_sc_src);
++        }
++        __syncthreads();
++        return;
++    }
++    if (g.debug_stage == 11) {
++        #pragma unroll
++        for (int k = 0; k < C::K_SCALE_CHUNKS; ++k) {
++            #pragma unroll
++            for (int n_group = 0; n_group < C::B_SCALE_GROUPS; ++n_group) {
++                const uint8_t *b_sc_src = &g.b_sc[((n_group * g.b_scale_k_tiles + k) * 32 * 16)];
++                load_mxfp4_shape_sc_tile(b_sc_smem[k * C::B_SCALE_GROUPS + n_group], b_sc_src);
++            }
++        }
++        __syncthreads();
++        return;
++    }
++    #pragma unroll
++    for (int k = 0; k < C::K_SCALE_CHUNKS; ++k) {
++        const uint8_t *a_sc_src = &g.a_sc[(row_tile * g.a_scale_k_tiles + k) * 32 * 16];
++        load_mxfp4_shape_sc_tile(a_sc_smem[k], a_sc_src);
++        #pragma unroll
++        for (int n_group = 0; n_group < C::B_SCALE_GROUPS; ++n_group) {
++            const uint8_t *b_sc_src = &g.b_sc[((n_group * g.b_scale_k_tiles + k) * 32 * 16)];
++            load_mxfp4_shape_sc_tile(b_sc_smem[k * C::B_SCALE_GROUPS + n_group], b_sc_src);
++        }
++    }
++    __syncthreads();
++    if (g.debug_stage == 6) {
++        return;
++    }
++    const bool issuer_warp = (warpgroup::groupid() == 3) && (warpgroup::warpid() == 0) && (cta_rank == 0);
++    const bool issuer = issuer_warp && warp::elect_leader();
++    #pragma unroll
++    for (int out_phase = 0; out_phase < C::OUT_PHASES; ++out_phase) {
++        if constexpr (C::OUT_PHASES > 1) {
++            load_mxfp4_shape_b_tile<C>(b_smem, g, cta_rank, out_phase);
++            __syncthreads();
++        }
++        asm volatile("fence.proxy.async.shared::cta;\n" ::: "memory");
++        publish_cluster_shared_backing_if_needed<C>();
++        __syncthreads();
++        if (g.debug_stage == 7) {
++            return;
++        }
++        fp4pv_cluster_sync<C>();
++        if (g.debug_stage == 3) {
++            return;
++        }
++
++        if (issuer_warp) {
++            #pragma unroll
++            for (int k = 0; k < C::K_SCALE_CHUNKS; ++k) {
++                auto a_sc_tm_sub = a_sc_tm.template subtile<full_tt_fp8e8m0<16>>(k * 16);
++                fp4pv_load_mxnv_scale_async_cluster<C>(a_sc_tm_sub, a_sc_smem[k]);
++                #pragma unroll
++                for (int n_group = 0; n_group < C::ACTIVE_B_SCALE_GROUPS; ++n_group) {
++                    constexpr int ACTIVE_B_SCALE_GROUPS = C::ACTIVE_B_SCALE_GROUPS;
++                    const int src_group = out_phase * ACTIVE_B_SCALE_GROUPS + n_group;
++                    auto b_sc_tm_sub = b_sc_tm.template subtile<full_tt_fp8e8m0<16>>(
++                        k * ACTIVE_B_SCALE_GROUPS * 16 + n_group * 16);
++                    fp4pv_load_mxnv_scale_async_cluster<C>(
++                        b_sc_tm_sub, b_sc_smem[k * C::B_SCALE_GROUPS + src_group]);
++                }
++            }
++            tensor_load_wait();
++        }
++        __syncthreads();
++        if (g.debug_stage == 4) {
++            return;
++        }
++        if (issuer) {
++            tensor_before_thread_sync();
++            fp4pv_mm_cluster_ABt<C>(tt_output, a_smem, b_smem, a_sc_tm, b_sc_tm, src_finished[out_phase]);
++            tensor_commit<C::CLUSTER_SIZE>(tile_arrived[out_phase]);
++        }
++        __syncthreads();
++        if (g.debug_stage == 5) {
++            if (threadIdx.x == 0) {
++                wait(tile_arrived[out_phase], 0);
++            }
++            __syncthreads();
++            return;
++        }
++
++        if (warpgroup::groupid() == 2) {
++            wait(tile_arrived[out_phase], 0);
++            warpgroup::tma::store_async_read_wait<0>();
++            warpgroup::sync(warpgroup::groupid() + 1);
++            const int row = row_tile * C::Mb + warpgroup::laneid();
++            if (row >= g.rows) {
++                return;
++            }
++            constexpr float MXFP4_GEMM_SCALE_CORRECTION = 1.0f / 36.0f;
++            #pragma unroll
++            for (int col = 0; col < C::ACC_DVO; col += 16) {
++                float2 o_reg[8];
++                asm volatile("{tcgen05.ld.sync.aligned.32x32b.x16.b32 {%0,%1,%2,%3,%4,%5,%6,%7,%8,%9,%10,%11,%12,%13,%14,%15}, [%16];}"
++                    : "=f"(o_reg[0].x), "=f"(o_reg[0].y), "=f"(o_reg[1].x), "=f"(o_reg[1].y),
++                      "=f"(o_reg[2].x), "=f"(o_reg[2].y), "=f"(o_reg[3].x), "=f"(o_reg[3].y),
++                      "=f"(o_reg[4].x), "=f"(o_reg[4].y), "=f"(o_reg[5].x), "=f"(o_reg[5].y),
++                      "=f"(o_reg[6].x), "=f"(o_reg[6].y), "=f"(o_reg[7].x), "=f"(o_reg[7].y)
++                    : "r"(tt_output.addr + ((warpgroup::warpid() * 32) << 16) + col));
++                tensor_load_wait();
++                #pragma unroll
++                for (int i = 0; i < 8; ++i) {
++                    o_reg[i].x *= MXFP4_GEMM_SCALE_CORRECTION;
++                    o_reg[i].y *= MXFP4_GEMM_SCALE_CORRECTION;
++                    bf16_2 packed = __float22bfloat162_rn(o_reg[i]);
++                    *reinterpret_cast<bf16_2 *>(
++                        &g.o_direct[(row * C::Dvo) + out_phase * C::ACC_DVO + col + i * 2]) = packed;
++                }
++            }
++        }
++        __syncthreads();
++        fp4pv_cluster_sync<C>();
++    }
++}
++
+ enum debug_stage_cut_mode : int {
+     DEBUG_STAGE_CUT_FULL = 0,
+     DEBUG_STAGE_CUT_ISSUE3_ONLY = 1,
+diff --git a/tk_fa4/fp4_fa4_fwd/fwd_host_dispatch.inc b/tk_fa4/fp4_fa4_fwd/fwd_host_dispatch.inc
+index 20afc51..06c2bff 100644
+--- a/tk_fa4/fp4_fa4_fwd/fwd_host_dispatch.inc
++++ b/tk_fa4/fp4_fa4_fwd/fwd_host_dispatch.inc
+@@ -692,6 +692,207 @@ void dispatch_mxfp4_pv_from_p_k256_debug(at::Tensor P_fp4,
+     CUDACHECK(cudaLaunchKernelEx(launch_config, kernel_mxfp4_pv_from_p_k256_debug<C>, g));
+ }
+
++template <int KTile, int NTile, int ClusterSize, int ScaleLayout>
++static void launch_mxfp4_tcgen_shape_debug(at::Tensor A_fp4,
++                                           at::Tensor A_sc,
++                                           at::Tensor B_fp4,
++                                           at::Tensor B_sc,
++                                           at::Tensor O,
++                                           int debug_stage) {
++    using C = config_mxfp4_tcgen_shape_debug<KTile, NTile, ClusterSize, ScaleLayout>;
++    using G = globals_mxfp4_tcgen_shape_debug<C>;
++    G g{
++        reinterpret_cast<const uint8_t *>(A_fp4.data_ptr()),
++        reinterpret_cast<const uint8_t *>(A_sc.data_ptr()),
++        reinterpret_cast<const uint8_t *>(B_fp4.data_ptr()),
++        reinterpret_cast<const uint8_t *>(B_sc.data_ptr()),
++        reinterpret_cast<bf16 *>(O.data_ptr()),
++        (int)A_fp4.size(0),
++        (int)A_fp4.size(1),
++        (int)B_fp4.size(1),
++        (int)A_sc.size(1),
++        (int)B_sc.size(1),
++        debug_stage
++    };
++    CUDACHECK(cudaFuncSetAttribute(kernel_mxfp4_tcgen_shape_debug<C>, cudaFuncAttributeMaxDynamicSharedMemorySize, g.dynamic_shared_memory()));
++    LaunchConfig<true, false> launch_config(g.grid(), g.block(), g.dynamic_shared_memory(), at::cuda::getCurrentCUDAStream(), C::CLUSTER_SIZE);
++    CUDACHECK(cudaLaunchKernelEx(launch_config, kernel_mxfp4_tcgen_shape_debug<C>, g));
++}
++
++void dispatch_mxfp4_tcgen_shape_debug(at::Tensor A_fp4,
++                                      at::Tensor A_sc,
++                                      at::Tensor B_fp4,
++                                      at::Tensor B_sc,
++                                      at::Tensor O,
++                                      int k_tile,
++                                      int n_tile,
++                                      int ncta,
++                                      int scale_layout,
++                                      int debug_stage) {
++    CHECK_INPUT(A_fp4);
++    CHECK_INPUT(A_sc);
++    CHECK_INPUT(B_fp4);
++    CHECK_INPUT(B_sc);
++    CHECK_INPUT(O);
++    TORCH_CHECK(A_fp4.dtype() == at::ScalarType::Float4_e2m1fn_x2, "A_fp4 must be float4_e2m1fn_x2");
++    TORCH_CHECK(B_fp4.dtype() == at::ScalarType::Float4_e2m1fn_x2, "B_fp4 must be float4_e2m1fn_x2");
++    TORCH_CHECK(A_sc.dtype() == at::ScalarType::Byte, "A_sc must be uint8 E8M0 scales");
++    TORCH_CHECK(B_sc.dtype() == at::ScalarType::Byte, "B_sc must be uint8 E8M0 scales");
++    TORCH_CHECK(O.dtype() == at::ScalarType::BFloat16, "O must be bfloat16");
++    TORCH_CHECK(A_fp4.dim() == 2, "A_fp4 must have shape (rows, packed_k)");
++    TORCH_CHECK(B_fp4.dim() == 2, "B_fp4 must have shape (n_tile, packed_k)");
++    TORCH_CHECK(A_sc.dim() == 4, "A_sc must have shape (rows/128, k_scale_tiles, 32, 16)");
++    TORCH_CHECK(B_sc.dim() == 4, "B_sc must have shape (n_tile/128, k_scale_tiles, 32, 16)");
++    TORCH_CHECK(O.dim() == 2, "O must have shape (rows, n_tile)");
++    TORCH_CHECK(k_tile == 64 || k_tile == 128 || k_tile == 256, "k_tile must be 64, 128, or 256");
++    TORCH_CHECK(n_tile == 128 || n_tile == 256 || n_tile == 512, "n_tile must be 128, 256, or 512");
++    TORCH_CHECK(ncta == 1 || ncta == 2, "ncta must be 1 or 2");
++    TORCH_CHECK(scale_layout == 0 || scale_layout == 1, "scale_layout must be 0(compact) or 1(gemm-like)");
++    TORCH_CHECK(debug_stage >= 0 && debug_stage <= 11,
++                "debug_stage must be 0(full), 1(preload), 2(payload), 3(scale-smem-published), 4(scale-tmem), 5(tcgen-no-store), 6(scale-smem-copy), 7(scale-smem-publish), 8(a-scale-first-word), 9(b-scale-first-word), 10(a-scale-full), or 11(b-scale-full)");
++    const int rows = A_fp4.size(0);
++    const int packed_k = A_fp4.size(1);
++    const int scale_k_tiles = (k_tile + 127) / 128;
++    TORCH_CHECK(rows > 0 && rows % 128 == 0, "A rows must be a positive multiple of 128");
++    TORCH_CHECK(ncta == 1 || rows % 256 == 0, "ncta=2 requires rows divisible by 256");
++    TORCH_CHECK(packed_k * 2 >= k_tile, "A_fp4 packed_k is smaller than requested k_tile");
++    TORCH_CHECK(B_fp4.size(0) == n_tile && B_fp4.size(1) * 2 >= k_tile,
++                "B_fp4 must have shape (n_tile, packed_k>=k_tile/2)");
++    TORCH_CHECK(A_sc.size(0) == rows / 128 && A_sc.size(1) >= scale_k_tiles &&
++                A_sc.size(2) == 32 && A_sc.size(3) == 16,
++                "A_sc must have shape (rows/128, k_scale_tiles>=ceil(k/128), 32, 16)");
++    TORCH_CHECK(B_sc.size(0) == n_tile / 128 && B_sc.size(1) >= scale_k_tiles &&
++                B_sc.size(2) == 32 && B_sc.size(3) == 16,
++                "B_sc must have shape (n_tile/128, k_scale_tiles>=ceil(k/128), 32, 16)");
++    TORCH_CHECK(O.size(0) == rows && O.size(1) == n_tile,
++                "O must have shape (A rows, n_tile)");
++
++    if (k_tile == 64 && n_tile == 128 && ncta == 1 && scale_layout == 0) {
++        launch_mxfp4_tcgen_shape_debug<64, 128, 1, 0>(A_fp4, A_sc, B_fp4, B_sc, O, debug_stage);
++    } else if (k_tile == 64 && n_tile == 128 && ncta == 2 && scale_layout == 0) {
++        launch_mxfp4_tcgen_shape_debug<64, 128, 2, 0>(A_fp4, A_sc, B_fp4, B_sc, O, debug_stage);
++    } else if (k_tile == 64 && n_tile == 256 && ncta == 1 && scale_layout == 0) {
++        launch_mxfp4_tcgen_shape_debug<64, 256, 1, 0>(A_fp4, A_sc, B_fp4, B_sc, O, debug_stage);
++    } else if (k_tile == 64 && n_tile == 256 && ncta == 2 && scale_layout == 0) {
++        launch_mxfp4_tcgen_shape_debug<64, 256, 2, 0>(A_fp4, A_sc, B_fp4, B_sc, O, debug_stage);
++    } else if (k_tile == 64 && n_tile == 512 && ncta == 1 && scale_layout == 0) {
++        launch_mxfp4_tcgen_shape_debug<64, 512, 1, 0>(A_fp4, A_sc, B_fp4, B_sc, O, debug_stage);
++    } else if (k_tile == 64 && n_tile == 512 && ncta == 2 && scale_layout == 0) {
++        launch_mxfp4_tcgen_shape_debug<64, 512, 2, 0>(A_fp4, A_sc, B_fp4, B_sc, O, debug_stage);
++    } else if (k_tile == 128 && n_tile == 128 && ncta == 1 && scale_layout == 0) {
++        launch_mxfp4_tcgen_shape_debug<128, 128, 1, 0>(A_fp4, A_sc, B_fp4, B_sc, O, debug_stage);
++    } else if (k_tile == 128 && n_tile == 128 && ncta == 2 && scale_layout == 0) {
++        launch_mxfp4_tcgen_shape_debug<128, 128, 2, 0>(A_fp4, A_sc, B_fp4, B_sc, O, debug_stage);
++    } else if (k_tile == 128 && n_tile == 256 && ncta == 1 && scale_layout == 0) {
++        launch_mxfp4_tcgen_shape_debug<128, 256, 1, 0>(A_fp4, A_sc, B_fp4, B_sc, O, debug_stage);
++    } else if (k_tile == 128 && n_tile == 256 && ncta == 2 && scale_layout == 0) {
++        launch_mxfp4_tcgen_shape_debug<128, 256, 2, 0>(A_fp4, A_sc, B_fp4, B_sc, O, debug_stage);
++    } else if (k_tile == 128 && n_tile == 512 && ncta == 1 && scale_layout == 0) {
++        launch_mxfp4_tcgen_shape_debug<128, 512, 1, 0>(A_fp4, A_sc, B_fp4, B_sc, O, debug_stage);
++    } else if (k_tile == 128 && n_tile == 512 && ncta == 2 && scale_layout == 0) {
++        launch_mxfp4_tcgen_shape_debug<128, 512, 2, 0>(A_fp4, A_sc, B_fp4, B_sc, O, debug_stage);
++    } else if (k_tile == 256 && n_tile == 128 && ncta == 1 && scale_layout == 0) {
++        launch_mxfp4_tcgen_shape_debug<256, 128, 1, 0>(A_fp4, A_sc, B_fp4, B_sc, O, debug_stage);
++    } else if (k_tile == 256 && n_tile == 128 && ncta == 2 && scale_layout == 0) {
++        launch_mxfp4_tcgen_shape_debug<256, 128, 2, 0>(A_fp4, A_sc, B_fp4, B_sc, O, debug_stage);
++    } else if (k_tile == 256 && n_tile == 256 && ncta == 1 && scale_layout == 0) {
++        launch_mxfp4_tcgen_shape_debug<256, 256, 1, 0>(A_fp4, A_sc, B_fp4, B_sc, O, debug_stage);
++    } else if (k_tile == 256 && n_tile == 256 && ncta == 2 && scale_layout == 0) {
++        launch_mxfp4_tcgen_shape_debug<256, 256, 2, 0>(A_fp4, A_sc, B_fp4, B_sc, O, debug_stage);
++    } else if (k_tile == 256 && n_tile == 512 && ncta == 1 && scale_layout == 0) {
++        launch_mxfp4_tcgen_shape_debug<256, 512, 1, 0>(A_fp4, A_sc, B_fp4, B_sc, O, debug_stage);
++    } else if (k_tile == 256 && n_tile == 512 && ncta == 2 && scale_layout == 0) {
++        launch_mxfp4_tcgen_shape_debug<256, 512, 2, 0>(A_fp4, A_sc, B_fp4, B_sc, O, debug_stage);
++    } else if (k_tile == 128 && n_tile == 128 && ncta == 2 && scale_layout == 1) {
++        launch_mxfp4_tcgen_shape_debug<128, 128, 2, 1>(A_fp4, A_sc, B_fp4, B_sc, O, debug_stage);
++    } else if (k_tile == 256 && n_tile == 256 && ncta == 2 && scale_layout == 1) {
++        launch_mxfp4_tcgen_shape_debug<256, 256, 2, 1>(A_fp4, A_sc, B_fp4, B_sc, O, debug_stage);
++    } else {
++        TORCH_CHECK(false, "unsupported explicit mxfp4_tcgen_shape_debug combination");
++    }
++}
++
++template <int QuarterTile, int Quarters>
++static void launch_mxfp4_joint_qk_pv_quarter_debug(at::Tensor A_fp4,
++                                                   at::Tensor A_sc,
++                                                   at::Tensor B_fp4,
++                                                   at::Tensor B_sc,
++                                                   at::Tensor O,
++                                                   int debug_stage) {
++    using C = config_mxfp4_joint_qk_pv_quarter_debug<QuarterTile, Quarters>;
++    using G = globals_mxfp4_joint_qk_pv_quarter_debug<C>;
++    G g{
++        reinterpret_cast<const uint8_t *>(A_fp4.data_ptr()),
++        reinterpret_cast<const uint8_t *>(A_sc.data_ptr()),
++        reinterpret_cast<const uint8_t *>(B_fp4.data_ptr()),
++        reinterpret_cast<const uint8_t *>(B_sc.data_ptr()),
++        reinterpret_cast<bf16 *>(O.data_ptr()),
++        (int)A_fp4.size(0),
++        (int)A_fp4.size(1),
++        (int)B_fp4.size(1),
++        (int)A_sc.size(1),
++        (int)B_sc.size(1),
++        debug_stage
++    };
++    CUDACHECK(cudaFuncSetAttribute(
++        kernel_mxfp4_joint_qk_pv_quarter_debug<C>,
++        cudaFuncAttributeMaxDynamicSharedMemorySize,
++        g.dynamic_shared_memory()));
++    LaunchConfig<true, false> launch_config(
++        g.grid(), g.block(), g.dynamic_shared_memory(), at::cuda::getCurrentCUDAStream(), C::CLUSTER_SIZE);
++    CUDACHECK(cudaLaunchKernelEx(launch_config, kernel_mxfp4_joint_qk_pv_quarter_debug<C>, g));
++}
++
++void dispatch_mxfp4_joint_qk_pv_quarter_debug(at::Tensor A_fp4,
++                                               at::Tensor A_sc,
++                                               at::Tensor B_fp4,
++                                               at::Tensor B_sc,
++                                               at::Tensor O,
++                                               int quarter_tile,
++                                               int quarters,
++                                               int debug_stage) {
++    CHECK_INPUT(A_fp4);
++    CHECK_INPUT(A_sc);
++    CHECK_INPUT(B_fp4);
++    CHECK_INPUT(B_sc);
++    CHECK_INPUT(O);
++    TORCH_CHECK(A_fp4.dtype() == at::ScalarType::Float4_e2m1fn_x2, "A_fp4 must be float4_e2m1fn_x2");
++    TORCH_CHECK(B_fp4.dtype() == at::ScalarType::Float4_e2m1fn_x2, "B_fp4 must be float4_e2m1fn_x2");
++    TORCH_CHECK(A_sc.dtype() == at::ScalarType::Byte, "A_sc must be uint8 E8M0 scales");
++    TORCH_CHECK(B_sc.dtype() == at::ScalarType::Byte, "B_sc must be uint8 E8M0 scales");
++    TORCH_CHECK(O.dtype() == at::ScalarType::BFloat16, "O must be bfloat16");
++    TORCH_CHECK(A_fp4.dim() == 2, "A_fp4 must have shape (rows, packed_k)");
++    TORCH_CHECK(B_fp4.dim() == 2, "B_fp4 must have shape (quarter_tile * quarters, packed_k)");
++    TORCH_CHECK(A_sc.dim() == 4, "A_sc must have shape (rows/128, k_scale_tiles, 32, 16)");
++    TORCH_CHECK(B_sc.dim() == 4, "B_sc must have shape (quarters, k_scale_tiles, 32, 16)");
++    TORCH_CHECK(O.dim() == 2, "O must have shape (rows, 128)");
++    TORCH_CHECK(quarter_tile == 128, "quarter_tile must be 128 for this diagnostic");
++    TORCH_CHECK(quarters == 1 || quarters == 2 || quarters == 4, "quarters must be 1, 2, or 4");
++    TORCH_CHECK(debug_stage >= 0 && debug_stage <= 6,
++                "debug_stage must be 0(full), 1(pre-init), 2(qk+pv no-store), 3(payload/scale publish), 4(pv no-store), 5(first-quarter store), or 6(pv-only full)");
++    const int rows = A_fp4.size(0);
++    const int scale_k_tiles = (quarter_tile + 127) / 128;
++    TORCH_CHECK(rows > 0 && rows % 128 == 0, "A rows must be a positive multiple of 128");
++    TORCH_CHECK(A_fp4.size(1) * 2 >= quarter_tile, "A_fp4 packed_k is smaller than quarter_tile");
++    TORCH_CHECK(B_fp4.size(0) == quarter_tile * quarters && B_fp4.size(1) * 2 >= quarter_tile,
++                "B_fp4 must have shape (quarter_tile * quarters, packed_k>=quarter_tile/2)");
++    TORCH_CHECK(A_sc.size(0) == rows / 128 && A_sc.size(1) >= scale_k_tiles &&
++                A_sc.size(2) == 32 && A_sc.size(3) == 16,
++                "A_sc must have shape (rows/128, k_scale_tiles>=1, 32, 16)");
++    TORCH_CHECK(B_sc.size(0) == quarters && B_sc.size(1) >= scale_k_tiles &&
++                B_sc.size(2) == 32 && B_sc.size(3) == 16,
++                "B_sc must have shape (quarters, k_scale_tiles>=1, 32, 16)");
++    TORCH_CHECK(O.size(0) == rows && O.size(1) == 128, "O must have shape (rows, 128)");
++
++    if (quarters == 1) {
++        launch_mxfp4_joint_qk_pv_quarter_debug<128, 1>(A_fp4, A_sc, B_fp4, B_sc, O, debug_stage);
++    } else if (quarters == 2) {
++        launch_mxfp4_joint_qk_pv_quarter_debug<128, 2>(A_fp4, A_sc, B_fp4, B_sc, O, debug_stage);
++    } else {
++        launch_mxfp4_joint_qk_pv_quarter_debug<128, 4>(A_fp4, A_sc, B_fp4, B_sc, O, debug_stage);
++    }
++}
++
+ void dispatch_two_tile_pv_tmem_debug(
+     at::Tensor P_fp4,
+     at::Tensor P_sc_prepared,
+@@ -1471,6 +1672,10 @@ static void dispatch_forward_streaming_live_mxfp4_impl(
+             launch_mxfp4(std::type_identity<config_fp4pv_3wg_dual_score_direct_pscale_scorepack_prescaled_floor_x1sc_fusedmax_qkscfix_diagzero_prepub_earlyreuse_arrivereuse_pscreusefold_skippscarrive_persistouter_clc_onevpub_fullvsc_vtma_vstma_dualaccum_directrescale_decoupled_pstage2_pregs_force_persistent<128, 128, 192, 128, 200, 56, 112, 1>>{}, false);
+         } else if (std::strcmp(fwd_config, "dualaccum_directrescale_scorepack_prescaled_floor_x1sc_fusedmax_diagzero_prepub_earlyreuse_arrivereuse_pscreusefold_skippscarrive_persistouter_clc_schedwg4_onevpub_fullvsc_vtma_vstma_pstage2_q200_p112_o56_qkscfix") == 0) {
+             launch_mxfp4(std::type_identity<config_fp4pv_4wg_dual_score_direct_pscale_scorepack_prescaled_floor_x1sc_fusedmax_qkscfix_diagzero_prepub_earlyreuse_arrivereuse_pscreusefold_skippscarrive_persistouter_clc_schedwg4_onevpub_fullvsc_vtma_vstma_dualaccum_directrescale_decoupled_pstage2_pregs_force_persistent<128, 128, 192, 128, 200, 56, 112, 1>>{}, false);
++        } else if (std::strcmp(fwd_config, "dualaccum_directrescale_scorepack_prescaled_floor_x1sc_fusedmax_diagzero_prepub_earlyreuse_arrivereuse_pscreusefold_skippscarrive_persistouter_clc_k64halfready_onevpub_fullvsc_vtma_vstma_pstage2_q200_p112_o56_qkscfix") == 0) {
++            launch_mxfp4(std::type_identity<config_fp4pv_3wg_dual_score_direct_pscale_scorepack_prescaled_floor_x1sc_fusedmax_qkscfix_diagzero_prepub_earlyreuse_arrivereuse_pscreusefold_skippscarrive_persistouter_clc_k64halfready_onevpub_fullvsc_vtma_vstma_dualaccum_directrescale_decoupled_pstage2_pregs_force_persistent<128, 128, 192, 128, 200, 56, 112, 1>>{}, false);
++        } else if (std::strcmp(fwd_config, "dualaccum_directrescale_scorepack_prescaled_floor_x1sc_fusedmax_diagzero_prepub_earlyreuse_arrivereuse_pscreusefold_skippscarrive_persistouter_clc_schedwg4_k64halfready_onevpub_fullvsc_vtma_vstma_pstage2_q200_p112_o56_qkscfix") == 0) {
++            launch_mxfp4(std::type_identity<config_fp4pv_4wg_dual_score_direct_pscale_scorepack_prescaled_floor_x1sc_fusedmax_qkscfix_diagzero_prepub_earlyreuse_arrivereuse_pscreusefold_skippscarrive_persistouter_clc_schedwg4_k64halfready_onevpub_fullvsc_vtma_vstma_dualaccum_directrescale_decoupled_pstage2_pregs_force_persistent<128, 128, 192, 128, 200, 56, 112, 1>>{}, false);
+         } else if (std::strcmp(fwd_config, "dualaccum_directrescale_scorepack_prescaled_floor_x1sc_fusedmax_diagzero_prepub_earlyreuse_arrivereuse_pscreusefold_skippscarrive_persistouter_clc_schedwg4_slotlife_diag_onevpub_fullvsc_vtma_vstma_pstage2_q200_p112_o56_qkscfix") == 0) {
+             launch_mxfp4(std::type_identity<config_fp4pv_4wg_dual_score_direct_pscale_scorepack_prescaled_floor_x1sc_fusedmax_qkscfix_diagzero_prepub_earlyreuse_arrivereuse_pscreusefold_skippscarrive_persistouter_clc_schedwg4_slotlife_diag_onevpub_fullvsc_vtma_vstma_dualaccum_directrescale_decoupled_pstage2_pregs_force_persistent<128, 128, 192, 128, 200, 56, 112, 1>>{}, false);
+         } else if (std::strcmp(fwd_config, "dualaccum_directrescale_scorepack_prescaled_floor_x1sc_fusedmax_diagzero_prepub_earlyreuse_arrivereuse_pscreusefold_skippscarrive_persistouter_clc_schedwg4_slotlife_schedown_taskdiag_onevpub_fullvsc_vtma_vstma_pstage2_q200_p112_o56_qkscfix") == 0) {
+@@ -2158,6 +2363,10 @@ static void dispatch_forward_streaming_live_mxfp4_impl(
+             launch_mxfp4(std::type_identity<config_fp4pv_3wg_dual_score_direct_pscale_scorepack_prescaled_floor_x1sc_fusedmax_qkscfix_diagzero_prepub_earlyreuse_arrivereuse_pscreusefold_skippscarrive_persistouter_clc_onevpub_fullvsc_vtma_vstma_dualaccum_directrescale_decoupled_pstage2_pregs_force_persistent<128, 128, 192, 128, 200, 56, 112, 1>>{}, false);
+         } else if (std::strcmp(fwd_config, "dualaccum_directrescale_scorepack_prescaled_floor_x1sc_fusedmax_diagzero_prepub_earlyreuse_arrivereuse_pscreusefold_skippscarrive_persistouter_clc_schedwg4_onevpub_fullvsc_vtma_vstma_pstage2_q200_p112_o56_qkscfix") == 0) {
+             launch_mxfp4(std::type_identity<config_fp4pv_4wg_dual_score_direct_pscale_scorepack_prescaled_floor_x1sc_fusedmax_qkscfix_diagzero_prepub_earlyreuse_arrivereuse_pscreusefold_skippscarrive_persistouter_clc_schedwg4_onevpub_fullvsc_vtma_vstma_dualaccum_directrescale_decoupled_pstage2_pregs_force_persistent<128, 128, 192, 128, 200, 56, 112, 1>>{}, false);
++        } else if (std::strcmp(fwd_config, "dualaccum_directrescale_scorepack_prescaled_floor_x1sc_fusedmax_diagzero_prepub_earlyreuse_arrivereuse_pscreusefold_skippscarrive_persistouter_clc_k64halfready_onevpub_fullvsc_vtma_vstma_pstage2_q200_p112_o56_qkscfix") == 0) {
++            launch_mxfp4(std::type_identity<config_fp4pv_3wg_dual_score_direct_pscale_scorepack_prescaled_floor_x1sc_fusedmax_qkscfix_diagzero_prepub_earlyreuse_arrivereuse_pscreusefold_skippscarrive_persistouter_clc_k64halfready_onevpub_fullvsc_vtma_vstma_dualaccum_directrescale_decoupled_pstage2_pregs_force_persistent<128, 128, 192, 128, 200, 56, 112, 1>>{}, false);
++        } else if (std::strcmp(fwd_config, "dualaccum_directrescale_scorepack_prescaled_floor_x1sc_fusedmax_diagzero_prepub_earlyreuse_arrivereuse_pscreusefold_skippscarrive_persistouter_clc_schedwg4_k64halfready_onevpub_fullvsc_vtma_vstma_pstage2_q200_p112_o56_qkscfix") == 0) {
++            launch_mxfp4(std::type_identity<config_fp4pv_4wg_dual_score_direct_pscale_scorepack_prescaled_floor_x1sc_fusedmax_qkscfix_diagzero_prepub_earlyreuse_arrivereuse_pscreusefold_skippscarrive_persistouter_clc_schedwg4_k64halfready_onevpub_fullvsc_vtma_vstma_dualaccum_directrescale_decoupled_pstage2_pregs_force_persistent<128, 128, 192, 128, 200, 56, 112, 1>>{}, false);
+         } else if (std::strcmp(fwd_config, "dualaccum_directrescale_scorepack_prescaled_floor_x1sc_fusedmax_diagzero_prepub_earlyreuse_arrivereuse_pscreusefold_skippscarrive_persistouter_clc_schedwg4_slotlife_diag_onevpub_fullvsc_vtma_vstma_pstage2_q200_p112_o56_qkscfix") == 0) {
+             launch_mxfp4(std::type_identity<config_fp4pv_4wg_dual_score_direct_pscale_scorepack_prescaled_floor_x1sc_fusedmax_qkscfix_diagzero_prepub_earlyreuse_arrivereuse_pscreusefold_skippscarrive_persistouter_clc_schedwg4_slotlife_diag_onevpub_fullvsc_vtma_vstma_dualaccum_directrescale_decoupled_pstage2_pregs_force_persistent<128, 128, 192, 128, 200, 56, 112, 1>>{}, false);
+         } else if (std::strcmp(fwd_config, "dualaccum_directrescale_scorepack_prescaled_floor_x1sc_fusedmax_diagzero_prepub_earlyreuse_arrivereuse_pscreusefold_skippscarrive_persistouter_clc_schedwg4_slotlife_schedown_taskdiag_onevpub_fullvsc_vtma_vstma_pstage2_q200_p112_o56_qkscfix") == 0) {
+diff --git a/tk_fa4/fp4_fa4_fwd/fwd_pybind.inc b/tk_fa4/fp4_fa4_fwd/fwd_pybind.inc
+index bca9160..7852699 100644
+--- a/tk_fa4/fp4_fa4_fwd/fwd_pybind.inc
++++ b/tk_fa4/fp4_fa4_fwd/fwd_pybind.inc
+@@ -26,4 +26,6 @@
+     m.def("mxfp4_v_tma_tile_check_fullg_debug", &dispatch_mxfp4_v_tma_tile_check_fullg_debug, "Debug one MXFP4 V tile using the production qkscfix/vtma globals; mode 0 compare, 1 manual, 2 TMA, 3 TMA wait");
+     m.def("mxfp4_pv_from_p_chunked_debug", &dispatch_mxfp4_pv_from_p_chunked_debug, "Debug MXFP4 PV from compact HBM P/V, accumulating K chunks in one launch");
+     m.def("mxfp4_pv_from_p_k256_debug", &dispatch_mxfp4_pv_from_p_k256_debug, "Debug MXFP4 PV from compact HBM P/V, consuming two K128 chunks per iteration");
++    m.def("mxfp4_tcgen_shape_debug", &dispatch_mxfp4_tcgen_shape_debug, "Standalone MXFP4 TCGEN shape diagnostic with real FP4 payloads and E8M0 scales");
++    m.def("mxfp4_joint_qk_pv_quarter_debug", &dispatch_mxfp4_joint_qk_pv_quarter_debug, "Standalone MXFP4 QK then placeholder-P PV quarter diagnostic with score/output TMEM reuse");
+ #endif
+diff --git a/tk_fa4/fp4_pv_experiments.py b/tk_fa4/fp4_pv_experiments.py
+index 1fa254b..58a1346 100644
+--- a/tk_fa4/fp4_pv_experiments.py
++++ b/tk_fa4/fp4_pv_experiments.py
+@@ -9,6 +9,7 @@ import importlib.util
+ import json
+ import math
+ import os
++import statistics
+ import subprocess
+ import sys
+ import time
+@@ -15808,6 +15809,261 @@ def _native_mxfp4_pv_from_p_k256_debug(
+     return out_bshd if output_layout == "bshd" else out_bshd.permute(0, 2, 1, 3).contiguous()
+
+
++def make_mxfp4_tcgen_shape_debug_inputs(
++    *,
++    rows: int,
++    n_tile: int,
++    k_tile: int,
++    seed: int = 0,
++    device: str | torch.device = "cuda",
++    quant_mode: str | None = None,
++) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
++    """Create real MXFP4 payloads/scales for the standalone TCGEN shape debug kernel."""
++    if rows % _TILE != 0:
++        raise ValueError("rows must be divisible by 128")
++    if n_tile not in (128, 256, 512):
++        raise ValueError("n_tile must be 128, 256, or 512")
++    if k_tile not in (64, 128, 256):
++        raise ValueError("k_tile must be 64, 128, or 256")
++    resolved_device = torch.device(device)
++    gen = torch.Generator(device=resolved_device)
++    gen.manual_seed(int(seed))
++    a_bf16 = torch.randn((rows, k_tile), device=resolved_device, dtype=torch.bfloat16, generator=gen)
++    b_bf16 = torch.randn((n_tile, k_tile), device=resolved_device, dtype=torch.bfloat16, generator=gen)
++    a_rec = _quantize_rows_2d_mxfp4(
++        a_bf16,
++        backend="mxfp4",
++        quant_mode=quant_mode,
++        pad_cols_to_tile=(k_tile < _TILE),
++    )
++    b_rec = _quantize_rows_2d_mxfp4(
++        b_bf16,
++        backend="mxfp4",
++        quant_mode=quant_mode,
++        pad_cols_to_tile=(k_tile < _TILE),
++    )
++    return (
++        a_rec["fp4"].contiguous(),
++        a_rec["scales"].contiguous(),
++        b_rec["fp4"].contiguous(),
++        b_rec["scales"].contiguous(),
++    )
++
++
++def _native_mxfp4_tcgen_shape_debug(
++    a_fp4: torch.Tensor,
++    a_sc: torch.Tensor,
++    b_fp4: torch.Tensor,
++    b_sc: torch.Tensor,
++    *,
++    k_tile: int,
++    n_tile: int,
++    ncta: int,
++    scale_layout: int = 0,
++    debug_stage: int = 0,
++) -> torch.Tensor:
++    ext = _load_forward_experiments_ext()
++    _check_cuda_contiguous(a_fp4, "a_fp4")
++    _check_cuda_contiguous(a_sc, "a_sc")
++    _check_cuda_contiguous(b_fp4, "b_fp4")
++    _check_cuda_contiguous(b_sc, "b_sc")
++    if a_fp4.dtype != torch.float4_e2m1fn_x2 or b_fp4.dtype != torch.float4_e2m1fn_x2:
++        raise ValueError("shape debug expects float4_e2m1fn_x2 payload tensors")
++    if a_sc.dtype != torch.uint8 or b_sc.dtype != torch.uint8:
++        raise ValueError("shape debug expects uint8 E8M0 scale tensors")
++    rows = int(a_fp4.shape[0])
++    out = torch.empty((rows, int(n_tile)), device=a_fp4.device, dtype=torch.bfloat16)
++    with _cuda_device_ctx(a_fp4.device):
++        ext.mxfp4_tcgen_shape_debug(
++            a_fp4,
++            a_sc,
++            b_fp4,
++            b_sc,
++            out,
++            int(k_tile),
++            int(n_tile),
++            int(ncta),
++            int(scale_layout),
++            int(debug_stage),
++        )
++    return out
++
++
++def benchmark_mxfp4_tcgen_shape_debug(
++    *,
++    rows: int = 65536,
++    n_tile: int = 128,
++    k_tile: int = 128,
++    ncta: int = 2,
++    scale_layout: int = 0,
++    debug_stage: int = 0,
++    seed: int = 0,
++    warmup: int = 2,
++    iters: int = 5,
++    device: str | torch.device = "cuda",
++    timeout_ms: float | None = _CUDA_EVENT_TIMEOUT_MS,
++) -> dict[str, Any]:
++    resolved_device = _benchmark_cuda_preflight(
++        device,
++        what="benchmark_mxfp4_tcgen_shape_debug",
++    )
++    a_fp4, a_sc, b_fp4, b_sc = make_mxfp4_tcgen_shape_debug_inputs(
++        rows=rows,
++        n_tile=n_tile,
++        k_tile=k_tile,
++        seed=seed,
++        device=resolved_device,
++    )
++    timeout = _CUDA_EVENT_TIMEOUT_MS if timeout_ms is None else float(timeout_ms)
++
++    def run_once() -> torch.Tensor:
++        return _native_mxfp4_tcgen_shape_debug(
++            a_fp4,
++            a_sc,
++            b_fp4,
++            b_sc,
++            k_tile=k_tile,
++            n_tile=n_tile,
++            ncta=ncta,
++            scale_layout=scale_layout,
++            debug_stage=debug_stage,
++        )
++
++    for _ in range(max(0, warmup)):
++        out = run_once()
++    _wait_for_current_stream(resolved_device, timeout_ms=timeout, what="mxfp4_tcgen_shape_debug warmup")
++
++    samples: list[float] = []
++    out = None
++    stream = torch.cuda.current_stream(device=resolved_device)
++    for _ in range(max(1, iters)):
++        start = torch.cuda.Event(enable_timing=True)
++        end = torch.cuda.Event(enable_timing=True)
++        start.record(stream)
++        out = run_once()
++        end.record(stream)
++        _wait_for_event(end, timeout_ms=timeout, what="mxfp4_tcgen_shape_debug timing")
++        samples.append(float(start.elapsed_time(end)))
++    assert out is not None
++    out_f = out.float()
++    return {
++        "rows": int(rows),
++        "n_tile": int(n_tile),
++        "k_tile": int(k_tile),
++        "ncta": int(ncta),
++        "scale_layout": int(scale_layout),
++        "debug_stage": int(debug_stage),
++        "ms": float(statistics.median(samples)),
++        "samples_ms": samples,
++        "finite": bool(torch.isfinite(out_f).all().item()),
++        "nonzero": bool((out_f.abs().sum() > 0).item()),
++        "abs_sum": float(out_f.abs().sum().item()),
++        "max_abs": float(out_f.abs().max().item()),
++    }
++
++
++def _native_mxfp4_joint_qk_pv_quarter_debug(
++    a_fp4: torch.Tensor,
++    a_sc: torch.Tensor,
++    b_fp4: torch.Tensor,
++    b_sc: torch.Tensor,
++    *,
++    quarter_tile: int = 128,
++    quarters: int = 4,
++    debug_stage: int = 0,
++) -> torch.Tensor:
++    ext = _load_forward_experiments_ext()
++    _check_cuda_contiguous(a_fp4, "a_fp4")
++    _check_cuda_contiguous(a_sc, "a_sc")
++    _check_cuda_contiguous(b_fp4, "b_fp4")
++    _check_cuda_contiguous(b_sc, "b_sc")
++    if a_fp4.dtype != torch.float4_e2m1fn_x2 or b_fp4.dtype != torch.float4_e2m1fn_x2:
++        raise ValueError("joint QK/PV debug expects float4_e2m1fn_x2 payload tensors")
++    if a_sc.dtype != torch.uint8 or b_sc.dtype != torch.uint8:
++        raise ValueError("joint QK/PV debug expects uint8 E8M0 scale tensors")
++    rows = int(a_fp4.shape[0])
++    out = torch.empty((rows, 128), device=a_fp4.device, dtype=torch.bfloat16)
++    with _cuda_device_ctx(a_fp4.device):
++        ext.mxfp4_joint_qk_pv_quarter_debug(
++            a_fp4,
++            a_sc,
++            b_fp4,
++            b_sc,
++            out,
++            int(quarter_tile),
++            int(quarters),
++            int(debug_stage),
++        )
++    return out
++
++
++def benchmark_mxfp4_joint_qk_pv_quarter_debug(
++    *,
++    rows: int = 65536,
++    quarter_tile: int = 128,
++    quarters: int = 4,
++    debug_stage: int = 0,
++    seed: int = 0,
++    warmup: int = 2,
++    iters: int = 5,
++    device: str | torch.device = "cuda",
++    timeout_ms: float | None = _CUDA_EVENT_TIMEOUT_MS,
++) -> dict[str, Any]:
++    resolved_device = _benchmark_cuda_preflight(
++        device,
++        what="benchmark_mxfp4_joint_qk_pv_quarter_debug",
++    )
++    a_fp4, a_sc, b_fp4, b_sc = make_mxfp4_tcgen_shape_debug_inputs(
++        rows=rows,
++        n_tile=quarter_tile * quarters,
++        k_tile=quarter_tile,
++        seed=seed,
++        device=resolved_device,
++    )
++    timeout = _CUDA_EVENT_TIMEOUT_MS if timeout_ms is None else float(timeout_ms)
++
++    def run_once() -> torch.Tensor:
++        return _native_mxfp4_joint_qk_pv_quarter_debug(
++            a_fp4,
++            a_sc,
++            b_fp4,
++            b_sc,
++            quarter_tile=quarter_tile,
++            quarters=quarters,
++            debug_stage=debug_stage,
++        )
++
++    for _ in range(max(0, warmup)):
++        out = run_once()
++    _wait_for_current_stream(resolved_device, timeout_ms=timeout, what="mxfp4_joint_qk_pv_quarter_debug warmup")
++
++    samples: list[float] = []
++    out = None
++    stream = torch.cuda.current_stream(device=resolved_device)
++    for _ in range(max(1, iters)):
++        start = torch.cuda.Event(enable_timing=True)
++        end = torch.cuda.Event(enable_timing=True)
++        start.record(stream)
++        out = run_once()
++        end.record(stream)
++        _wait_for_event(end, timeout_ms=timeout, what="mxfp4_joint_qk_pv_quarter_debug timing")
++        samples.append(float(start.elapsed_time(end)))
++    assert out is not None
++    out_f = out.float()
++    return {
++        "rows": int(rows),
++        "quarter_tile": int(quarter_tile),
++        "quarters": int(quarters),
++        "debug_stage": int(debug_stage),
++        "ms": float(statistics.median(samples)),
++        "samples_ms": samples,
++        "finite": bool(torch.isfinite(out_f).all().item()),
++        "nonzero": bool((out_f.abs().sum() > 0).item()),
++        "abs_sum": float(out_f.abs().sum().item()),
++        "max_abs": float(out_f.abs().max().item()),
++    }
++
++
+ def _quantize_dequantize_rows_2d(
+     x_2d: torch.Tensor,
+     *,

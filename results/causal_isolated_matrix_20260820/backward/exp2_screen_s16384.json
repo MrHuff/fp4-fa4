@@ -1,0 +1,1929 @@
+{
+  "command": [
+    "/workspace/codebases/pv/fp4_matmul_worktrees/causal_matrix_20260820/tk_fa4/lowp_fa4_bwd/benchmark_causal_backward_matrix.py",
+    "--sequences",
+    "16384",
+    "--head-dims",
+    "64",
+    "--head-pairs",
+    "32/8",
+    "--routes",
+    "retained_lowp_native_exp2,retained_lowp_exp2_d1_p2,retained_lowp_exp2_d1_p3",
+    "--seeds",
+    "20260820",
+    "--warmups",
+    "5",
+    "--samples",
+    "21",
+    "--min-device-free-gib",
+    "32",
+    "--min-host-free-gib",
+    "128",
+    "--output",
+    "results/causal_isolated_matrix_20260820/backward/exp2_screen_s16384.json"
+  ],
+  "created_utc": "2026-08-20T15:00:55.434087+00:00",
+  "device": {
+    "compute_capability": [
+      10,
+      0
+    ],
+    "device_name": "NVIDIA GB200",
+    "torch": "2.9.0a0+145a3a7bda.nv25.10",
+    "torch_cuda": "13.0",
+    "total_memory_bytes": 197897617408,
+    "visible_device_count": 1
+  },
+  "host": {
+    "platform": "Linux-6.12.68-92.122.amzn2023.aarch64-aarch64-with-glibc2.39",
+    "python": "3.12.3"
+  },
+  "planned_cases": [
+    {
+      "available": true,
+      "route": "retained_lowp_native_exp2",
+      "route_policy": {
+        "detached_fp8_p_tmem": false,
+        "direct_tma_dkdv": true,
+        "exp2_degree": 2,
+        "exp2_period": 0,
+        "exp2_policy": {
+          "effective": {
+            "degree": 2,
+            "period": 0
+          },
+          "mode": "explicit",
+          "reason": "an explicit period overrides automatic sequence dispatch",
+          "requested": {
+            "degree": 2,
+            "period": 0
+          },
+          "version": "d64_verified_shape_selective_exp2_v2"
+        },
+        "fp8_ds_lift": 16,
+        "head_fast_raster": false,
+        "lowp_do_stages": 1,
+        "probability_lift": 256,
+        "probability_storage": "tmem",
+        "probability_tmem_policy": {
+          "auto_eligible": false,
+          "comparison_control": "inherits the retained route's P placement unless detached-P is the explicitly named comparison variable",
+          "effective_detached": false,
+          "mode": "explicit",
+          "reason": "an explicit P-placement override wins over measured dispatch",
+          "requested_detached": false,
+          "retained_policy": {
+            "auto_eligible": false,
+            "effective_detached": false,
+            "mode": "auto_alias_p",
+            "reason": "detached FP8 P is not yet verified for this backward shape",
+            "requested_detached": null,
+            "version": "d64_verified_shape_detached_fp8_p_tmem_v1"
+          },
+          "version": "d64_verified_shape_detached_fp8_p_tmem_v1"
+        },
+        "raster_policy": {
+          "auto_eligible": false,
+          "comparison_control": "inherits the retained route's physical raster so the named direct-TMA, EX2, or detached-P policy is the only kernel change",
+          "effective_head_fast": false,
+          "forced_head_fast": false,
+          "mode": "explicit",
+          "reason": "an explicit raster override wins over measured-shape dispatch",
+          "requested_head_fast": false,
+          "retained_policy": {
+            "auto_eligible": false,
+            "effective_head_fast": false,
+            "forced_head_fast": false,
+            "mode": "auto_key_fast",
+            "reason": "head-fast scheduling is not yet verified for this backward shape",
+            "requested_head_fast": null,
+            "version": "d64_verified_shape_head_fast_raster_v1"
+          },
+          "version": "d64_verified_shape_head_fast_raster_v1"
+        },
+        "retained_source": "0db D64 coherent training policy with sequence-resolved EX2",
+        "reuse_quantized_p": false,
+        "workspace_stats": true
+      },
+      "shape": {
+        "batch": 1,
+        "gqa_ratio": 4,
+        "head_dim": 64,
+        "kv_heads": 8,
+        "q_heads": 32,
+        "sequence": 16384
+      }
+    },
+    {
+      "available": true,
+      "route": "retained_lowp_exp2_d1_p2",
+      "route_policy": {
+        "detached_fp8_p_tmem": false,
+        "direct_tma_dkdv": true,
+        "exp2_degree": 1,
+        "exp2_period": 2,
+        "exp2_policy": {
+          "effective": {
+            "degree": 1,
+            "period": 2
+          },
+          "mode": "explicit",
+          "reason": "an explicit period overrides automatic sequence dispatch",
+          "requested": {
+            "degree": 1,
+            "period": 2
+          },
+          "version": "d64_verified_shape_selective_exp2_v2"
+        },
+        "fp8_ds_lift": 16,
+        "head_fast_raster": false,
+        "lowp_do_stages": 1,
+        "probability_lift": 256,
+        "probability_storage": "tmem",
+        "probability_tmem_policy": {
+          "auto_eligible": false,
+          "comparison_control": "inherits the retained route's P placement unless detached-P is the explicitly named comparison variable",
+          "effective_detached": false,
+          "mode": "explicit",
+          "reason": "an explicit P-placement override wins over measured dispatch",
+          "requested_detached": false,
+          "retained_policy": {
+            "auto_eligible": false,
+            "effective_detached": false,
+            "mode": "auto_alias_p",
+            "reason": "detached FP8 P is not yet verified for this backward shape",
+            "requested_detached": null,
+            "version": "d64_verified_shape_detached_fp8_p_tmem_v1"
+          },
+          "version": "d64_verified_shape_detached_fp8_p_tmem_v1"
+        },
+        "raster_policy": {
+          "auto_eligible": false,
+          "comparison_control": "inherits the retained route's physical raster so the named direct-TMA, EX2, or detached-P policy is the only kernel change",
+          "effective_head_fast": false,
+          "forced_head_fast": false,
+          "mode": "explicit",
+          "reason": "an explicit raster override wins over measured-shape dispatch",
+          "requested_head_fast": false,
+          "retained_policy": {
+            "auto_eligible": false,
+            "effective_head_fast": false,
+            "forced_head_fast": false,
+            "mode": "auto_key_fast",
+            "reason": "head-fast scheduling is not yet verified for this backward shape",
+            "requested_head_fast": null,
+            "version": "d64_verified_shape_head_fast_raster_v1"
+          },
+          "version": "d64_verified_shape_head_fast_raster_v1"
+        },
+        "retained_source": "0db D64 coherent training policy with sequence-resolved EX2",
+        "reuse_quantized_p": false,
+        "workspace_stats": true
+      },
+      "shape": {
+        "batch": 1,
+        "gqa_ratio": 4,
+        "head_dim": 64,
+        "kv_heads": 8,
+        "q_heads": 32,
+        "sequence": 16384
+      }
+    },
+    {
+      "available": true,
+      "route": "retained_lowp_exp2_d1_p3",
+      "route_policy": {
+        "detached_fp8_p_tmem": false,
+        "direct_tma_dkdv": true,
+        "exp2_degree": 1,
+        "exp2_period": 3,
+        "exp2_policy": {
+          "effective": {
+            "degree": 1,
+            "period": 3
+          },
+          "mode": "explicit",
+          "reason": "an explicit period overrides automatic sequence dispatch",
+          "requested": {
+            "degree": 1,
+            "period": 3
+          },
+          "version": "d64_verified_shape_selective_exp2_v2"
+        },
+        "fp8_ds_lift": 16,
+        "head_fast_raster": false,
+        "lowp_do_stages": 1,
+        "probability_lift": 256,
+        "probability_storage": "tmem",
+        "probability_tmem_policy": {
+          "auto_eligible": false,
+          "comparison_control": "inherits the retained route's P placement unless detached-P is the explicitly named comparison variable",
+          "effective_detached": false,
+          "mode": "explicit",
+          "reason": "an explicit P-placement override wins over measured dispatch",
+          "requested_detached": false,
+          "retained_policy": {
+            "auto_eligible": false,
+            "effective_detached": false,
+            "mode": "auto_alias_p",
+            "reason": "detached FP8 P is not yet verified for this backward shape",
+            "requested_detached": null,
+            "version": "d64_verified_shape_detached_fp8_p_tmem_v1"
+          },
+          "version": "d64_verified_shape_detached_fp8_p_tmem_v1"
+        },
+        "raster_policy": {
+          "auto_eligible": false,
+          "comparison_control": "inherits the retained route's physical raster so the named direct-TMA, EX2, or detached-P policy is the only kernel change",
+          "effective_head_fast": false,
+          "forced_head_fast": false,
+          "mode": "explicit",
+          "reason": "an explicit raster override wins over measured-shape dispatch",
+          "requested_head_fast": false,
+          "retained_policy": {
+            "auto_eligible": false,
+            "effective_head_fast": false,
+            "forced_head_fast": false,
+            "mode": "auto_key_fast",
+            "reason": "head-fast scheduling is not yet verified for this backward shape",
+            "requested_head_fast": null,
+            "version": "d64_verified_shape_head_fast_raster_v1"
+          },
+          "version": "d64_verified_shape_head_fast_raster_v1"
+        },
+        "retained_source": "0db D64 coherent training policy with sequence-resolved EX2",
+        "reuse_quantized_p": false,
+        "workspace_stats": true
+      },
+      "shape": {
+        "batch": 1,
+        "gqa_ratio": 4,
+        "head_dim": 64,
+        "kv_heads": 8,
+        "q_heads": 32,
+        "sequence": 16384
+      }
+    }
+  ],
+  "planned_shapes": [
+    {
+      "batch": 1,
+      "gqa_ratio": 4,
+      "head_dim": 64,
+      "kv_heads": 8,
+      "q_heads": 32,
+      "sequence": 16384
+    }
+  ],
+  "protocol": {
+    "accuracy_seeds": [
+      20260820
+    ],
+    "backward_exp2_dispatch": {
+      "default": {
+        "degree": 2,
+        "period": 0
+      },
+      "scope": "D64 B1 causal retained lowp",
+      "threshold_sequence": 4096,
+      "verified_shape_policy": {
+        "degree": 1,
+        "period": 2
+      },
+      "verified_shapes": [
+        {
+          "kv_heads": 4,
+          "q_heads": 16,
+          "sequence": 4096
+        },
+        {
+          "kv_heads": 8,
+          "q_heads": 32,
+          "sequence": 4096
+        },
+        {
+          "kv_heads": 16,
+          "q_heads": 64,
+          "sequence": 4096
+        },
+        {
+          "kv_heads": 8,
+          "q_heads": 32,
+          "sequence": 8192
+        }
+      ],
+      "version": "d64_verified_shape_selective_exp2_v2"
+    },
+    "backward_probability_tmem_dispatch": {
+      "default": "score_alias_p",
+      "scope": "D64 B1 causal one-lane direct-TMA retained lowp with TMEM probability storage and workspace statistics",
+      "verified_shape_policy": "detached_fp8_p_tmem",
+      "verified_shapes": [
+        {
+          "kv_heads": 8,
+          "q_heads": 32,
+          "sequence": 8192
+        }
+      ],
+      "version": "d64_verified_shape_detached_fp8_p_tmem_v1"
+    },
+    "backward_raster_dispatch": {
+      "default": "key_fast",
+      "scope": "D64 B1 causal one-lane direct-TMA retained lowp with TMEM probability storage and workspace statistics",
+      "verified_shape_policy": "head_fast",
+      "verified_shapes": [
+        {
+          "kv_heads": 8,
+          "q_heads": 32,
+          "sequence": 8192
+        }
+      ],
+      "version": "d64_verified_shape_head_fast_raster_v1"
+    },
+    "causal": true,
+    "comparison": "CuTe BF16 and retained lowp backward on one exact E4M3-represented Q/K/V/dO state",
+    "fixed_length": true,
+    "forward_for_statistics": "CuTe BF16 causal flash attention",
+    "forward_timing_included": false,
+    "minimum_device_free_gib": 32.0,
+    "minimum_host_free_gib": 128.0,
+    "primary_timing_includes_required_clears": true,
+    "quantization_timing_included": false,
+    "samples": 21,
+    "timing_seed": 20260820,
+    "warmups": 5
+  },
+  "records": [
+    {
+      "memory_before": {
+        "device_free_bytes": 197171675136,
+        "device_total_bytes": 197897617408,
+        "estimated_live_tensor_bytes": 889192448,
+        "host_available_bytes": 924761739264
+      },
+      "route": "retained_lowp_native_exp2",
+      "route_policy": {
+        "detached_fp8_p_tmem": false,
+        "direct_tma_dkdv": true,
+        "exp2_degree": 2,
+        "exp2_period": 0,
+        "exp2_policy": {
+          "effective": {
+            "degree": 2,
+            "period": 0
+          },
+          "mode": "explicit",
+          "reason": "an explicit period overrides automatic sequence dispatch",
+          "requested": {
+            "degree": 2,
+            "period": 0
+          },
+          "version": "d64_verified_shape_selective_exp2_v2"
+        },
+        "fp8_ds_lift": 16,
+        "head_fast_raster": false,
+        "lowp_do_stages": 1,
+        "probability_lift": 256,
+        "probability_storage": "tmem",
+        "probability_tmem_policy": {
+          "auto_eligible": false,
+          "comparison_control": "inherits the retained route's P placement unless detached-P is the explicitly named comparison variable",
+          "effective_detached": false,
+          "mode": "explicit",
+          "reason": "an explicit P-placement override wins over measured dispatch",
+          "requested_detached": false,
+          "retained_policy": {
+            "auto_eligible": false,
+            "effective_detached": false,
+            "mode": "auto_alias_p",
+            "reason": "detached FP8 P is not yet verified for this backward shape",
+            "requested_detached": null,
+            "version": "d64_verified_shape_detached_fp8_p_tmem_v1"
+          },
+          "version": "d64_verified_shape_detached_fp8_p_tmem_v1"
+        },
+        "raster_policy": {
+          "auto_eligible": false,
+          "comparison_control": "inherits the retained route's physical raster so the named direct-TMA, EX2, or detached-P policy is the only kernel change",
+          "effective_head_fast": false,
+          "forced_head_fast": false,
+          "mode": "explicit",
+          "reason": "an explicit raster override wins over measured-shape dispatch",
+          "requested_head_fast": false,
+          "retained_policy": {
+            "auto_eligible": false,
+            "effective_head_fast": false,
+            "forced_head_fast": false,
+            "mode": "auto_key_fast",
+            "reason": "head-fast scheduling is not yet verified for this backward shape",
+            "requested_head_fast": null,
+            "version": "d64_verified_shape_head_fast_raster_v1"
+          },
+          "version": "d64_verified_shape_head_fast_raster_v1"
+        },
+        "retained_source": "0db D64 coherent training policy with sequence-resolved EX2",
+        "reuse_quantized_p": false,
+        "workspace_stats": true
+      },
+      "seed_records": [
+        {
+          "accuracy": {
+            "aggregate": {
+              "actual_finite": true,
+              "cosine": 0.9996643999435374,
+              "max_abs": 0.013671875,
+              "norm_ratio": 0.9996682361776758,
+              "reference_finite": true,
+              "relative_l2": 0.02590535659364327
+            },
+            "dk": {
+              "actual_finite": true,
+              "cosine": 0.9987854361534119,
+              "max_abs": 0.0008544921875,
+              "norm_ratio": 1.0004303455352783,
+              "reference_finite": true,
+              "relative_l2": 0.0492972657084465,
+              "row_cosine_p01": 0.9753175973892212,
+              "row_cosine_p05": 0.9812313914299011,
+              "row_cosine_p50": 0.9923481345176697
+            },
+            "dq": {
+              "actual_finite": true,
+              "cosine": 0.9987732768058777,
+              "max_abs": 0.0009765625,
+              "norm_ratio": 1.0004721879959106,
+              "reference_finite": true,
+              "relative_l2": 0.04954683035612106,
+              "row_cosine_p01": 0.9775658845901489,
+              "row_cosine_p05": 0.9835765957832336,
+              "row_cosine_p50": 0.9960376024246216
+            },
+            "dv": {
+              "actual_finite": true,
+              "cosine": 0.9996703267097473,
+              "max_abs": 0.013671875,
+              "norm_ratio": 0.9996630549430847,
+              "reference_finite": true,
+              "relative_l2": 0.025677597150206566,
+              "row_cosine_p01": 0.9991297125816345,
+              "row_cosine_p05": 0.9992932081222534,
+              "row_cosine_p50": 0.999596118927002
+            }
+          },
+          "peak_device_allocated_bytes": 1809850880,
+          "peak_device_reserved_bytes": 1925185536,
+          "reference_policy": {
+            "causal": true,
+            "input": "BF16 decode of the represented E4M3 state",
+            "output": "BF16 dQ/dK/dV",
+            "probability": "BF16 score/softmax",
+            "statistics": "internal O*dO and LSE preprocessing"
+          },
+          "route": "retained_lowp_native_exp2",
+          "route_policy": {
+            "causal": true,
+            "detached_fp8_p_tmem": false,
+            "direct_tma_dkdv": true,
+            "exp2_degree": 2,
+            "exp2_period": 0,
+            "exp2_policy": {
+              "effective": {
+                "degree": 2,
+                "period": 0
+              },
+              "mode": "explicit",
+              "reason": "an explicit period overrides automatic sequence dispatch",
+              "requested": {
+                "degree": 2,
+                "period": 0
+              },
+              "version": "d64_verified_shape_selective_exp2_v2"
+            },
+            "fp8_ds_lift": 16,
+            "head_fast_raster": false,
+            "input": "E4M3 Q/K/V/dO with fixed x4 publication scale",
+            "lowp_do_stages": 1,
+            "output": "BF16 dQ/dK/dV with common x4 decode",
+            "probability_lift": 256,
+            "probability_storage": "tmem",
+            "probability_tmem_policy": {
+              "auto_eligible": false,
+              "comparison_control": "inherits the retained route's P placement unless detached-P is the explicitly named comparison variable",
+              "effective_detached": false,
+              "mode": "explicit",
+              "reason": "an explicit P-placement override wins over measured dispatch",
+              "requested_detached": false,
+              "retained_policy": {
+                "auto_eligible": false,
+                "effective_detached": false,
+                "mode": "auto_alias_p",
+                "reason": "detached FP8 P is not yet verified for this backward shape",
+                "requested_detached": null,
+                "version": "d64_verified_shape_detached_fp8_p_tmem_v1"
+              },
+              "version": "d64_verified_shape_detached_fp8_p_tmem_v1"
+            },
+            "raster_policy": {
+              "auto_eligible": false,
+              "comparison_control": "inherits the retained route's physical raster so the named direct-TMA, EX2, or detached-P policy is the only kernel change",
+              "effective_head_fast": false,
+              "forced_head_fast": false,
+              "mode": "explicit",
+              "reason": "an explicit raster override wins over measured-shape dispatch",
+              "requested_head_fast": false,
+              "retained_policy": {
+                "auto_eligible": false,
+                "effective_head_fast": false,
+                "forced_head_fast": false,
+                "mode": "auto_key_fast",
+                "reason": "head-fast scheduling is not yet verified for this backward shape",
+                "requested_head_fast": null,
+                "version": "d64_verified_shape_head_fast_raster_v1"
+              },
+              "version": "d64_verified_shape_head_fast_raster_v1"
+            },
+            "retained_source": "0db D64 coherent training policy with sequence-resolved EX2",
+            "reuse_quantized_p": false,
+            "score_scale": "(1/sqrt(64))/16",
+            "statistics": "negative projection-native pages in backward workspace",
+            "workspace_stats": true
+          },
+          "seed": 20260820,
+          "timing": {
+            "breakdown": {
+              "cute_bf16": {
+                "kernel_after_required_clear": {
+                  "maximum_us": 2701.3120651245117,
+                  "mean_us": 2677.6061058044434,
+                  "median_us": 2675.7121086120605,
+                  "minimum_us": 2664.448022842407,
+                  "p05_us": 2667.520046234131,
+                  "p95_us": 2691.135883331299,
+                  "samples_us": [
+                    2687.999963760376,
+                    2690.783977508545,
+                    2681.9519996643066,
+                    2668.4799194335938,
+                    2670.5920696258545,
+                    2679.8079013824463,
+                    2675.7121086120605,
+                    2671.2000370025635,
+                    2668.6720848083496,
+                    2675.7121086120605,
+                    2664.448022842407,
+                    2671.5519428253174,
+                    2667.520046234131,
+                    2672.640085220337,
+                    2670.5920696258545,
+                    2681.0879707336426,
+                    2691.135883331299,
+                    2671.776056289673,
+                    2678.272008895874,
+                    2688.4799003601074,
+                    2701.3120651245117
+                  ],
+                  "stdev_us": 9.646589927978718
+                },
+                "required_clear_only": {
+                  "maximum_us": 87.00799942016602,
+                  "mean_us": 81.25561866022292,
+                  "median_us": 80.76799660921097,
+                  "minimum_us": 79.48800176382065,
+                  "p05_us": 79.8719972372055,
+                  "p95_us": 83.93599838018417,
+                  "samples_us": [
+                    83.93599838018417,
+                    80.83199709653854,
+                    82.40000158548355,
+                    80.57600259780884,
+                    79.48800176382065,
+                    80.57600259780884,
+                    83.0719992518425,
+                    81.08799904584885,
+                    80.92799782752991,
+                    80.44800162315369,
+                    79.9039974808693,
+                    79.93599772453308,
+                    81.50400221347809,
+                    80.76799660921097,
+                    79.8719972372055,
+                    81.88799768686295,
+                    81.28000050783157,
+                    79.99999821186066,
+                    80.35200089216232,
+                    87.00799942016602,
+                    80.51200211048126
+                  ],
+                  "stdev_us": 1.717953091596095
+                }
+              },
+              "retained_lowp_native_exp2": {
+                "kernel_after_required_clear": {
+                  "maximum_us": 3492.032051086426,
+                  "mean_us": 3317.144382567633,
+                  "median_us": 3285.759925842285,
+                  "minimum_us": 3276.9598960876465,
+                  "p05_us": 3279.0400981903076,
+                  "p95_us": 3444.096088409424,
+                  "samples_us": [
+                    3316.4799213409424,
+                    3310.879945755005,
+                    3492.032051086426,
+                    3444.096088409424,
+                    3431.135892868042,
+                    3407.776117324829,
+                    3281.951904296875,
+                    3279.0400981903076,
+                    3286.4320278167725,
+                    3276.9598960876465,
+                    3282.8478813171387,
+                    3288.73610496521,
+                    3284.4479084014893,
+                    3280.224084854126,
+                    3296.9601154327393,
+                    3282.047986984253,
+                    3283.4560871124268,
+                    3282.5920581817627,
+                    3286.4320278167725,
+                    3279.7439098358154,
+                    3285.759925842285
+                  ],
+                  "stdev_us": 65.15718825080714
+                },
+                "required_clear_only": {
+                  "maximum_us": 39.423998445272446,
+                  "mean_us": 36.071619462399255,
+                  "median_us": 36.3520011305809,
+                  "minimum_us": 32.607998698949814,
+                  "p05_us": 32.83200040459633,
+                  "p95_us": 37.76000067591667,
+                  "samples_us": [
+                    36.3520011305809,
+                    36.320000886917114,
+                    36.607999354600906,
+                    32.607998698949814,
+                    36.3520011305809,
+                    36.896001547575,
+                    36.479998379945755,
+                    36.448001861572266,
+                    32.83200040459633,
+                    35.392001271247864,
+                    36.83200106024742,
+                    36.57599911093712,
+                    35.42400151491165,
+                    35.93600168824196,
+                    36.51199862360954,
+                    37.76000067591667,
+                    36.159999668598175,
+                    35.93600168824196,
+                    33.79200026392937,
+                    39.423998445272446,
+                    36.86400130391121
+                  ],
+                  "stdev_us": 1.5141412508361907
+                }
+              }
+            },
+            "paired_with_required_clear": {
+              "cute_bf16": {
+                "maximum_us": 3020.4479694366455,
+                "mean_us": 2762.4152387891495,
+                "median_us": 2749.2799758911133,
+                "minimum_us": 2736.095905303955,
+                "p05_us": 2738.176107406616,
+                "p95_us": 2767.199993133545,
+                "samples_us": [
+                  2767.199993133545,
+                  2751.4560222625732,
+                  2754.080057144165,
+                  2754.0481090545654,
+                  2745.759963989258,
+                  2753.7920475006104,
+                  3020.4479694366455,
+                  2749.2799758911133,
+                  2743.1039810180664,
+                  2753.2479763031006,
+                  2746.783971786499,
+                  2757.0879459381104,
+                  2739.1040325164795,
+                  2747.1680641174316,
+                  2736.095905303955,
+                  2749.8559951782227,
+                  2738.176107406616,
+                  2748.703956604004,
+                  2749.1519451141357,
+                  2747.296094894409,
+                  2758.8798999786377
+                ],
+                "stdev_us": 59.55510582752281
+              },
+              "retained_lowp_native_exp2": {
+                "maximum_us": 3336.832046508789,
+                "mean_us": 3317.435412179856,
+                "median_us": 3317.0878887176514,
+                "minimum_us": 3307.0080280303955,
+                "p05_us": 3308.448076248169,
+                "p95_us": 3333.5039615631104,
+                "samples_us": [
+                  3336.832046508789,
+                  3317.280054092407,
+                  3333.5039615631104,
+                  3317.984104156494,
+                  3317.0878887176514,
+                  3315.1040077209473,
+                  3324.1920471191406,
+                  3320.2879428863525,
+                  3322.07989692688,
+                  3310.62388420105,
+                  3314.879894256592,
+                  3308.7680339813232,
+                  3314.1119480133057,
+                  3308.6719512939453,
+                  3311.7759227752686,
+                  3315.232038497925,
+                  3325.023889541626,
+                  3308.448076248169,
+                  3318.592071533203,
+                  3307.0080280303955,
+                  3318.6559677124023
+                ],
+                "stdev_us": 7.8050109739010045
+              }
+            },
+            "primary_boundary": "backward_with_every_required_clear",
+            "rotated_order": true,
+            "speedup_vs_bf16": 0.828823374033045
+          }
+        }
+      ],
+      "shape": {
+        "batch": 1,
+        "gqa_ratio": 4,
+        "head_dim": 64,
+        "kv_heads": 8,
+        "q_heads": 32,
+        "sequence": 16384
+      },
+      "status": "complete"
+    },
+    {
+      "memory_before": {
+        "device_free_bytes": 197171675136,
+        "device_total_bytes": 197897617408,
+        "estimated_live_tensor_bytes": 889192448,
+        "host_available_bytes": 924761739264
+      },
+      "route": "retained_lowp_exp2_d1_p2",
+      "route_policy": {
+        "detached_fp8_p_tmem": false,
+        "direct_tma_dkdv": true,
+        "exp2_degree": 1,
+        "exp2_period": 2,
+        "exp2_policy": {
+          "effective": {
+            "degree": 1,
+            "period": 2
+          },
+          "mode": "explicit",
+          "reason": "an explicit period overrides automatic sequence dispatch",
+          "requested": {
+            "degree": 1,
+            "period": 2
+          },
+          "version": "d64_verified_shape_selective_exp2_v2"
+        },
+        "fp8_ds_lift": 16,
+        "head_fast_raster": false,
+        "lowp_do_stages": 1,
+        "probability_lift": 256,
+        "probability_storage": "tmem",
+        "probability_tmem_policy": {
+          "auto_eligible": false,
+          "comparison_control": "inherits the retained route's P placement unless detached-P is the explicitly named comparison variable",
+          "effective_detached": false,
+          "mode": "explicit",
+          "reason": "an explicit P-placement override wins over measured dispatch",
+          "requested_detached": false,
+          "retained_policy": {
+            "auto_eligible": false,
+            "effective_detached": false,
+            "mode": "auto_alias_p",
+            "reason": "detached FP8 P is not yet verified for this backward shape",
+            "requested_detached": null,
+            "version": "d64_verified_shape_detached_fp8_p_tmem_v1"
+          },
+          "version": "d64_verified_shape_detached_fp8_p_tmem_v1"
+        },
+        "raster_policy": {
+          "auto_eligible": false,
+          "comparison_control": "inherits the retained route's physical raster so the named direct-TMA, EX2, or detached-P policy is the only kernel change",
+          "effective_head_fast": false,
+          "forced_head_fast": false,
+          "mode": "explicit",
+          "reason": "an explicit raster override wins over measured-shape dispatch",
+          "requested_head_fast": false,
+          "retained_policy": {
+            "auto_eligible": false,
+            "effective_head_fast": false,
+            "forced_head_fast": false,
+            "mode": "auto_key_fast",
+            "reason": "head-fast scheduling is not yet verified for this backward shape",
+            "requested_head_fast": null,
+            "version": "d64_verified_shape_head_fast_raster_v1"
+          },
+          "version": "d64_verified_shape_head_fast_raster_v1"
+        },
+        "retained_source": "0db D64 coherent training policy with sequence-resolved EX2",
+        "reuse_quantized_p": false,
+        "workspace_stats": true
+      },
+      "seed_records": [
+        {
+          "accuracy": {
+            "aggregate": {
+              "actual_finite": true,
+              "cosine": 0.9985221213830211,
+              "max_abs": 0.06640625,
+              "norm_ratio": 0.9708999199709785,
+              "reference_finite": true,
+              "relative_l2": 0.06096358847375009
+            },
+            "dk": {
+              "actual_finite": true,
+              "cosine": 0.9976226091384888,
+              "max_abs": 0.0032958984375,
+              "norm_ratio": 0.9719941020011902,
+              "reference_finite": true,
+              "relative_l2": 0.07352655380964279,
+              "row_cosine_p01": 0.9730250835418701,
+              "row_cosine_p05": 0.9795193672180176,
+              "row_cosine_p50": 0.9912140369415283
+            },
+            "dq": {
+              "actual_finite": true,
+              "cosine": 0.9976258873939514,
+              "max_abs": 0.002655029296875,
+              "norm_ratio": 0.9719101786613464,
+              "reference_finite": true,
+              "relative_l2": 0.07351096719503403,
+              "row_cosine_p01": 0.9757184982299805,
+              "row_cosine_p05": 0.9825918674468994,
+              "row_cosine_p50": 0.9954361915588379
+            },
+            "dv": {
+              "actual_finite": true,
+              "cosine": 0.9985281825065613,
+              "max_abs": 0.06640625,
+              "norm_ratio": 0.9708929657936096,
+              "reference_finite": true,
+              "relative_l2": 0.060871679335832596,
+              "row_cosine_p01": 0.9975740909576416,
+              "row_cosine_p05": 0.9980033040046692,
+              "row_cosine_p50": 0.9988422393798828
+            }
+          },
+          "peak_device_allocated_bytes": 1809850880,
+          "peak_device_reserved_bytes": 1925185536,
+          "reference_policy": {
+            "causal": true,
+            "input": "BF16 decode of the represented E4M3 state",
+            "output": "BF16 dQ/dK/dV",
+            "probability": "BF16 score/softmax",
+            "statistics": "internal O*dO and LSE preprocessing"
+          },
+          "route": "retained_lowp_exp2_d1_p2",
+          "route_policy": {
+            "causal": true,
+            "detached_fp8_p_tmem": false,
+            "direct_tma_dkdv": true,
+            "exp2_degree": 1,
+            "exp2_period": 2,
+            "exp2_policy": {
+              "effective": {
+                "degree": 1,
+                "period": 2
+              },
+              "mode": "explicit",
+              "reason": "an explicit period overrides automatic sequence dispatch",
+              "requested": {
+                "degree": 1,
+                "period": 2
+              },
+              "version": "d64_verified_shape_selective_exp2_v2"
+            },
+            "fp8_ds_lift": 16,
+            "head_fast_raster": false,
+            "input": "E4M3 Q/K/V/dO with fixed x4 publication scale",
+            "lowp_do_stages": 1,
+            "output": "BF16 dQ/dK/dV with common x4 decode",
+            "probability_lift": 256,
+            "probability_storage": "tmem",
+            "probability_tmem_policy": {
+              "auto_eligible": false,
+              "comparison_control": "inherits the retained route's P placement unless detached-P is the explicitly named comparison variable",
+              "effective_detached": false,
+              "mode": "explicit",
+              "reason": "an explicit P-placement override wins over measured dispatch",
+              "requested_detached": false,
+              "retained_policy": {
+                "auto_eligible": false,
+                "effective_detached": false,
+                "mode": "auto_alias_p",
+                "reason": "detached FP8 P is not yet verified for this backward shape",
+                "requested_detached": null,
+                "version": "d64_verified_shape_detached_fp8_p_tmem_v1"
+              },
+              "version": "d64_verified_shape_detached_fp8_p_tmem_v1"
+            },
+            "raster_policy": {
+              "auto_eligible": false,
+              "comparison_control": "inherits the retained route's physical raster so the named direct-TMA, EX2, or detached-P policy is the only kernel change",
+              "effective_head_fast": false,
+              "forced_head_fast": false,
+              "mode": "explicit",
+              "reason": "an explicit raster override wins over measured-shape dispatch",
+              "requested_head_fast": false,
+              "retained_policy": {
+                "auto_eligible": false,
+                "effective_head_fast": false,
+                "forced_head_fast": false,
+                "mode": "auto_key_fast",
+                "reason": "head-fast scheduling is not yet verified for this backward shape",
+                "requested_head_fast": null,
+                "version": "d64_verified_shape_head_fast_raster_v1"
+              },
+              "version": "d64_verified_shape_head_fast_raster_v1"
+            },
+            "retained_source": "0db D64 coherent training policy with sequence-resolved EX2",
+            "reuse_quantized_p": false,
+            "score_scale": "(1/sqrt(64))/16",
+            "statistics": "negative projection-native pages in backward workspace",
+            "workspace_stats": true
+          },
+          "seed": 20260820,
+          "timing": {
+            "breakdown": {
+              "cute_bf16": {
+                "kernel_after_required_clear": {
+                  "maximum_us": 2722.815990447998,
+                  "mean_us": 2685.3043465387254,
+                  "median_us": 2679.1999340057373,
+                  "minimum_us": 2672.287940979004,
+                  "p05_us": 2673.3760833740234,
+                  "p95_us": 2711.3919258117676,
+                  "samples_us": [
+                    2699.2640495300293,
+                    2682.176113128662,
+                    2676.703929901123,
+                    2676.5120029449463,
+                    2673.3760833740234,
+                    2689.023971557617,
+                    2675.1999855041504,
+                    2678.0478954315186,
+                    2672.287940979004,
+                    2703.0398845672607,
+                    2711.3919258117676,
+                    2676.4159202575684,
+                    2687.999963760376,
+                    2677.759885787964,
+                    2679.136037826538,
+                    2681.8559169769287,
+                    2679.1999340057373,
+                    2686.4960193634033,
+                    2677.759885787964,
+                    2684.9279403686523,
+                    2722.815990447998
+                  ],
+                  "stdev_us": 13.280323418410784
+                },
+                "required_clear_only": {
+                  "maximum_us": 85.63199639320374,
+                  "mean_us": 82.68952334210987,
+                  "median_us": 82.36800134181976,
+                  "minimum_us": 80.76799660921097,
+                  "p05_us": 81.53600245714188,
+                  "p95_us": 84.3840017914772,
+                  "samples_us": [
+                    85.63199639320374,
+                    83.90399813652039,
+                    82.07999914884567,
+                    82.5280025601387,
+                    82.68799632787704,
+                    83.45600217580795,
+                    82.5280025601387,
+                    84.3840017914772,
+                    81.53600245714188,
+                    83.3280012011528,
+                    81.60000294446945,
+                    80.76799660921097,
+                    82.0159986615181,
+                    81.7599967122078,
+                    82.04799890518188,
+                    82.07999914884567,
+                    84.1279998421669,
+                    81.82399719953537,
+                    84.06399935483932,
+                    81.7599967122078,
+                    82.36800134181976
+                  ],
+                  "stdev_us": 1.191821861567925
+                }
+              },
+              "retained_lowp_exp2_d1_p2": {
+                "kernel_after_required_clear": {
+                  "maximum_us": 3011.0719203948975,
+                  "mean_us": 2875.1466614859446,
+                  "median_us": 2859.4560623168945,
+                  "minimum_us": 2853.4719944000244,
+                  "p05_us": 2854.720115661621,
+                  "p95_us": 2922.6560592651367,
+                  "samples_us": [
+                    2922.6560592651367,
+                    2915.071964263916,
+                    2910.46404838562,
+                    3011.0719203948975,
+                    2864.192008972168,
+                    2859.4560623168945,
+                    2855.2958965301514,
+                    2857.2158813476562,
+                    2866.4638996124268,
+                    2859.679937362671,
+                    2857.343912124634,
+                    2856.384038925171,
+                    2857.2158813476562,
+                    2857.952117919922,
+                    2856.703996658325,
+                    2861.407995223999,
+                    2854.720115661621,
+                    2853.4719944000244,
+                    2869.3439960479736,
+                    2873.568058013916,
+                    2858.4001064300537
+                  ],
+                  "stdev_us": 37.409362728611185
+                },
+                "required_clear_only": {
+                  "maximum_us": 43.5199998319149,
+                  "mean_us": 38.17447629712877,
+                  "median_us": 37.91999816894531,
+                  "minimum_us": 35.19999980926514,
+                  "p05_us": 35.45600175857544,
+                  "p95_us": 41.63200035691261,
+                  "samples_us": [
+                    41.63200035691261,
+                    39.99999910593033,
+                    38.495998829603195,
+                    36.928001791238785,
+                    35.45600175857544,
+                    38.07999938726425,
+                    36.448001861572266,
+                    37.98399865627289,
+                    37.087999284267426,
+                    35.19999980926514,
+                    43.5199998319149,
+                    37.856001406908035,
+                    36.57599911093712,
+                    37.728000432252884,
+                    37.408001720905304,
+                    38.94399851560593,
+                    38.84800150990486,
+                    40.44799879193306,
+                    37.91999816894531,
+                    38.30400109291077,
+                    36.80000081658363
+                  ],
+                  "stdev_us": 1.9696633583408603
+                }
+              }
+            },
+            "paired_with_required_clear": {
+              "cute_bf16": {
+                "maximum_us": 2809.6959590911865,
+                "mean_us": 2758.861700693766,
+                "median_us": 2753.727912902832,
+                "minimum_us": 2748.095989227295,
+                "p05_us": 2748.4800815582275,
+                "p95_us": 2769.9520587921143,
+                "samples_us": [
+                  2809.6959590911865,
+                  2759.29594039917,
+                  2753.5359859466553,
+                  2767.359972000122,
+                  2760.4479789733887,
+                  2763.808012008667,
+                  2750.880002975464,
+                  2761.535882949829,
+                  2753.727912902832,
+                  2756.351947784424,
+                  2750.0479221343994,
+                  2769.9520587921143,
+                  2748.095989227295,
+                  2766.9761180877686,
+                  2752.4800300598145,
+                  2752.0320415496826,
+                  2749.8559951782227,
+                  2758.431911468506,
+                  2748.4800815582275,
+                  2753.4079551696777,
+                  2749.6960163116455
+                ],
+                "stdev_us": 13.394031307546333
+              },
+              "retained_lowp_exp2_d1_p2": {
+                "maximum_us": 3730.91197013855,
+                "mean_us": 2939.792746589297,
+                "median_us": 2900.2559185028076,
+                "minimum_us": 2891.4239406585693,
+                "p05_us": 2892.0960426330566,
+                "p95_us": 2911.263942718506,
+                "samples_us": [
+                  2911.263942718506,
+                  2892.0960426330566,
+                  2900.2559185028076,
+                  2901.3121128082275,
+                  2906.559944152832,
+                  2903.712034225464,
+                  3730.91197013855,
+                  2904.128074645996,
+                  2899.519920349121,
+                  2891.4239406585693,
+                  2898.1759548187256,
+                  2896.2559700012207,
+                  2903.424024581909,
+                  2893.0559158325195,
+                  2895.20001411438,
+                  2895.9360122680664,
+                  2896.064043045044,
+                  2899.7440338134766,
+                  2910.8479022979736,
+                  2901.279926300049,
+                  2904.47998046875
+                ],
+                "stdev_us": 181.35221834069716
+              }
+            },
+            "primary_boundary": "backward_with_every_required_clear",
+            "rotated_order": true,
+            "speedup_vs_bf16": 0.9494775600093879
+          }
+        }
+      ],
+      "shape": {
+        "batch": 1,
+        "gqa_ratio": 4,
+        "head_dim": 64,
+        "kv_heads": 8,
+        "q_heads": 32,
+        "sequence": 16384
+      },
+      "status": "complete"
+    },
+    {
+      "memory_before": {
+        "device_free_bytes": 197171675136,
+        "device_total_bytes": 197897617408,
+        "estimated_live_tensor_bytes": 889192448,
+        "host_available_bytes": 924761739264
+      },
+      "route": "retained_lowp_exp2_d1_p3",
+      "route_policy": {
+        "detached_fp8_p_tmem": false,
+        "direct_tma_dkdv": true,
+        "exp2_degree": 1,
+        "exp2_period": 3,
+        "exp2_policy": {
+          "effective": {
+            "degree": 1,
+            "period": 3
+          },
+          "mode": "explicit",
+          "reason": "an explicit period overrides automatic sequence dispatch",
+          "requested": {
+            "degree": 1,
+            "period": 3
+          },
+          "version": "d64_verified_shape_selective_exp2_v2"
+        },
+        "fp8_ds_lift": 16,
+        "head_fast_raster": false,
+        "lowp_do_stages": 1,
+        "probability_lift": 256,
+        "probability_storage": "tmem",
+        "probability_tmem_policy": {
+          "auto_eligible": false,
+          "comparison_control": "inherits the retained route's P placement unless detached-P is the explicitly named comparison variable",
+          "effective_detached": false,
+          "mode": "explicit",
+          "reason": "an explicit P-placement override wins over measured dispatch",
+          "requested_detached": false,
+          "retained_policy": {
+            "auto_eligible": false,
+            "effective_detached": false,
+            "mode": "auto_alias_p",
+            "reason": "detached FP8 P is not yet verified for this backward shape",
+            "requested_detached": null,
+            "version": "d64_verified_shape_detached_fp8_p_tmem_v1"
+          },
+          "version": "d64_verified_shape_detached_fp8_p_tmem_v1"
+        },
+        "raster_policy": {
+          "auto_eligible": false,
+          "comparison_control": "inherits the retained route's physical raster so the named direct-TMA, EX2, or detached-P policy is the only kernel change",
+          "effective_head_fast": false,
+          "forced_head_fast": false,
+          "mode": "explicit",
+          "reason": "an explicit raster override wins over measured-shape dispatch",
+          "requested_head_fast": false,
+          "retained_policy": {
+            "auto_eligible": false,
+            "effective_head_fast": false,
+            "forced_head_fast": false,
+            "mode": "auto_key_fast",
+            "reason": "head-fast scheduling is not yet verified for this backward shape",
+            "requested_head_fast": null,
+            "version": "d64_verified_shape_head_fast_raster_v1"
+          },
+          "version": "d64_verified_shape_head_fast_raster_v1"
+        },
+        "retained_source": "0db D64 coherent training policy with sequence-resolved EX2",
+        "reuse_quantized_p": false,
+        "workspace_stats": true
+      },
+      "seed_records": [
+        {
+          "accuracy": {
+            "aggregate": {
+              "actual_finite": true,
+              "cosine": 0.9987290641507214,
+              "max_abs": 0.0625,
+              "norm_ratio": 0.9801744466606965,
+              "reference_finite": true,
+              "relative_l2": 0.053707822994659336
+            },
+            "dk": {
+              "actual_finite": true,
+              "cosine": 0.9979164004325867,
+              "max_abs": 0.002685546875,
+              "norm_ratio": 0.9816580414772034,
+              "reference_finite": true,
+              "relative_l2": 0.06653814017772675,
+              "row_cosine_p01": 0.9737362861633301,
+              "row_cosine_p05": 0.9800595641136169,
+              "row_cosine_p50": 0.9914960861206055
+            },
+            "dq": {
+              "actual_finite": true,
+              "cosine": 0.9978983998298645,
+              "max_abs": 0.002655029296875,
+              "norm_ratio": 0.9819962978363037,
+              "reference_finite": true,
+              "relative_l2": 0.06672265380620956,
+              "row_cosine_p01": 0.9762579798698425,
+              "row_cosine_p05": 0.9828996062278748,
+              "row_cosine_p50": 0.9956420063972473
+            },
+            "dv": {
+              "actual_finite": true,
+              "cosine": 0.9987345337867737,
+              "max_abs": 0.0625,
+              "norm_ratio": 0.9801635146141052,
+              "reference_finite": true,
+              "relative_l2": 0.053611721843481064,
+              "row_cosine_p01": 0.9978984594345093,
+              "row_cosine_p05": 0.9983073472976685,
+              "row_cosine_p50": 0.9990366101264954
+            }
+          },
+          "peak_device_allocated_bytes": 1809850880,
+          "peak_device_reserved_bytes": 1925185536,
+          "reference_policy": {
+            "causal": true,
+            "input": "BF16 decode of the represented E4M3 state",
+            "output": "BF16 dQ/dK/dV",
+            "probability": "BF16 score/softmax",
+            "statistics": "internal O*dO and LSE preprocessing"
+          },
+          "route": "retained_lowp_exp2_d1_p3",
+          "route_policy": {
+            "causal": true,
+            "detached_fp8_p_tmem": false,
+            "direct_tma_dkdv": true,
+            "exp2_degree": 1,
+            "exp2_period": 3,
+            "exp2_policy": {
+              "effective": {
+                "degree": 1,
+                "period": 3
+              },
+              "mode": "explicit",
+              "reason": "an explicit period overrides automatic sequence dispatch",
+              "requested": {
+                "degree": 1,
+                "period": 3
+              },
+              "version": "d64_verified_shape_selective_exp2_v2"
+            },
+            "fp8_ds_lift": 16,
+            "head_fast_raster": false,
+            "input": "E4M3 Q/K/V/dO with fixed x4 publication scale",
+            "lowp_do_stages": 1,
+            "output": "BF16 dQ/dK/dV with common x4 decode",
+            "probability_lift": 256,
+            "probability_storage": "tmem",
+            "probability_tmem_policy": {
+              "auto_eligible": false,
+              "comparison_control": "inherits the retained route's P placement unless detached-P is the explicitly named comparison variable",
+              "effective_detached": false,
+              "mode": "explicit",
+              "reason": "an explicit P-placement override wins over measured dispatch",
+              "requested_detached": false,
+              "retained_policy": {
+                "auto_eligible": false,
+                "effective_detached": false,
+                "mode": "auto_alias_p",
+                "reason": "detached FP8 P is not yet verified for this backward shape",
+                "requested_detached": null,
+                "version": "d64_verified_shape_detached_fp8_p_tmem_v1"
+              },
+              "version": "d64_verified_shape_detached_fp8_p_tmem_v1"
+            },
+            "raster_policy": {
+              "auto_eligible": false,
+              "comparison_control": "inherits the retained route's physical raster so the named direct-TMA, EX2, or detached-P policy is the only kernel change",
+              "effective_head_fast": false,
+              "forced_head_fast": false,
+              "mode": "explicit",
+              "reason": "an explicit raster override wins over measured-shape dispatch",
+              "requested_head_fast": false,
+              "retained_policy": {
+                "auto_eligible": false,
+                "effective_head_fast": false,
+                "forced_head_fast": false,
+                "mode": "auto_key_fast",
+                "reason": "head-fast scheduling is not yet verified for this backward shape",
+                "requested_head_fast": null,
+                "version": "d64_verified_shape_head_fast_raster_v1"
+              },
+              "version": "d64_verified_shape_head_fast_raster_v1"
+            },
+            "retained_source": "0db D64 coherent training policy with sequence-resolved EX2",
+            "reuse_quantized_p": false,
+            "score_scale": "(1/sqrt(64))/16",
+            "statistics": "negative projection-native pages in backward workspace",
+            "workspace_stats": true
+          },
+          "seed": 20260820,
+          "timing": {
+            "breakdown": {
+              "cute_bf16": {
+                "kernel_after_required_clear": {
+                  "maximum_us": 2707.7760696411133,
+                  "mean_us": 2681.8316209883915,
+                  "median_us": 2681.8559169769287,
+                  "minimum_us": 2666.8479442596436,
+                  "p05_us": 2668.544054031372,
+                  "p95_us": 2696.9919204711914,
+                  "samples_us": [
+                    2694.1440105438232,
+                    2687.7760887145996,
+                    2677.056074142456,
+                    2669.5680618286133,
+                    2677.824020385742,
+                    2673.8240718841553,
+                    2668.544054031372,
+                    2677.759885787964,
+                    2672.3198890686035,
+                    2666.8479442596436,
+                    2677.5360107421875,
+                    2682.111978530884,
+                    2675.7121086120605,
+                    2681.8559169769287,
+                    2707.7760696411133,
+                    2694.080114364624,
+                    2682.431936264038,
+                    2689.568042755127,
+                    2696.9919204711914,
+                    2681.8559169769287,
+                    2682.87992477417
+                  ],
+                  "stdev_us": 10.292479905885058
+                },
+                "required_clear_only": {
+                  "maximum_us": 86.496002972126,
+                  "mean_us": 82.81295214380536,
+                  "median_us": 82.49600231647491,
+                  "minimum_us": 81.216000020504,
+                  "p05_us": 81.50400221347809,
+                  "p95_us": 84.19200032949448,
+                  "samples_us": [
+                    86.496002972126,
+                    84.19200032949448,
+                    82.78399705886841,
+                    82.30400085449219,
+                    82.75199681520462,
+                    81.216000020504,
+                    82.49600231647491,
+                    81.7599967122078,
+                    82.17599987983704,
+                    82.75199681520462,
+                    81.7599967122078,
+                    81.56800270080566,
+                    81.50400221347809,
+                    84.09599959850311,
+                    82.04799890518188,
+                    82.20800012350082,
+                    83.90399813652039,
+                    83.8719978928566,
+                    83.39200168848038,
+                    83.5840031504631,
+                    82.20800012350082
+                  ],
+                  "stdev_us": 1.234425259152343
+                }
+              },
+              "retained_lowp_exp2_d1_p3": {
+                "kernel_after_required_clear": {
+                  "maximum_us": 4583.0078125,
+                  "mean_us": 4437.196118491037,
+                  "median_us": 4429.152011871338,
+                  "minimum_us": 4419.23189163208,
+                  "p05_us": 4422.4958419799805,
+                  "p95_us": 4461.887836456299,
+                  "samples_us": [
+                    4461.887836456299,
+                    4430.71985244751,
+                    4429.535865783691,
+                    4583.0078125,
+                    4431.551933288574,
+                    4425.375938415527,
+                    4427.999973297119,
+                    4419.23189163208,
+                    4427.680015563965,
+                    4429.247856140137,
+                    4428.415775299072,
+                    4423.007965087891,
+                    4422.4958419799805,
+                    4432.159900665283,
+                    4428.224086761475,
+                    4432.511806488037,
+                    4428.127765655518,
+                    4429.152011871338,
+                    4430.848121643066,
+                    4428.832054138184,
+                    4431.1041831970215
+                  ],
+                  "stdev_us": 34.366079575041574
+                },
+                "required_clear_only": {
+                  "maximum_us": 42.399998754262924,
+                  "mean_us": 37.40342830618223,
+                  "median_us": 36.73600032925606,
+                  "minimum_us": 35.42400151491165,
+                  "p05_us": 35.74400022625923,
+                  "p95_us": 39.07199949026108,
+                  "samples_us": [
+                    38.656000047922134,
+                    37.98399865627289,
+                    39.07199949026108,
+                    36.54399886727333,
+                    36.57599911093712,
+                    38.40000182390213,
+                    38.656000047922134,
+                    36.73600032925606,
+                    42.399998754262924,
+                    36.67199984192848,
+                    36.57599911093712,
+                    36.54399886727333,
+                    38.015998899936676,
+                    35.74400022625923,
+                    37.02399879693985,
+                    35.42400151491165,
+                    35.80800071358681,
+                    37.50399872660637,
+                    36.38400137424469,
+                    38.59199956059456,
+                    36.159999668598175
+                  ],
+                  "stdev_us": 1.577806946334017
+                }
+              }
+            },
+            "paired_with_required_clear": {
+              "cute_bf16": {
+                "maximum_us": 2775.615930557251,
+                "mean_us": 2754.4411477588474,
+                "median_us": 2755.808115005493,
+                "minimum_us": 2741.919994354248,
+                "p05_us": 2742.0480251312256,
+                "p95_us": 2764.863967895508,
+                "samples_us": [
+                  2775.615930557251,
+                  2764.863967895508,
+                  2746.079921722412,
+                  2757.7600479125977,
+                  2743.295907974243,
+                  2758.0161094665527,
+                  2742.0480251312256,
+                  2759.903907775879,
+                  2752.000093460083,
+                  2764.7039890289307,
+                  2748.8958835601807,
+                  2763.0081176757812,
+                  2747.999906539917,
+                  2756.256103515625,
+                  2744.3199157714844,
+                  2752.671957015991,
+                  2749.664068222046,
+                  2755.808115005493,
+                  2758.4640979766846,
+                  2759.968042373657,
+                  2741.919994354248
+                ],
+                "stdev_us": 8.810049479185672
+              },
+              "retained_lowp_exp2_d1_p3": {
+                "maximum_us": 5210.591793060303,
+                "mean_us": 4501.287573859805,
+                "median_us": 4468.639850616455,
+                "minimum_us": 4448.959827423096,
+                "p05_us": 4454.207897186279,
+                "p95_us": 4476.128101348877,
+                "samples_us": [
+                  4469.376087188721,
+                  4457.791805267334,
+                  4469.024181365967,
+                  4476.128101348877,
+                  4474.783897399902,
+                  4473.887920379639,
+                  5210.591793060303,
+                  4468.671798706055,
+                  4467.167854309082,
+                  4467.520236968994,
+                  4466.65620803833,
+                  4469.279766082764,
+                  4469.056129455566,
+                  4456.89582824707,
+                  4458.911895751953,
+                  4464.960098266602,
+                  4471.456050872803,
+                  4454.207897186279,
+                  4463.071823120117,
+                  4448.959827423096,
+                  4468.639850616455
+                ],
+                "stdev_us": 162.671082692942
+              }
+            },
+            "primary_boundary": "backward_with_every_required_clear",
+            "rotated_order": true,
+            "speedup_vs_bf16": 0.6166995343393641
+          }
+        }
+      ],
+      "shape": {
+        "batch": 1,
+        "gqa_ratio": 4,
+        "head_dim": 64,
+        "kv_heads": 8,
+        "q_heads": 32,
+        "sequence": 16384
+      },
+      "status": "complete"
+    }
+  ],
+  "requested_routes": [
+    "retained_lowp_native_exp2",
+    "retained_lowp_exp2_d1_p2",
+    "retained_lowp_exp2_d1_p3"
+  ],
+  "route_capabilities": {
+    "mx_exact_replay": {
+      "available": false,
+      "reason": "No retained callable adapter in the clean source line consumes the causal forward's published MXFP4 probability payload/E8M0 scale page at the CompiledGqaBackward boundary. Exploratory fp4_pv_experiments.py probes are not a production substitute.",
+      "required_adapter_contract": {
+        "inputs": [
+          "represented E4M3 Q/K/V/dO",
+          "forward MXFP4 probability payload or deterministic replay",
+          "forward-published E8M0 block32 probability scales",
+          "forward LSE/statistics"
+        ],
+        "outputs": [
+          "BF16 dQ",
+          "BF16 dK",
+          "BF16 dV"
+        ],
+        "required_methods": [
+          "reset",
+          "run"
+        ],
+        "timing_boundary": "replay/publication handoff plus every required clear and attention backward"
+      },
+      "scope": "route_complete_mxfp4_probability_replay_and_backward"
+    },
+    "retained_lowp": {
+      "available": true,
+      "d64_exp2_contract": "automatic d1/p2 only for measured S/Hq/Hkv shapes: 4096/16/4, 4096/32/8, 4096/64/16, and 8192/32/8; all other shapes retain native d2/p0",
+      "d64_probability_tmem_contract": "S8192 Hq/Hkv=32/8 stores FP8 P in the unused D64 TMEM tail; other retained shapes preserve the score-aliasing placement",
+      "d64_raster_contract": "the one-lane direct-TMA TMEM S8192 Hq/Hkv=32/8 route uses the measured head-fast/key-wavefront raster; named comparison controls inherit that raster so they isolate only their advertised direct-TMA, EX2, or detached-P change",
+      "input_contract": "represented_e4m3_q_k_v_dout_x4",
+      "probability_contract": "score/LSE reconstruction with retained E4M3 probability path",
+      "scope": "isolated_attention_backward_shared_core",
+      "supported_head_dims": [
+        64,
+        128
+      ]
+    },
+    "retained_lowp_alias_p": {
+      "available": true,
+      "comparison_control_for": "retained_lowp",
+      "explicit_detached_fp8_p_tmem": false,
+      "input_contract": "represented_e4m3_q_k_v_dout_x4",
+      "only_policy_change": {
+        "control_module_detached_fp8_p_tmem": [
+          true,
+          false
+        ]
+      },
+      "probability_contract": "score/LSE reconstruction with retained E4M3 probability path",
+      "reason_d64_only": "This control retains score-aliasing FP8 P while inheriting the production raster so detached-P speedup remains measurable.",
+      "scope": "isolated_attention_backward_shared_core",
+      "supported_head_dims": [
+        64
+      ],
+      "supported_shapes": [
+        {
+          "kv_heads": 8,
+          "q_heads": 32,
+          "sequence": 8192
+        }
+      ]
+    },
+    "retained_lowp_detached_p": {
+      "available": true,
+      "comparison_control_for": "retained_lowp_alias_p",
+      "explicit_detached_fp8_p_tmem": true,
+      "input_contract": "represented_e4m3_q_k_v_dout_x4",
+      "only_policy_change": {
+        "control_module_detached_fp8_p_tmem": [
+          false,
+          true
+        ]
+      },
+      "probability_contract": "score/LSE reconstruction with retained E4M3 probability path",
+      "reason_d64_only": "This control moves FP8 P from the score alias to unused D64 TMEM while inheriting the retained route's physical raster.",
+      "scope": "isolated_attention_backward_shared_core",
+      "supported_head_dims": [
+        64
+      ],
+      "supported_shapes": [
+        {
+          "kv_heads": 8,
+          "q_heads": 32,
+          "sequence": 8192
+        }
+      ]
+    },
+    "retained_lowp_exp2_d1_p2": {
+      "available": true,
+      "comparison_control_for": "retained_lowp_native_exp2",
+      "explicit_exp2_policy": {
+        "degree": 1,
+        "period": 2
+      },
+      "input_contract": "represented_e4m3_q_k_v_dout_x4",
+      "only_policy_change": {
+        "exp2_degree": [
+          2,
+          1
+        ],
+        "exp2_period": [
+          0,
+          2
+        ]
+      },
+      "probability_contract": "score/LSE reconstruction with retained E4M3 probability path",
+      "reason_d64_only": "This is a controlled long-sequence D64 screen of the selective packed-ALU EX2 cadence; it is not a D128 policy.",
+      "scope": "isolated_attention_backward_shared_core",
+      "supported_head_dims": [
+        64
+      ]
+    },
+    "retained_lowp_exp2_d1_p3": {
+      "available": true,
+      "comparison_control_for": "retained_lowp_native_exp2",
+      "explicit_exp2_policy": {
+        "degree": 1,
+        "period": 3
+      },
+      "input_contract": "represented_e4m3_q_k_v_dout_x4",
+      "only_policy_change": {
+        "exp2_degree": [
+          2,
+          1
+        ],
+        "exp2_period": [
+          0,
+          3
+        ]
+      },
+      "probability_contract": "score/LSE reconstruction with retained E4M3 probability path",
+      "reason_d64_only": "This is a controlled long-sequence D64 screen of the selective packed-ALU EX2 cadence; it is not a D128 policy.",
+      "scope": "isolated_attention_backward_shared_core",
+      "supported_head_dims": [
+        64
+      ]
+    },
+    "retained_lowp_native_exp2": {
+      "available": true,
+      "comparison_control_for": "retained_lowp",
+      "explicit_exp2_policy": {
+        "degree": 2,
+        "period": 0
+      },
+      "input_contract": "represented_e4m3_q_k_v_dout_x4",
+      "probability_contract": "score/LSE reconstruction with retained E4M3 probability path",
+      "reason_d64_only": "This control forces the pre-dispatch native EX2 implementation.",
+      "scope": "isolated_attention_backward_shared_core",
+      "supported_head_dims": [
+        64
+      ]
+    },
+    "retained_lowp_no_direct_tma": {
+      "available": true,
+      "comparison_control_for": "retained_lowp",
+      "input_contract": "represented_e4m3_q_k_v_dout_x4",
+      "only_policy_change": {
+        "compiled_backward_direct_tma_dkdv": [
+          true,
+          false
+        ],
+        "control_module_direct_tma_dkdv": [
+          true,
+          false
+        ]
+      },
+      "probability_contract": "score/LSE reconstruction with retained E4M3 probability path",
+      "reason_d64_only": "D128 retained_lowp already uses direct_tma_dkdv=False; this control isolates the D64 direct-TMA dK/dV epilogue only.",
+      "scope": "isolated_attention_backward_shared_core",
+      "supported_head_dims": [
+        64
+      ]
+    }
+  },
+  "schema": "fp4_fa4_causal_backward_matrix_v2",
+  "source": {
+    "control_inputs": [
+      {
+        "exists": true,
+        "path": "qutlass/third_party/cutlass/examples/python/CuTeDSL/blackwell/fmha_bwd.py",
+        "sha256": "953b86a13cc64789052e9d1f8090c9562ac579ee903d275d78cf426780c09eff",
+        "size_bytes": 130976
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/backward_policy.py",
+        "sha256": "1e64e5d8ddbe278d09d47093b278f03b2355382b819a54635f99860514faf2e5",
+        "size_bytes": 11912
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/profile_gqa_d128_chain.py",
+        "sha256": "dcfe9daacedde7b68ae73192080da703756eaeb96ff993d7399d17166fa3fe60",
+        "size_bytes": 97889
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/tune_d64_gqa_cute.py",
+        "sha256": "92edfa134bc7507f4247da0a4c88e317139079d39cd50c466589cb5edf26b98b",
+        "size_bytes": 29793
+      },
+      {
+        "exists": true,
+        "path": "flash-attention/flash_attn/cute/interface.py",
+        "sha256": "f62d3cc9ba70534fa36cb3300bcf87432c957289e53ef165ad79d247820016ca",
+        "size_bytes": 150840
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/d64_gqa_cute.patch",
+        "sha256": "51c7c733108b6a4547b00b560dfd0a827ec321733fae08fdb55ae5708598e487",
+        "size_bytes": 34748
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/d64_gqa_detached_fp8_p_tmem.patch",
+        "sha256": "bac48319b298f8e56537a06eefec0c981ea4d5dee1f00b3d327e3d75d3982f3a",
+        "size_bytes": 5052
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/d64_gqa_direct_tma_dkdv.patch",
+        "sha256": "948413fdd2e95c3844c2771222458d6bbe5d17a3c84b4f3d717a9797a1586b9e",
+        "size_bytes": 15482
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/d64_gqa_fp8_p_layout.patch",
+        "sha256": "4e9fbd7e5a2a291dd8965c17df5a1bb950d3c0a09276f9963ca5fea3ca45db34",
+        "size_bytes": 7705
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/d64_gqa_fp8_p_lift.patch",
+        "sha256": "39884efa3580ea6342730bdc817a83dfc6294235584e3482e67fe524ca948f1f",
+        "size_bytes": 6200
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/d64_gqa_fp8_p_tmem_coord.patch",
+        "sha256": "3533c0f0e20faaad2a9a59ac2286e21ba56f840c88848e8dd9b196f7e3cc879c",
+        "size_bytes": 5063
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/d64_gqa_fp8_p_tmem_wide_load.patch",
+        "sha256": "d1fd6695d181b475e1d9104f8adf292d06af2bdd6096dda38e494bf3389b7486",
+        "size_bytes": 328
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/d64_gqa_fused_probability_lift.patch",
+        "sha256": "af7adbc9dc0faf06d7ebeed206a891139efcc197f6671896b57da61f6791b8bd",
+        "size_bytes": 3697
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/d64_gqa_head_fast_raster.patch",
+        "sha256": "4254b14b753920563ea79baef3579523c6d0821620e4ac3b35a05edf89e2bcaa",
+        "size_bytes": 1793
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/d64_gqa_owner_d64.patch",
+        "sha256": "ec42e984a982b3e8608e9c3d4095b249bfec3bac0628c08e9d3730745e319b01",
+        "size_bytes": 7070
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/d64_gqa_owner_full_operand.patch",
+        "sha256": "2dc9455b7820f78e70744db83d6cb91c22214f8af665ba96e94ca371fa15b198",
+        "size_bytes": 1521
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/d64_gqa_owner_fused_dq_scale.patch",
+        "sha256": "96d97e96e8afc6d375a5ca361f339f7b353819de9a632834fca3e30b2b4a22e5",
+        "size_bytes": 3396
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/d64_gqa_owner_kv_no_materialize.patch",
+        "sha256": "14cfb0e5abe1d8d496594c0dc531079db3d9599c6a398bf34217b8e910ace63e",
+        "size_bytes": 4871
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/d64_gqa_owner_kv_quantize.patch",
+        "sha256": "b9b54388fe6b1b39dd3259391a8660405f0b7e2b57191ead9659563154432b84",
+        "size_bytes": 7939
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/d64_gqa_owner_quantize.patch",
+        "sha256": "fc03f81c1ac0fb325dfc0b517a096e0ab8fb60ce139ba10a1b4fdeffe73904d8",
+        "size_bytes": 34684
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/d64_gqa_reverse_query.patch",
+        "sha256": "7e8b469320c2c9e5350d6f6fa2014c30106c538e14fd9c1e84968d0a97586f23",
+        "size_bytes": 5047
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/d64_gqa_tile_ready.patch",
+        "sha256": "60cba7afbb40933ac9154f56a0761f87e6ed34f3d5925e4414f27e7a9c0637ba",
+        "size_bytes": 8042
+      }
+    ],
+    "git": {
+      "branch": "codex/causal-isolated-matrix-20260820",
+      "dirty": true,
+      "head": "637d4a77bf4eb6ec7fab90faa6f4a29e2c7f6261"
+    },
+    "harness": {
+      "exists": true,
+      "path": "tk_fa4/lowp_fa4_bwd/benchmark_causal_backward_matrix.py",
+      "sha256": "8e32d83c0758dbc599f2de3c77d93866af368b9c23dff3266685f4842c8e6206",
+      "size_bytes": 62003
+    },
+    "lowp_extension": {
+      "exists": true,
+      "path": "/workspace/codebases/pv/fp4_matmul_worktrees/causal_matrix_20260820/tk_fa4/_C_b300_lowp_bwd.cpython-312-aarch64-linux-gnu.so",
+      "sha256": "aeed2603d40290b815218cc77142ddacda0c734384429f26c0d4a6a200fbe884",
+      "size_bytes": 17423160
+    }
+  },
+  "status": "complete",
+  "unavailable_routes": []
+}

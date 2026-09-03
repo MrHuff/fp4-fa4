@@ -1,0 +1,235 @@
+\section{Reproduction and Compile-Time Contract}
+\label{app:reproduction}
+
+\subsection{HAO-grid suite}
+
+Run from \code{tk\_fa4/fp4\_fa4\_fwd}. The following command shows one
+representative shape and policy; repeat \code{--shape} for the rows in
+Eq.~\ref{eq:hao-grid} and run \code{nvmx-fast} and
+\code{nvmx-accurate} in separate output directories.
+\begin{lstlisting}[language=bash]
+CUDA_VISIBLE_DEVICES=0 python3 hao_comprehensive_suite.py \
+  --shape 1,4096,24,128 \
+  --variant nvmx-fast \
+  --warmup-ms 300 --rep-ms 3000 \
+  --cooldown-seconds 0.8 \
+  --seed 20260814 --gpu 0 \
+  --output-dir /path/to/fast_shard0 \
+  --build-root /tmp/fp4_fa4_fast_shard0
+\end{lstlisting}
+The production replay used four identical GB200s. Each shard contains its
+own manifest; the generated summary validates exactly one complete case per
+shape and policy:
+\begin{lstlisting}[language=bash]
+python3 \
+  results/fp4_fa4_hao_table_gb200_20260802/build_summary.py
+\end{lstlisting}
+
+\subsection{FP8 and saturation controls}
+
+The independent wider suite adds FP8 PV and H64 shapes:
+\begin{lstlisting}[language=bash]
+python3 hao_comprehensive_suite.py \
+  --variant all \
+  --shape 1,256,16,128 \
+  --shape 1,1024,24,128 \
+  --shape 1,2048,24,128 \
+  --shape 1,4096,24,128 \
+  --shape 1,4096,64,128 \
+  --shape 1,8192,64,128 \
+  --warmup-ms 300 --rep-ms 3000 \
+  --seed 20260814 --gpu 0 \
+  --output-dir /path/to/fp4_fa4_unified_replay
+\end{lstlisting}
+Its canonical BF16/HAO reference harness preallocates outputs and cycles
+through all six provider orders. Every order and per-window median remains
+in the JSON audit record.
+
+\subsection{Downstream provider suite}
+
+The downstream matrix uses one adapter for TK and native HAO. Every provider
+receives identical weights, dataset order, seed, padding mask, and prepared
+Q/K/V values.
+\begin{lstlisting}[language=bash]
+cd tk_fa4/fp4_fa4_fwd
+python3 downstream_provider_suite.py \
+  --gpu 0 \
+  --output-dir \
+  ../../results/fp4_fa4_downstream_matrix_20260801
+\end{lstlisting}
+Tasks and providers can be sharded with repeated \code{--task} and
+\code{--provider}. Regenerate the audit without rerunning models using
+\code{--summarize-only}. The suite hashes every full BF16 replay and checks
+a matching BF16 prefix for the fail-fast NV/NV control. HAO uses its native
+CuTe forward, not the TK port.
+
+\subsection{Wan QK-guarded policy bundle}
+
+Wan uses a layer-routed bundle rather than one global fallback. The build
+script compiles the fast and accurate NV/MX bases, compiles the wide QK guard,
+and records the routing in one manifest. The following replays the 14B fast
+policy without exact stable softmax:
+\begin{lstlisting}[language=bash]
+cd tk_fa4/fp4_fa4_fwd
+python3 build_wan_nv_mx_bundle.py \
+  --model 14b \
+  --output-dir /tmp/wan_nv_mx_14b_s7680
+CUDA_VISIBLE_DEVICES=0 \
+PYTHONPATH=/workspace/codebases/flash-attention-fp4 \
+python3 eval_wan_video.py \
+  --model Wan-AI/Wan2.1-T2V-14B-Diffusers \
+  --providers hao-bf16,tk \
+  --policy-manifest \
+    /tmp/wan_nv_mx_14b_s7680/manifest.json \
+  --policy fast --steps 4 \
+  --output /tmp/wan_14b_fast.json
+\end{lstlisting}
+Use \code{--policy accurate} for the represented-normalization base. The
+manifest selects guarded layers 27--29 for 1.3B and 33--34/38--39 for 14B;
+all other layers remain on the selected base policy. The default guard uses
+margin/stored-shift pairs $110/16$ and $112/14$, respectively. The builder
+rejects a combined shift above 126, and the kernel clamps translated E8M0
+scales to code 1 before evaluating represented normalization in the
+non-underflowing order.
+
+The main Wan table and its CuTe-BF16 paired outputs are in
+\path{results/fp4_fa4_wan_cute_bf16_20260806}. Rebuild the table with:
+\begin{lstlisting}[language=bash]
+python3 results/fp4_fa4_wan_cute_bf16_20260806/\
+build_tables.py
+\end{lstlisting}
+The corrected guard manifests, paired prompt replays, and five-second timing
+windows are in
+\path{results/fp4_fa4_wan_guard_fix_20260806}.
+
+The layer-boundary calibration artifacts and aggregation script are in
+\path{results/fp4_fa4_wan_affine_calibration_20260806}. The route evaluator's
+\code{--active ROUTE=LAYERS} option runs FP4 only in selected layers and BF16
+attention elsewhere, which keeps every candidate on the same teacher
+trajectory. Rebuild the audit table with:
+\begin{lstlisting}[language=bash]
+python3 results/fp4_fa4_wan_affine_calibration_20260806/\
+build_summary.py
+\end{lstlisting}
+
+The rejected end-to-end joint route search, wider prompt validation, and
+fresh-process controls are in
+\path{results/fp4_fa4_wan_joint_20260806}. The corresponding reusable tools
+are \path{joint_optimize_wan_affine.py},
+\path{validate_wan_joint_routes.py}, and
+\path{materialize_wan_joint_route.py}.
+
+\subsection{ViT-MAE reconstruction}
+
+Download the 100 recorded COCO 2017 validation filenames into one directory,
+then run each provider in a separate process so its extension and CuTe cache
+remain isolated. A representative fast run is:
+\begin{lstlisting}[language=bash]
+cd tk_fa4/fp4_fa4_fwd
+EXT=/tmp/tk_hao_unified_g0/
+EXT=${EXT}b1_s256_h16_d128_nvmx-fast.so
+CUDA_VISIBLE_DEVICES=0 python3 \
+  eval_vit_mae_reconstruction.py \
+  --image-dir /path/to/coco-val-images \
+  --samples 100 \
+  --extension $EXT \
+  --output /tmp/nvmx_fast_100.json
+\end{lstlisting}
+For the accurate route, add \code{--global-anchor-kv}. For HAO controls, set
+\code{--attention-backend} to \code{hao-native} or \code{hao-fp8}. The input
+order is stored in every JSON file. Regenerate paired intervals and the table
+with:
+\begin{lstlisting}[language=bash]
+python3 results/fp4_fa4_reconstruction_20260805/\
+build_summary.py
+\end{lstlisting}
+
+\subsection{B300 mini-job}
+
+The committed compatibility job can be submitted with the Volt production
+CLI after exposing the existing \code{GITHUB\_TOKEN} secret:
+\begin{lstlisting}[language=bash]
+volt job submit \
+  results/fp4_fa4_b300_tuning_20260802/volt_b300_smoke.yaml \
+  --tag project:fp4-fa4 --tag purpose:report
+\end{lstlisting}
+The job clones fixed TK and HAO commits, builds for \code{sm\_103a}, and
+stores hardware metadata, logs, the extension hash, and benchmark JSON under
+Volt artifacts.
+
+The follow-up job corrects the persistent-grid width and compiles four
+native-EX2 densities from the same source and input tensors:
+\begin{lstlisting}[language=bash]
+volt job submit \
+  results/fp4_fa4_b300_tuning_20260802/\
+volt_b300_density_sweep.yaml \
+  --tag project:fp4-fa4 --tag purpose:report
+\end{lstlisting}
+
+The complete D64 runs and final no-override policy check use:
+\begin{lstlisting}[language=bash]
+volt job submit results/fp4_fa4_b300_tuning_20260802/\
+volt_b300_d64_nvmx_full_sweep.yaml
+volt job submit results/fp4_fa4_b300_tuning_20260802/\
+volt_b300_d64_nvnv_full_sweep.yaml
+volt job submit results/fp4_fa4_b300_tuning_20260802/\
+volt_b300_d64_promoted_policy.yaml
+\end{lstlisting}
+The corresponding successful job IDs are \path{f8ajtqmbvd8p},
+\path{ig2tvyqoxtlz}, and \path{2bz33uyyvvo8}. The grid-cap sweep is
+\path{q6nb0jj73xik}; bounded NV/NV validation is \path{szpe9052wipe}.
+The final D128 cross-generation rows come from the order/KV-stage replay
+\path{ev0g6vopwujl}, saturated SFU/reduction sweep \path{y5yrv3k9dvxh},
+S6144 prefetch/SFU sweep \path{oen3rbbipbtf}, and long-context job
+\path{xfby78ic4nql}. The 3-PFLOP/s discovery sweep is
+\path{ibwp4shzwfmi}; its independent five-window, two-seed confirmation is
+\path{d9e3yhudpu93}. Their specifications are
+\path{volt_b300_d128_3ktflops_sweep.yaml} and
+\path{volt_b300_d128_3ktflops_confirm.yaml}.
+After downloading the artifacts, regenerate the B300 JSON and LaTeX rows by
+running \code{python3 build\_summary.py} from the
+\path{results/fp4_fa4_b300_tuning_20260802} directory.
+
+\subsection{Required operand contract}
+
+Both retained policies require folded K64 Q/K scales selected by the MSE
+policy:
+\begin{lstlisting}[language=bash]
+--nv-qk-fold-k64-scales both \
+--nv-qk-fold-scale-select mse
+\end{lstlisting}
+\code{Accurate} also requires the same fixed 32-row permutation for K and V.
+Pairing a folded-scale binary with ordinary block-16 Q/K scales can produce
+plausible timing and invalid accuracy; the suite couples the binary and
+operand arguments.
+
+\subsection{Retained compile-time policy}
+
+\code{Fast} uses a 12-stage K/V ring, all-affine mode 23, four-word
+represented denominators, paired scale reuse, wide three-input maxima,
+Q-scale preloading, early asynchronous P-scale handoff, and a 200/208/56
+register split. \code{Accurate} uses 13 K/V stages, native EX2 samples, a
+32-row anchor, and correction-warpgroup normalization.
+
+Historical NV/NV, intermediate NV/MX, sparse, sampled-denominator,
+direct-code, quadratic, two-CTA, alternate-owner, and interleaving probes
+remain compile-gated and default-off.
+
+\section{Terminology}
+
+\begin{description}
+  \item[Quarter] One N32 fragment read from an N128 score tile. Four producer
+  quarters feed two K64 scaled-FP4 PV commands.
+  \item[Score bank] A 128-column FP32 TMEM region receiving QK and later
+  hosting transient P/scale overlays.
+  \item[Output bank] A permanent 128-column FP32 PV accumulator for one query
+  stage.
+  \item[Represented denominator] A normalizer summed from the E2M1 payload
+  and decoded block scale actually consumed by PV.
+  \item[Early publication] Signaling a legal first K64 payload and scale pair
+  before tail P construction completes.
+  \item[Speed-of-light diagnostic] An intentionally incorrect or
+  semantically altered kernel that removes work to bound latency.
+  \item[Full FP4] Q, K, P, and V use E2M1 payloads with block scales. NVFP4
+  QK plus FP8 PV is a control, not full FP4.
+\end{description}

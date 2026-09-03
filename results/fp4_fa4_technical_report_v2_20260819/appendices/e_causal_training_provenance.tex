@@ -1,0 +1,122 @@
+\section{Causal-Training Result Provenance}
+\label{app:causal-training-provenance}
+
+The causal extension uses durable repository receipts rather than values
+reconstructed from terminal scrollback.  The receipts below authenticate the
+native attention kernels, historical transformer-step recipes, final v509
+runtime, the final local timing brackets, and the four distributed
+dense-cross-entropy arms.  The September 1 curves remain historical
+diagnostics; the September 2 matched B4 snapshot defines the reporting cutoff
+for the paired comparison:
+
+\begin{itemize}
+  \item \path{results/native_tk_d64_ptx_adaptation_20260829/README.md}
+  and \path{v416_llama12b_saturated_receipt_20260829.json} record the D64
+  matched CuTe policies, production ABI, extension hashes, and saturated
+  Llama-1.2B run.
+  \item \path{results/native_tk_d128_gqa_20260829/README.md} records the
+  matched v454 and v482 generated-CuTe matrices, numerical gates, resource
+  envelopes, and selected-SASS identities.
+  \item \path{results/tk_fa4_d128_v501_corrected_20260829/README.md}
+  records the corrected statistics ABI, isolated forward result, 8B matched
+  bracket, v501 profile, and straight-MX v502/v503 experiments.
+  \item \path{results/tk_fa4_d128_shared_tile_mx_20260830/}
+  records byte-level producer equivalence, the represented oracle, composed
+  projection/backward timing, and the saturated A/control/B full-model gate.
+  \item \path{results/llama8b_nvfp4_qk_backward_reconstruction_20260831/README.md}
+  records the B1 native-score reconstruction and E5M2-dO diagnosis that led to
+  the retained path. The final exact-batch integration identities are recorded
+  by the release manifest and the timing and matched-training receipts below.
+  Large tensor captures used for layer-boundary diagnosis are not
+  redistributed with the paper.
+  \item \path{receipts/causal_d128_report_boundaries_20260901.json}
+  contains every sample and summary used for the isolated-backward and
+  projection-inclusive figures.  Its SHA256 is
+  \code{1dbdc27194282680\allowbreak{}7a9cb8e1b93489d3\allowbreak{}24689a77e74ad71b\allowbreak{}3deb7a85d0e47f7e};
+  the recorded raw-receipt SHA256 is
+  \code{0c94e8eec8bcec67\allowbreak{}68fb1e47032c5cfe\allowbreak{}e531cf73dec27c31\allowbreak{}56864ad3db8ba906}.
+  The benchmark source is
+  \path{tk_fa4/lowp_fa4_bwd/benchmark_v509_report_boundaries.py}.
+  \item
+  \path{results/tk_fa4_8b_batch_scaling_20260901/e2e_batch_scaling_summary.json}
+  contains the B1/B2/B4 medians, numerical warning, compiled-extension
+  identities, source commits, and hashes of the six authenticated raw timing
+  receipts used by Figure~\ref{fig:llama8b-e2e-breakdown} and
+  Table~\ref{tab:llama8b-e2e}.  Its SHA256 is
+  \code{1849d1aed501450a\allowbreak{}4b25a807dd6855f9\allowbreak{}962f59e76e91f836\allowbreak{}848bb1a7053dab68}.
+  The raw sample arrays were ephemeral and are not retained in the repository;
+  the committed summary therefore supports the reported medians, not a new
+  confidence-interval analysis.  All arms use standard cross entropy compiled
+  by \texttt{torch.compile}; CCE is disabled.  The older
+  \path{receipts/llama8b_e2e_b1_v509_20260901.json} remains as a superseded
+  B1-only bracket with every sample preserved.
+  \item \path{receipts/llama8b_training_curves_20260901.json} freezes the
+  credential-free W\&B histories used by both training figures at
+  2026-09-01 15:37:37 UTC.  Its SHA256 is
+  \code{eecf78acd3cccd20\allowbreak{}f2cfae57cd8e4b9f\allowbreak{}6a79da12ecd3a453\allowbreak{}7e10f40b73591ca1}.
+  Every unique token coordinate recovered from each four-arm trajectory contributes
+  to its causal token-domain exponential moving average; only one row per 100
+  updates is retained for display.  Duplicate coordinates created by resume
+  are resolved by the final observation returned by the W\&B history scan. The historical
+  reference instead retains its sampled history and committed moving average
+  inside the frozen receipt; it is not treated as a matched control for the
+  B4 experiment.
+  \item \path{receipts/llama8b_b4_w64_launch_check_20260902.json} records the
+  matched 64-GPU B4 recipe, all five aligned update-300--400 observations,
+  the rejected NVFP4-projection MXFP4-P/V arm, source/runtime identities, and
+  the update-239 distributed-checkpoint gate.  This launch-window receipt is
+  used for route validation; aggregate throughput comes from the matched
+  receipt below.  Its SHA256 is
+  \code{f652ea07c34048e9\allowbreak{}180629737dc00093\allowbreak{}3e481e88856e7c64\allowbreak{}ee87f148eea21063}.
+  \item \path{receipts/llama8b_b4_matched_snapshot_20260902T1358Z.json}
+  freezes the matched B4 bfloat16 and NVFP4-projection/FP8-PV
+  histories through their common update 16,425, together with the separate
+  E4M3-projection/MXFP4-PV failure history.  It contains all 578 common
+  post-warmup throughput observations, aligned held-out validation, job and
+  route identities, source hashes, and the worker-log cross-checks used by
+  Figures~\ref{fig:llama8b-b4-matched-training}--\ref{fig:llama8b-b4-matched-throughput}
+  and Figure~\ref{fig:llama8b-b4-mxfp4-failure}.  Its SHA256 is
+  \code{295fc28099e686ed\allowbreak{}101cdd86c28313da\allowbreak{}10cf330fc47f8c1b\allowbreak{}7c5255b55e230f80}.
+\end{itemize}
+
+The three local timing figures, two historical training figures, and three
+B4 figures are regenerated from those receipts by
+\path{plot_causal_training.py}.  The timing receipts also bind the
+benchmark-source and compiled-runtime hashes, so the timing claims do not
+depend on an unversioned extension name or terminal output.
+\path{fetch_llama8b_training_curves.py} performs a read-only metric-history
+capture. It requires an API key in its process environment, an uncommitted
+source map, and an explicit new output path, and refuses to overwrite an
+existing receipt. It never writes the key, service-side run locators, run
+configuration, or environment into the receipt. Source/runtime identities are
+inherited from the authenticated initial cutoff receipt rather than
+revalidated from the metric service.
+For the matched B4 receipt, \path{export_llama8b_b4_snapshot.py} validates
+the already credential-scrubbed W\&B histories, exact token cadence, and
+four-local-rank copies in independently downloaded worker logs.  The raw
+captures and authentication material are not committed.
+
+The historical distributed rows are snapshots from an earlier FP8-PV and
+shared-MXFP4-PV pair.  They are used only as route-selection diagnostics, not
+as checkpoint-aligned validation or aggregate throughput for the retained
+recipe.
+The snapshot deliberately records the matched loss gap and MX gradient
+explosion so a later edit cannot silently convert an operationally running job
+into a numerical-success claim.  Both jobs used learned NVFP4 QKV/O and CCE;
+their values cannot be attached to the revised projection/loss contract.  No
+credential-bearing configuration or environment data are included.
+
+The initial redacted cutoff values and first-retained-instability markers are frozen in
+\path{receipts/v509_four_arm_cutoff_20260831T2209Z.json}, SHA256
+\code{b8e19765627e4f40\allowbreak{}d262578f9b59614f\allowbreak{}61f7eff76b35a346\allowbreak{}7b9d82b5f2784fc2}.
+All four arms authenticate the same source/runtime capsules and backward
+implementation and use a dense language-model head with standard cross entropy
+and loss-only compilation.
+Table~\ref{tab:v509-four-arm-cutoff} is the initial read-only rolling-log
+cutoff from these live records.  The complete materialized histories extend
+the four arms to 55.5--59.0 billion tokens and show that the old retained
+markers were not onset estimates.  The two MX failures may be reported as a
+factorial numerical result; the instantaneous throughput values must not be
+converted into a matched speedup, the historical bfloat16 trace is not a
+paired control, and the FP8 arms support stability only through their stated
+common horizon.

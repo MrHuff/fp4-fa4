@@ -1,0 +1,13 @@
+\section{Conclusion}
+
+Full-FP4 FlashAttention-4 is limited by the path that turns online scores into
+a legal FP4 probability operand, not by FP4 matrix instructions alone. Within
+HAO's two-query TMEM pipeline, NVFP4 QK plus MXFP4 P/V, direct E2M1 code
+mapping, represented normalization, and early K64 publication recover a
+two-times-class BF16 speedup. A sampled range guard and underflow-safe
+denominator keep the same path finite on 20-step Wan replays.
+
+The result is a speed--accuracy frontier rather than strict dominance of
+HAO's higher-fidelity NV/FP8 route. Larger model and training evaluations are
+needed, while further throughput gains likely require K32 consumption, more
+TMEM buffering, or a different scale-delivery contract.

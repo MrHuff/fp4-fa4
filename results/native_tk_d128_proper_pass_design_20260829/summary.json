@@ -1,0 +1,403 @@
+{
+  "schema_version": 1,
+  "audit": {
+    "date_utc": "2026-08-29",
+    "scope": "Read-only native ThunderKittens D128 causal-GQA proper-pass design audit",
+    "worktree": "/workspace/codebases/pv/fp4_matmul_monolithic_tk_20260828",
+    "branch": "codex/monolithic-tk-fa4-train-20260828",
+    "head_at_audit": "1ede7dc715a58ea91165997b78d420439a3585b3",
+    "mutations": "No kernel, binary, benchmark, GPU, job, or cluster mutation; only this README.md and summary.json receipt were added."
+  },
+  "definitions": {
+    "native_tk": "CUDA/C++ directly programming ThunderKittens and SM100 operations",
+    "cute_dsl": "Generated CUTLASS CuTe DSL, including project-local patched controls",
+    "static_instruction_count_limit": "Static PTX/SASS sites are not dynamic execution counts; no NCU profile was collected."
+  },
+  "verdict": {
+    "proper_native_d128_implementable": true,
+    "existing_native_d128_faster_than_cute": false,
+    "existing_native_d128_status": "Correct generic BF16 fallback with noncompetitive topology",
+    "d64_v385_status": "Useful corrected SM100 primitives, unsafe schedule to widen mechanically",
+    "production_until_acceptance": "CuTe DSL",
+    "implementation_class": "New kernel development, not recovery or dispatch activation"
+  },
+  "cute_d128_authenticated_target": {
+    "shape": {
+      "batch": 2,
+      "sequence": 4096,
+      "query_heads": 32,
+      "kv_heads": 8,
+      "head_dim": 128,
+      "causal": true
+    },
+    "input_dtype": "float8_e4m3fn",
+    "statistics_dtype": "float32",
+    "output_dtype": "bfloat16",
+    "source": {
+      "bytes": 221230,
+      "sha256": "cfbd3ad27e5188d39c475abc238b57b5331fc7e631054a7075c7993150c70764"
+    },
+    "cubin": {
+      "diagnostic_path": "/tmp/fa4_d128_exact_isa_20260829/cutlass___call___tk_fa4lowp_fa4_bwdprofile_gqa_d128_chainCompiledGqaBackward__init__localsExternalGqaBackward_object_at__4096_4096_128_4_8_2_Tensorgmemodiv64i64div641i64div64i64div.sm_100a.cubin",
+      "bytes": 114440,
+      "sha256": "4963de5a48e41aea1e4cf6163d1682611becdcb199a779099a7ddfc14c12bc6c"
+    },
+    "ptx": {
+      "diagnostic_path": "/tmp/fa4_d128_exact_isa_20260829/cutlass___call___tk_fa4lowp_fa4_bwdprofile_gqa_d128_chainCompiledGqaBackward__init__localsExternalGqaBackward_object_at__4096_4096_128_4_8_2_Tensorgmemodiv64i64div641i64div64i64div.sm_100a.ptx",
+      "bytes": 184037,
+      "sha256": "89c04ad597dfc038c5ded5d0348497384b0ce30dd06526f91cbe82e71c21a793"
+    },
+    "sass": {
+      "diagnostic_path": "/tmp/fa4_d128_exact_isa_20260829/d128_exact.sass",
+      "bytes": 1126725,
+      "sha256": "52eb4ec8f72b76f93dc555217df890ec3d1d325bf3b84f5a0d0315aced13e931"
+    },
+    "launch": {
+      "tile": [128, 128, 128],
+      "grid": [32, 32, 2],
+      "threads": 512,
+      "warps": 16,
+      "ctas_per_sm": 1,
+      "tmem_columns": 512
+    },
+    "main_resources": {
+      "registers": 128,
+      "stack_bytes_per_thread": 64,
+      "local_bytes": 0,
+      "dynamic_shared_bytes": 150528,
+      "static_or_reserved_shared_bytes": 1024,
+      "total_shared_bytes": 151552,
+      "mbarriers": 24
+    },
+    "static_ptx_sites": {
+      "tcgen05_mma": 40,
+      "native_ex2": 64,
+      "bulk_tensor_load": 6,
+      "tensor_reduction": 4
+    },
+    "stages": {
+      "q": 2,
+      "dout": 2,
+      "dkdv": 1,
+      "probability": 1,
+      "ds": 1,
+      "dq_bf16_n32": 2
+    },
+    "numeric_policy": {
+      "softmax_beta": "(1 / sqrt(128)) / 16",
+      "qk_publication_scale_each": 4,
+      "ds_lift": 256,
+      "exp2_period": 0,
+      "probability_storage": "shared_e4m3",
+      "reuse_quantized_probability": true,
+      "statistics_sign_and_scale": "Inherit and authenticate the current direct-workspace producer convention; do not infer a new convention from tensor names."
+    },
+    "warp_roles": {
+      "reduce": [0, 1, 2, 3],
+      "compute": [4, 5, 6, 7, 8, 9, 10, 11],
+      "mma_issue": 12,
+      "tma_load": 13,
+      "spare_or_control": [14, 15]
+    },
+    "tmem_map": [
+      {"name": "dk", "first_column": 0, "columns": 128, "lifetime": "persistent"},
+      {"name": "dv", "first_column": 128, "columns": 128, "lifetime": "persistent"},
+      {"name": "dp_then_dq", "first_column": 256, "columns": 128, "lifetime": "time_aliased_after_ds_publication"},
+      {"name": "score", "first_column": 384, "columns": 128, "lifetime": "until_probability_publication"}
+    ],
+    "shared_map": [
+      {"name": "barriers_control_and_alignment", "offset": 0, "bytes": 1024},
+      {"name": "k", "offset": 1024, "bytes": 16384},
+      {"name": "v", "offset": 17408, "bytes": 16384},
+      {"name": "q_two_stage", "offset": 33792, "bytes": 32768},
+      {"name": "dout_two_stage", "offset": 66560, "bytes": 32768},
+      {"name": "probability", "offset": 99328, "bytes": 16384},
+      {"name": "ds", "offset": 115712, "bytes": 16384},
+      {"name": "dq_bf16_two_stage", "offset": 132096, "bytes": 16384},
+      {"name": "lse", "offset": 148480, "bytes": 512},
+      {"name": "alignment", "offset": 148992, "bytes": 512},
+      {"name": "dp_row_sum", "offset": 149504, "bytes": 512},
+      {"name": "tail_alignment", "offset": 150016, "bytes": 512}
+    ],
+    "fused_gqa_reducer": {
+      "threads": 256,
+      "registers": 40,
+      "stack_bytes_per_thread": 0,
+      "static_or_reserved_shared_bytes": 1024,
+      "ratio": 4,
+      "accumulation_dtype": "float32",
+      "output_dtype": "bfloat16"
+    }
+  },
+  "gb200_local_resources": {
+    "name": "NVIDIA GB200",
+    "compute_capability": "10.0",
+    "sms": 152,
+    "registers_per_sm": 65536,
+    "shared_bytes_per_sm": 233472,
+    "optin_shared_bytes_per_block": 232448,
+    "max_threads_per_sm": 2048
+  },
+  "d64_v385": {
+    "source": [
+      {
+        "path": "tk_fa4/native_gqa_tk_bwd/v385_d64_gqa_e4m3_k128q128.cuh",
+        "sha256": "11ee92a96d883c15af41c8a23b552350b594000ffee152da45b38516ecca4d70"
+      },
+      {
+        "path": "tk_fa4/native_gqa_tk_bwd/v385_d64_gqa_e4m3_k128q128.cu",
+        "sha256": "74fde07b11c5b1954c6c12bea02ecd052c2feb63f162dc04be8e3ae01c3a25d0"
+      }
+    ],
+    "binary": {
+      "diagnostic_path": "/tmp/tkfa4_v385_d64_gqa_k128q128_build/_C_sm100_gqa_tk_v385_d64_e4m3_k128q128.cpython-312-aarch64-linux-gnu.so",
+      "bytes": 2283880,
+      "sha256": "0b62572a70b2575a984630d0703c81a0490dda616fb8b2515f030131c5a7bc09"
+    },
+    "launch": {
+      "tile": [128, 128, 64],
+      "threads": 512,
+      "warps": 16
+    },
+    "resources": {
+      "registers": 128,
+      "stack_bytes_per_thread": 120,
+      "local_bytes": 0,
+      "shared_bytes": 67696
+    },
+    "safe_to_reuse": [
+      "corrected_e4m3_tcgen05_ab_helper",
+      "corrected_e4m3_tcgen05_atb_helper",
+      "tensor_allocator",
+      "tma_primitives",
+      "bf16_tmem_drain"
+    ],
+    "unsafe_to_widen": [
+      "single_buffered_q_and_dout",
+      "steady_state_full_cta_syncthreads",
+      "wide_compute_fragments_already_spill_at_d64",
+      "serialized_tmem_phase_aliasing",
+      "unvalidated_d128_direct_gqa_add"
+    ],
+    "timing_claim": null,
+    "timing_note": "The preserved 5.864 ms native timing belongs to v384, not v385."
+  },
+  "legacy_native_d128_negative_baseline": {
+    "source_root": "tk_fa4/deprecated",
+    "selected_route": "generic_bf16_causal_gqa",
+    "optimized_route_exclusion": ["causal", "query_heads_not_equal_kv_heads"],
+    "grid_b1": [32, 8, 1],
+    "threads": 256,
+    "resources": {
+      "registers": 255,
+      "stack_bytes_per_thread": 352,
+      "shared_bytes": 100352
+    },
+    "isa": "bf16_hmma_not_tcgen05_tmem",
+    "topology_failures": [
+      "serializes_four_query_heads_per_kv_head_cta",
+      "q16_inner_subtiles",
+      "does_not_prune_fully_masked_query_prefix",
+      "separate_preprocess_and_dq_reducer"
+    ],
+    "fresh_b1_public_boundary_ms": {
+      "native": 6.578432,
+      "exact_bf16_cute": 0.479504,
+      "native_over_cute": 13.719243
+    },
+    "correctness": {
+      "finite": true,
+      "minimum_gradient_cosine_vs_cute": 0.999995768
+    },
+    "provenance_receipt": "results/native_tk_d128_provenance_audit_20260829/README.md"
+  },
+  "proposed_native_d128": {
+    "ownership": "one_cta_per_batch_query_head_k128_tile",
+    "grid_formula": ["ceil_div(sequence,128)", "query_heads", "batch"],
+    "target_shape": [128, 128, 128],
+    "threads": 512,
+    "warps": 16,
+    "ctas_at_b2_s4096_hq32": 2048,
+    "causal_query_traversal": "query_tile starts at key_tile and advances to sequence end",
+    "average_query_tiles_per_cta_at_s4096": 16.5,
+    "warp_roles": {
+      "dq_drain": [0, 1, 2, 3],
+      "compute_wg0": [4, 5, 6, 7],
+      "compute_wg1": [8, 9, 10, 11],
+      "tcgen05_issue": 12,
+      "bulk_tma_load": 13,
+      "statistics_and_causal_control": 14,
+      "tma_store_and_epilogue_control": 15
+    },
+    "tmem_map": "Match authenticated CuTe D128 map exactly",
+    "shared_memory": {
+      "first_pass_dynamic_limit_bytes": 150528,
+      "first_pass_total_limit_bytes": 151552,
+      "later_aliasing_target_kib": [133, 136],
+      "later_aliasing_is_not_required_for_occupancy": true
+    },
+    "register_budget": {
+      "reduce_warps_registers_per_thread": 152,
+      "compute_warps_registers_per_thread": 128,
+      "role_warps_registers_per_thread": 96,
+      "registers_per_cta": 64512,
+      "required_stack_bytes_per_thread": 0,
+      "required_local_bytes": 0
+    },
+    "steady_state_synchronization": "named_mbarriers_only",
+    "full_cta_barrier_allowed": ["initialization", "tmem_allocation", "final_teardown"],
+    "public_abi": {
+      "physical_storage": "contiguous_BSHD",
+      "tma_logical_layout": "S_D_query_head_within_group_kv_head_B",
+      "materializing_transpose": false,
+      "input_dtype": "float8_e4m3fn",
+      "statistics_dtype": "float32",
+      "output_dtype": "bfloat16"
+    },
+    "gqa_baseline": {
+      "main_partial_dtype": "bfloat16",
+      "partial_shape_each": "B_Hq_S_D",
+      "reducer_threads": 256,
+      "reducer_accumulation_dtype": "float32",
+      "ratio": 4,
+      "b2_partial_bytes_total": 134217728,
+      "b2_statistics_bytes": 2097152,
+      "b2_workspace_bytes_total": 136314880
+    },
+    "gqa_direct_add_variant": {
+      "operation": "bf16_tma_red_add",
+      "destination_must_be_zeroed": true,
+      "contributors_per_element": 4,
+      "removes_partial_workspace_and_reducer": true,
+      "status": "opt_in_until_separate_numeric_and_boundary_timing_acceptance"
+    },
+    "rejected_first_passes": [
+      "cta_per_kv_head_with_serial_query_heads",
+      "four_cta_cluster_reduction",
+      "mechanical_d128_template_of_v385_or_v387",
+      "shared_memory_aliasing_that_serializes_score_dp_or_p_ds"
+    ]
+  },
+  "v387_dependency": {
+    "present_when_d128_audit_started": false,
+    "concurrent_untracked_files_observed_at_receipt_validation": true,
+    "runtime_validated_by_this_receipt": false,
+    "compile_only_snapshot": {
+      "source": [
+        {
+          "path": "tk_fa4/native_gqa_tk_bwd/v387_d64_gqa_e4m3_async_pipeline.cuh",
+          "bytes": 20994,
+          "sha256": "037459345c4e6da0f4a0e49a909e75231a00642b8ed131a388b71cf16c48c290"
+        },
+        {
+          "path": "tk_fa4/native_gqa_tk_bwd/v387_d64_gqa_e4m3_async_pipeline.cu",
+          "bytes": 6849,
+          "sha256": "9fcad6b67f6e2533ad38d96d94e42b57b50a545a14c33879262fe865ba3eb362"
+        },
+        {
+          "path": "tk_fa4/native_gqa_tk_bwd/Makefile.v387",
+          "bytes": 1023,
+          "sha256": "b394ed92d54e7f7698a572876d19329b960523f42bfe33fcaff56012ba267734"
+        }
+      ],
+      "extension": {
+        "diagnostic_path": "/tmp/tkfa4_v387_d64_gqa_async_pipeline_build/_C_sm100_gqa_tk_v387_d64_e4m3_async_pipeline.cpython-312-aarch64-linux-gnu.so",
+        "bytes": 2743440,
+        "sha256": "58fce638e8d62c4d5d6fb5f243d3e6d2e09577885d828870cd57a06439d27c71"
+      },
+      "cubin": {
+        "diagnostic_path": "/tmp/tkfa4_v387_d64_gqa_async_pipeline_build/v387_d64_gqa_e4m3_async_pipeline.sm_100a.cubin",
+        "bytes": 1510752,
+        "sha256": "f972db1da9b5d77e0d1c32b55aa2018ee6243f8f92e3d1e06d7636b3313469ac"
+      },
+      "resources": {
+        "threads": 512,
+        "registers": 128,
+        "stack_bytes_per_thread": 0,
+        "local_bytes": 0,
+        "user_shared_bytes": 100576,
+        "cuobjdump_shared_bytes": 101600,
+        "barrier_resources": 3
+      },
+      "static_sass_sites": {
+        "instructions": 2776,
+        "utcqmma": 40,
+        "native_ex2": 32,
+        "tma_load": 12,
+        "tma_reduction": 3,
+        "ldl": 0,
+        "stl": 0
+      },
+      "cta_wide_sync": "one_prologue_syncthreads_and_none_in_steady_state",
+      "runtime_correctness_validated": false,
+      "runtime_timing_validated": false,
+      "register_reconfiguration": {
+        "source_split": "warps_0_through_7_at_compiler_128_warps_8_through_11_at_152_and_warps_12_through_15_at_96",
+        "requested_registers_per_cta": 64512,
+        "gb200_registers_per_sm": 65536,
+        "headroom_registers": 1024,
+        "fits_register_file": true,
+        "runtime_semantics_and_timing_still_unvalidated": true
+      }
+    },
+    "conditional_use": "Primitive base only, followed by a new D128 sibling schedule",
+    "required_before_reuse": [
+      "corrected_e4m3_tcgen05_ab_and_atb",
+      "k128_q128_causal_ownership",
+      "named_mbarrier_steady_state",
+      "register_reconfiguration_sum_no_greater_than_65536",
+      "cubin_stack_zero_and_local_zero",
+      "validated_dq_dk_dv_semantics"
+    ],
+    "fallback_primitive_base": "tk_fa4/native_gqa_tk_bwd/native_gqa_tk_bwd_pipelined.cuh"
+  },
+  "acceptance": {
+    "compile": {
+      "native_symbol_and_cubin_hash_recorded": true,
+      "sm_arch": "sm_100a",
+      "threads": 512,
+      "tile": [128, 128, 128],
+      "registers_max": 128,
+      "stack_bytes_per_thread": 0,
+      "local_bytes": 0,
+      "dynamic_shared_bytes_max": 150528,
+      "total_shared_bytes_max": 151552,
+      "steady_state_full_cta_barriers_allowed": false
+    },
+    "correctness": {
+      "shapes": [
+        {"batch": 1, "sequence": 4096, "query_heads": 32, "kv_heads": 8, "head_dim": 128, "causal": true},
+        {"batch": 2, "sequence": 4096, "query_heads": 32, "kv_heads": 8, "head_dim": 128, "causal": true}
+      ],
+      "all_gradients_finite": true,
+      "cosine_min_vs_current_cute_lowp": 0.9999,
+      "relative_l2_max_vs_current_cute_lowp": 0.02,
+      "norm_ratio_range_vs_current_cute_lowp": [0.995, 1.005],
+      "bf16_regression_allowance": "No more than 2 percent relative or 0.001 absolute beyond current CuTe lowp, whichever is larger",
+      "direct_add_cosine_min_vs_partial": 0.999,
+      "direct_add_relative_l2_degradation_max": 0.01
+    },
+    "performance": {
+      "comparison": "Interleaved matched public backward boundary on same GPU, tensors, statistics, clock state, and reset semantics",
+      "diagnostic_main_kernel_reported": true,
+      "claim_uses_public_boundary": true,
+      "reset_zero_and_reducer_cost_included": true,
+      "maximum_regression_at_b1_or_b2_fraction": 0.01,
+      "minimum_b2_public_boundary_speedup_fraction": 0.03,
+      "direct_add_must_beat_accepted_partial_after_zeroing": true
+    },
+    "integration": {
+      "target": "saturated_llama8b_b2",
+      "required_metrics": [
+        "per_layer_attention_backward",
+        "aggregate_model_backward",
+        "step_latency",
+        "tokens_per_second_per_gpu",
+        "memory",
+        "finite_loss",
+        "finite_gradient_norms"
+      ],
+      "claim_basis": "aggregate_step_not_isolated_main_kernel"
+    }
+  }
+}

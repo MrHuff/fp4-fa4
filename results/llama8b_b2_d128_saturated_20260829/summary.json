@@ -1,0 +1,93 @@
+{
+  "schema": "tkfa4.llama8b_b2_d128_saturated.v1",
+  "date_utc": "2026-08-29",
+  "source_commit": "6530af2551984154bc5d97f6b76eb37c9dca1af8",
+  "hardware": {
+    "name": "NVIDIA GB200",
+    "compute_capability": [10, 0],
+    "gpu_count": 1,
+    "reported_hbm_mib": 189471
+  },
+  "shape": {
+    "model": "llama3.1-8b",
+    "batch": 2,
+    "sequence": 4096,
+    "layers": 32,
+    "hidden": 4096,
+    "q_heads": 32,
+    "kv_heads": 8,
+    "head_dim": 128
+  },
+  "measurement": {
+    "warmups": 3,
+    "updates": 20,
+    "token_source": "synthetic",
+    "loss": "torch-compiled cut-cross-entropy",
+    "checkpoint_sha256": "3dc0e3dc151b4caeb70a3871f44b5ae73ba0aec577ea2752fac18e5b3cc9bdf1"
+  },
+  "routes": {
+    "bf16": {
+      "forward": "packed_bf16_cute_fa4",
+      "backward": "bf16_cute_dsl",
+      "step_p50_ms": 488.69000244140625,
+      "tokens_per_second_p50": 16763.183120330392,
+      "useful_bf16_equivalent_mfu": 0.35947686971978743,
+      "decoder_forward_p50_ms": 136.8196029663086,
+      "backward_p50_ms": 279.745849609375,
+      "ce_forward_p50_ms": 6.390352010726929,
+      "step_coefficient_of_variation": 0.0051478784864892775,
+      "peak_allocated_gib": 112.11052942276001,
+      "peak_reserved_gib": 129.404296875,
+      "heldout_initial": 12.570266723632812,
+      "heldout_final": 12.561864852905273,
+      "result_sha256": "85d0c19234140c58505bb612f1534ded50c397ed578fdfc40f9f84c42540671d"
+    },
+    "fp8_pv": {
+      "forward": "native_tk_nvfp4_qk_e4m3_fp8_pv",
+      "backward": "lowp_cute_dsl_shared_e4m3_projection_accumulator",
+      "step_p50_ms": 435.79791259765625,
+      "tokens_per_second_p50": 18797.703621777415,
+      "useful_bf16_equivalent_mfu": 0.4031059976718594,
+      "decoder_forward_p50_ms": 119.91263961791992,
+      "backward_p50_ms": 242.60248565673828,
+      "ce_forward_p50_ms": 6.245232105255127,
+      "step_coefficient_of_variation": 0.004807186332712263,
+      "peak_allocated_gib": 110.65414142608643,
+      "peak_reserved_gib": 125.9296875,
+      "heldout_initial": 12.58324909210205,
+      "heldout_final": 12.583219528198242,
+      "speedup_vs_bf16": 1.1213683873070357,
+      "forward_speedup_vs_bf16": 1.1409940053213712,
+      "backward_speedup_vs_bf16": 1.1531038062206478,
+      "result_sha256": "86b985895378e81bc8f14ed7ecce3dd38f535879d4de3da70ebec007c4000ddc"
+    },
+    "mxfp4_pv": {
+      "forward": "native_tk_nvfp4_qk_mxfp4_pv",
+      "backward": "lowp_cute_dsl_shared_e4m3_projection_accumulator",
+      "projection_publication": "retained_dual_v",
+      "step_p50_ms": 434.75994873046875,
+      "tokens_per_second_p50": 18842.582036181684,
+      "useful_bf16_equivalent_mfu": 0.4040683895882531,
+      "decoder_forward_p50_ms": 119.60568237304688,
+      "backward_p50_ms": 241.63758087158203,
+      "ce_forward_p50_ms": 6.402223825454712,
+      "step_coefficient_of_variation": 0.004838742088415045,
+      "peak_allocated_gib": 110.65414142608643,
+      "peak_reserved_gib": 125.9296875,
+      "heldout_initial": 12.598453521728516,
+      "heldout_final": 12.578765869140625,
+      "speedup_vs_bf16": 1.1240455885332061,
+      "forward_speedup_vs_bf16": 1.1439222639905349,
+      "backward_speedup_vs_bf16": 1.1577083688734888,
+      "speedup_vs_fp8_pv": 1.002387441323007,
+      "forward_speedup_vs_fp8_pv": 1.0025664102138196,
+      "result_sha256": "a39ea99ac742df01e0acbe4b98d45aaee91ae6e52d33a56363dae416967c1cf5"
+    }
+  },
+  "interpretation": {
+    "lowp_routes_finite": true,
+    "fp8_vs_mx_timing": "tie_within_single_run_variability",
+    "native_tk_d128_backward_used": false,
+    "numerics_scope": "short_synthetic_diagnostic_not_convergence"
+  }
+}

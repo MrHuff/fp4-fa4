@@ -1,0 +1,54 @@
+{
+  "schema": "tk_wan_nv_mx_affine_routed_bundle_v1",
+  "model": "Wan-AI/Wan2.1-T2V-14B-Diffusers",
+  "shape": {
+    "batch": 1,
+    "seqlen": 7680,
+    "heads": 40,
+    "dim": 128
+  },
+  "formats": {
+    "qk": "nvfp4",
+    "pv": "mxfp4"
+  },
+  "softmax": "shiftless/sampled; no stable-softmax fallback",
+  "guard_layers": "33-34,38-39",
+  "qk_guard": {
+    "samples": 128,
+    "margin_log2": 120,
+    "stored_scale_shift_log2": 14
+  },
+  "affine_calibration": {
+    "path": "/workspace/codebases/pv/fp4_matmul/results/fp4_fa4_wan_affine_calibration_20260806/wan14b_train4_fit.json",
+    "base": "a160b095",
+    "runtime_overhead": "none; compile-time constants and static layer routing"
+  },
+  "policies": {
+    "fast": {
+      "base": {
+        "path": "/tmp/wan_pareto_20260805/base-fast-s16-d0-a160-b095.so",
+        "module": "_C_tk_wan_h40_fast_d0_a160_b095"
+      },
+      "layer_extensions": [
+        {
+          "layers": "1-22,24-32,35-37",
+          "path": "/tmp/wan_pareto_20260805/base-fast-s16-d0-a1575-b105.so",
+          "module": "_C_tk_wan_h40_fast_d0_a1575_b105",
+          "purpose": "layer-calibrated affine code map a1575b105"
+        },
+        {
+          "layers": "23",
+          "path": "/tmp/wan_pareto_20260805/base-fast-s16-d0-a160-b0975.so",
+          "module": "_C_tk_wan_h40_fast_d0_a160_b0975",
+          "purpose": "layer-calibrated affine code map a160b0975"
+        },
+        {
+          "layers": "33-34,38-39",
+          "path": "/tmp/wan_pareto_20260805/guard-m120-s14-d1q15.so",
+          "module": "_C_tk_wan_h40_guard_m120_s14_d1q15",
+          "purpose": "wide global QK probe for extreme-logit layers"
+        }
+      ]
+    }
+  }
+}

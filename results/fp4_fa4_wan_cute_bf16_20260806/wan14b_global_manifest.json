@@ -1,0 +1,38 @@
+{
+  "schema": "tk_wan_nv_mx_policy_bundle_v1",
+  "model": "Wan-AI/Wan2.1-T2V-14B-Diffusers",
+  "shape": {
+    "batch": 1,
+    "seqlen": 7680,
+    "heads": 40,
+    "dim": 128
+  },
+  "formats": {
+    "qk": "nvfp4",
+    "pv": "mxfp4"
+  },
+  "policies": {
+    "fast": {
+      "base": {
+        "path": "/tmp/wan_cute_bf16_20260806/14b/nvmx-fast.so",
+        "module": "_C_tk_hao_direct_fp4pv_fast_h40"
+      },
+      "layer_extensions": [
+        {
+          "layers": "33-34,38-39",
+          "path": "/tmp/wan_cute_bf16_20260806/14b/nvmx-anchor128-m120-s14.so",
+          "module": "_C_tk_hao_direct_fp4pv_anchor128_m120_s14_h40",
+          "purpose": "wide global QK probe for extreme-logit layers"
+        }
+      ]
+    }
+  },
+  "affine_calibration": {
+    "base": {
+      "a": 1.6,
+      "b": 0.95
+    },
+    "layer_overrides": [],
+    "purpose": "global affine-boundary control"
+  }
+}

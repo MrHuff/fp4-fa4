@@ -1,0 +1,239 @@
+\section{Results}
+
+Throughput is reported in trillions or quadrillions of floating-point
+operations per second (TFLOP/s or PFLOP/s).
+
+\subsection{Operator performance and accuracy}
+
+How much forward speed does Direct-P gain, and what accuracy does it trade for
+that speed?  Table~\ref{tab:primary-results} places the same finite NV/MX route
+on our GB200 and B300 systems and adds HAO's published GB300 NV/FP8 result
+where the shape matches.  The complete local D128 grid underlies
+Figures~\ref{fig:headline-pareto} and \ref{fig:cross-shape}; its generated
+table remains in the release artifacts.  Unbounded shiftless NV/NV timings are
+excluded even when a particular input happens to be finite.
+
+\begin{table}[htbp]
+\centering
+\caption{Primary forward comparison across Blackwell systems.  Bold marks
+independently confirmed B300 results above 3 PFLOP/s.  Published HAO columns
+provide cross-run context.  ``ms / TF'' means milliseconds and TFLOP/s; TK
+error is cosine / relative-$L_2$ against BF16.}
+\label{tab:primary-results}
+\begingroup
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{adjustbox}{max width=\textwidth}
+\begin{tabular}{lccccc}
+\toprule
+Shape & TK GB200 ms / TF & TK B300 ms / TF & HAO GB300 NV/FP8 TF / cos.
+& B300 $\Delta$t & TK B300 cosine / rel.-$L_2$ \\
+\midrule
+\input{../fp4_fa4_b300_tuning_20260802/tables/primary_cross_generation_d128_rows.tex}%
+\end{tabular}
+\end{adjustbox}
+\endgroup
+\end{table}
+
+Across the nine GB200 D128 rows, \code{fast} is
+\HaoGridFastGeoSpeedup$\times$ faster than HAO BF16 geometrically and peaks
+at \HaoGridFastPeakTflops\ TFLOP/s. \code{Accurate} reaches
+\HaoGridAccurateGeoSpeedup$\times$ and \HaoGridAccuratePeakTflops\ TFLOP/s.
+At S32768/H24, fast takes 4.400448 ms (2998 TFLOP/s), compared with HAO's
+published 2018 TFLOP/s on B200 and 2677 TFLOP/s on GB300 for NV/FP8.
+
+HAO NV/FP8 remains more accurate: its mean cosine is
+\HaoPublishedMeanCosine, versus \HaoGridFastMeanCosine\ for fast and
+\HaoGridAccurateMeanCosine\ for accurate. The corresponding TK mean
+relative-$L_2$ values are \HaoGridFastMeanRelLTwo\ and
+\HaoGridAccurateMeanRelLTwo. HAO does not publish relative-$L_2$ for these
+rows. Appendix~\ref{app:accuracy-matched-control} measures the cost of matching
+its cosine with our exact NV/FP8 route; the local HAO NV/NV and full format
+matrix remain in Appendices~\ref{app:nvnv} and \ref{app:format-matrix}.
+
+B300 improves D128 latency by 5.6--7.7\% on the S4096--S8192 rows.
+The standard S8192/H64 case reaches \BThreeThreeKStandardTflops\ TFLOP/s,
+and wave-aligned S\BThreeThreeKPeakSeq/H64 reaches
+\BThreeThreeKPeakTflops\ TFLOP/s. The exception is S32768/H24: B300 reaches
+2945 TFLOP/s versus 2998 on GB200. At HAO's published D128 shapes, our B300
+NV/MX reaches 2369 versus 2046 TFLOP/s at S4096/H24 and 2945 versus 2677 at
+S32768/H24. These are different implementations and harnesses, so they
+establish scale rather than causal timing differences. The distinct D64 tile
+regime is reported in Appendix~\ref{app:nvnv-d64}.
+
+\subsection{Speed--accuracy behavior across shapes}
+
+Does the trade-off persist across attention shapes?  Figure
+\ref{fig:headline-pareto} shows the independent suite at $B=1$, $S=4096$,
+$H=24$, and $D=128$, including optimized local FP8-PV controls. Its six-order
+reference harness produces slightly different timings from
+Table~\ref{tab:primary-results}, but all points share one BF16 value.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=.83\textwidth]
+  {../fp4_fa4_unified_20260801/figures/headline_pareto.pdf}
+\caption{Speed--error plane for the headline shape. Up and left are better.
+The fastest full-FP4 points accept more operator error than HAO NV/NV or FP8
+PV.}
+\label{fig:headline-pareto}
+\end{figure}
+
+FP8 PV avoids the E2M1 payload and block-scale page required by full FP4 and
+is more accurate. The local TK NV/FP8 control reaches only 1.118$\times$ BF16
+in this suite, whereas NV/MX fast reaches 1.783$\times$; HAO's stronger
+published NV/FP8 result is therefore included in the primary table rather
+than inferred from this local control.
+
+Figure~\ref{fig:cross-shape} adds H64 cases. At S4096/H64, fast takes
+0.202752 ms versus 0.370688 ms for BF16 (1.828$\times$). At S8192/H64 it
+takes 0.758336 ms versus 1.611488 ms (2.125$\times$). The two-query CTA is
+important here: the earlier one-query topology created twice as many jobs and
+could require an additional scheduling wave at high head count.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=.96\textwidth]
+  {../fp4_fa4_unified_20260801/figures/cross_shape_speed_accuracy.pdf}
+\caption{BF16 speedup and relative-$L_2$ from matched records across startup,
+transition, and saturated shapes.}
+\label{fig:cross-shape}
+\end{figure}
+
+\Needspace{10\baselineskip}
+\subsection{ViT and BERT fixed-input evaluations}
+
+How does operator error propagate through complete transformer models?
+Table~\ref{tab:downstream-tradeoff} joins physical attention speed, mean layer
+error, and final task behavior. ViT uses 1,000 examples at S256 and 200 at
+S1024/S4096. BERT MLM uses 800 S256 blocks and 200 S512 blocks; SST-2 uses all
+872 validation examples.
+
+\begin{table}[htbp]
+\centering
+\caption{Downstream fixed-input trade-off.  Task score is provider / BF16 accuracy;
+final error is cosine / relative-$L_2$ against BF16.  Speedup belongs to the
+physical attention shape, not the complete model.  HAO NV/NV is the
+identical-input control because no NV/FP8 task evaluation is published.}
+\label{tab:downstream-tradeoff}
+\footnotesize
+\begin{adjustbox}{max width=\textwidth}
+\begin{tabular}{llrrrr}
+\toprule
+Task & Provider & Speedup & Task score / BF16 (\%)
+& Final cos. / rel.-$L_2$ & $\Delta$MLM loss \\
+\midrule
+\input{../fp4_fa4_unified_20260801/tables/downstream_main_rows.tex}%
+\end{tabular}
+\end{adjustbox}
+\end{table}
+
+Both NV/MX policies remain finite. On ViT S4096, fast matches BF16 top-1
+accuracy (88.5\%) with 95.5\% prediction agreement; accurate reaches 89.0\%
+and 98.5\%, while native HAO NV/NV reaches 88.0\% and 98.0\%. Fast improves
+from roughly 0.944 cosine in the Gaussian operator test to 0.9961 mean layer
+cosine on this model input. Residual paths, normalization, later mixing, and
+decision margins can attenuate operator error, so standalone relative-$L_2$
+is informative but is not itself a task loss.
+
+Across \DownstreamClassificationSamples\ classification examples, fast
+changes \DownstreamFastPredictionChanges\ predictions, with
+\DownstreamFastLowMarginChanges\ in the lowest quartile of BF16 top-two logit
+margins. All changes from accurate and HAO NV/NV also lie in that quartile.
+This supports a margin mechanism, but the suite is too small to establish
+universal inference or training safety.
+
+\subsection{Wan video diffusion}
+
+Does Direct-P remain finite when attention error is composed across many
+diffusion steps?  Wan is a larger, native-shape test: all video self-attention
+calls run at S7680/D128, while text cross-attention and the rest of the model stay BF16.
+Table~\ref{tab:wan-downstream} compares every route with paired HAO CuTe-DSL
+BF16 outputs and warmed kernel timing.
+
+\begin{table}[htbp]
+\centering
+\caption{Wan2.1 quality and warmed GB200 kernel speed at S7680/D128. Speedup
+is relative to HAO CuTe-DSL BF16. Quality is cosine / relative-$L_2$ of the
+final latent against the paired BF16 run.}
+\label{tab:wan-downstream}
+\scriptsize
+\begin{adjustbox}{max width=\textwidth}
+\begin{tabular}{llrrccc}
+\toprule
+Model & Method & Time (ms) & Speedup & 1 step & 4 steps & 20 steps \\
+\midrule
+\input{../fp4_fa4_wan_cute_bf16_20260806/tables/wan_quality_speed_rows.tex}%
+\end{tabular}
+\end{adjustbox}
+\end{table}
+
+Fast is 1.75$\times$ faster than CuTe BF16 on the 1.3-billion-parameter model
+and 2.09$\times$ on the 14-billion-parameter model; accurate reaches
+1.47$\times$ and 1.75$\times$. HAO NV/FP8 is at parity for H12 and
+1.18$\times$ faster for H40. On the 14-billion-parameter model at four steps,
+fast reaches 0.9338 / 0.3589, close to HAO NV/NV at 0.9327 / 0.3640. At twenty
+steps it reaches 0.8496 / 0.5337, versus 0.9036 / 0.4435 for HAO NV/NV; a
+held-out prompt reaches 0.8235 / 0.5813. The route is finite but accumulates
+more drift.
+
+The original layer-39 failure was not an anchor miss: the sampled and exact
+row maxima were equal. The expression $(s/6)\sum_i c_i$ formed a subnormal
+intermediate at E8M0 code 1 and flushed to zero. Algorithm~\ref{alg:sampled-guard}
+reassociates it as $s(\sum_i c_i/6)$. Both 14-billion-parameter twenty-step
+runs now complete all 1,600 attention calls without a scan or stable-softmax
+fallback.
+
+Guarded layers are 21--23\% slower individually, but they are only 3/30 layers
+in the 1.3-billion-parameter model and 4/40 in the 14-billion-parameter model.
+Layer-weighted times are therefore 0.165309 ms and 0.424995 ms, 2.2--2.3\%
+above the unguarded bases. The historical layer-wise affine map is omitted
+because its small gain reversed between prompts. These drop-in BF16-checkpoint
+results do not reproduce Attn-QAT's trained quality; that requires its QAT
+checkpoint or training recipe \cite{zhang2026attnqat}.
+
+\subsection{Paired image reconstruction}
+
+Is the residual attention error visible in reconstructed images?
+Table~\ref{tab:mae-reconstruction} replaces all 12 ViT-MAE encoder attention
+layers for the same 100 images and masks. The S256 speedup is a physical kernel
+measurement, not end-to-end MAE speed.
+
+\begin{table}[htbp]
+\centering
+\caption{Paired ViT-MAE reconstruction. PSNR $\Delta$ is FP4 minus BF16 with
+a paired 95\% interval. Reconstruction and layer cells are cosine /
+relative-$L_2$ against BF16.}
+\label{tab:mae-reconstruction}
+\scriptsize
+\begin{adjustbox}{max width=\textwidth}
+\begin{tabular}{lrrrrrr}
+\toprule
+Provider & S256 speedup & PSNR (dB) & PSNR $\Delta$ (dB)
+& MSE $\Delta$ (\%) & Reconstruction & Mean layer \\
+\midrule
+\input{../fp4_fa4_reconstruction_20260805/tables/reconstruction_rows.tex}%
+\end{tabular}
+\end{adjustbox}
+\end{table}
+
+HAO NV/FP8 is closest to BF16 at $-0.007\pm0.012$ dB. HAO NV/NV, accurate,
+and fast reach $-0.010\pm0.015$, $-0.024\pm0.021$, and
+$-0.020\pm0.026$ dB. Fast has the largest reconstruction displacement, but
+its output remains 0.99973 cosine and 2.03\% relative-$L_2$ from BF16 after
+all twelve layers. Figure~\ref{fig:mae-reconstruction} makes the residual
+visible only after an $8\times$ amplification.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=.98\textwidth]
+  {../fp4_fa4_reconstruction_20260805/nvmx_fast_report.png}
+\caption{Four paired ViT-MAE examples. The right column shows
+$8\lvert I_{\mathrm{FP4}}-I_{\mathrm{BF16}}\rvert$; only encoder attention
+differs between the BF16 and fast runs.}
+\label{fig:mae-reconstruction}
+\end{figure}
+
+The aggressive shiftless TK NV/NV control fails on the first sample of every
+task, whereas HAO's stabilized NV/NV remains finite. Appendix~\ref{app:nvnv-failure}
+shows that the distinction is stabilization, not the use of NVFP4 P itself.

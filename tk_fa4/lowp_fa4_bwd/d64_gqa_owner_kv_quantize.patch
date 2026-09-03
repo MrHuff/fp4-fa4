@@ -1,0 +1,177 @@
+--- a/fmha_bwd.py
++++ b/fmha_bwd.py
+@@ -404,6 +404,7 @@
+         self.hierarchical_dq_lanes = 1
+         self.signal_dq_tiles = False
+         self.owner_quantize_dq = False
++        self.owner_quantize_kv = False
+         self.use_precomputed_stats = False
+         self.skip_stats_preprocess = False
+         # The reference GQA topology serializes every query head that shares a
+@@ -1248,6 +1249,10 @@
+             problem_shape[2],
+             cumulative_s_q,
+             scale_softmax,
++            owner_dq_fp4,
++            owner_dq_scales,
++            owner_dq_global_scale,
++            owner_rope_packed,
+         ).launch(
+             grid=convert_grid,
+             block=convert_block,
+@@ -1879,6 +1884,10 @@
+         d_dim: Int32,
+         cumulative_s_q: Union[cute.Tensor, None],
+         scale_softmax: Float32,
++        owner_dq_fp4: Union[cute.Tensor, None],
++        owner_dq_scales: Union[cute.Tensor, None],
++        owner_dq_global_scale: Union[cute.Tensor, None],
++        owner_rope_packed: Union[cute.Tensor, None],
+     ):
+         tidx, tidy, tidz = cute.arch.thread_idx()
+         bidx, bidy, bidz = cute.arch.block_idx()
+@@ -2004,6 +2013,144 @@
+                         dv_acc.to(self.output_dtype)
+                     )
+
++                    if cutlass.const_expr(self.owner_quantize_kv):
++                        if idx_d_vec % 4 == 0:
++                            block = idx_d_vec // 4
++                            dk_values = cute.make_rmem_tensor(
++                                cute.make_layout(16), BFloat16
++                            )
++                            dv_values = cute.make_rmem_tensor(
++                                cute.make_layout(16), BFloat16
++                            )
++                            for block_vec in cutlass.range_constexpr(4):
++                                vec_idx = idx_d_vec + block_vec
++                                dk_vec = cute.logical_divide(
++                                    dK_partial[
++                                        idx_k, None, first_head
++                                    ],
++                                    cute.make_layout(
++                                        self.gqa_reduce_vector
++                                    ),
++                                )[None, vec_idx].load().to(self.acc_dtype)
++                                dv_vec = cute.logical_divide(
++                                    dV_partial[
++                                        idx_k, None, first_head
++                                    ],
++                                    cute.make_layout(
++                                        self.gqa_reduce_vector
++                                    ),
++                                )[None, vec_idx].load().to(self.acc_dtype)
++                                for h_r in cutlass.range(1, H_R):
++                                    head_coord = (
++                                        (h_r, reduce_head),
++                                        reduce_batch,
++                                    )
++                                    dk_vec += cute.logical_divide(
++                                        dK_partial[
++                                            idx_k, None, head_coord
++                                        ],
++                                        cute.make_layout(
++                                            self.gqa_reduce_vector
++                                        ),
++                                    )[None, vec_idx].load().to(
++                                        self.acc_dtype
++                                    )
++                                    dv_vec += cute.logical_divide(
++                                        dV_partial[
++                                            idx_k, None, head_coord
++                                        ],
++                                        cute.make_layout(
++                                            self.gqa_reduce_vector
++                                        ),
++                                    )[None, vec_idx].load().to(
++                                        self.acc_dtype
++                                    )
++                                dv_vec *= Float32(1.0 / 256.0)
++                                for j in cutlass.range_constexpr(4):
++                                    value_idx = block_vec * 4 + j
++                                    dk_values[value_idx] = dk_vec[j].to(
++                                        BFloat16
++                                    )
++                                    dv_values[value_idx] = dv_vec[j].to(
++                                        BFloat16
++                                    )
++
++                            for pair in cutlass.range_constexpr(8):
++                                x, y = tk_inverse_rope_bf16_pair(
++                                    Float32(dk_values[pair * 2]),
++                                    Float32(dk_values[pair * 2 + 1]),
++                                    owner_rope_packed[
++                                        reduce_batch,
++                                        idx_k,
++                                        block * 8 + pair,
++                                    ],
++                                )
++                                dk_values[pair * 2] = x.to(BFloat16)
++                                dk_values[pair * 2 + 1] = y.to(BFloat16)
++
++                            q_heads = H_R * H_K
++                            self.publish_owner_nvfp4_block(
++                                dk_values,
++                                idx_k,
++                                q_heads + reduce_head,
++                                block,
++                                owner_dq_fp4,
++                                owner_dq_scales,
++                                owner_dq_global_scale,
++                            )
++                            self.publish_owner_nvfp4_block(
++                                dv_values,
++                                idx_k,
++                                q_heads + H_K + reduce_head,
++                                block,
++                                owner_dq_fp4,
++                                owner_dq_scales,
++                                owner_dq_global_scale,
++                            )
++
++    @cute.jit
++    def publish_owner_nvfp4_block(
++        self,
++        values: cute.Tensor,
++        row: Int32,
++        logical_head: Int32,
++        block: Int32,
++        owner_dq_fp4: cute.Tensor,
++        owner_dq_scales: cute.Tensor,
++        owner_dq_global_scale: cute.Tensor,
++    ):
++        global_decode = Float32(owner_dq_global_scale[0])
++        global_encode = cute.arch.rcp_approx(
++            cute.arch.fmax(global_decode, Float32(0.000000000001))
++        )
++        amax = Float32(0.0)
++        for i in cutlass.range_constexpr(16):
++            amax = cute.arch.fmax(amax, abs(Float32(values[i])))
++        packed_scale, local_decode = tk_encode_e4m3_f32(
++            amax * global_encode * Float32(1.0 / 6.0)
++        )
++        encode = cute.arch.rcp_approx(
++            cute.arch.fmax(
++                local_decode * global_decode,
++                Float32(0.000000000001),
++            )
++        )
++        payload_offset = logical_head * 64 + block * 8
++        for pair in cutlass.range_constexpr(8):
++            packed = tk_pack_e2m1_f32x2(
++                Float32(values[pair * 2]) * encode,
++                Float32(values[pair * 2 + 1]) * encode,
++            )
++            owner_dq_fp4[row, payload_offset + pair] = Uint8(packed)
++
++        local_row = row % 128
++        scale_row_offset = (local_row % 32) * 16 + (local_row // 32) * 4
++        owner_dq_scales[
++            row // 128,
++            logical_head * 2 + block // 4,
++            scale_row_offset + block % 4,
++        ] = Uint8(packed_scale)
++
+     @cute.jit
+     def load(
+         self,

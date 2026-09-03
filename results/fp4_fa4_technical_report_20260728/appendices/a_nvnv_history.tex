@@ -1,0 +1,217 @@
+\section{Historical NV/NV Investigation}
+\label{app:nvnv}
+
+This appendix preserves the NV/NV work that led to the retained design. It
+is intentionally separated from the principal result because those kernels
+use a different P scale format, approximation policy, and sometimes a
+different denominator. Their timings must not be mixed with the final NV/MX
+headroom.
+
+\subsection{Initial stabilized path}
+
+The first numerically robust full-FP4 route followed the conventional order:
+\begin{equation}
+  z \rightarrow m \rightarrow e^{z-m} \rightarrow a_B
+  \rightarrow s_{\mathrm{E4M3}} \rightarrow \mathrm{E2M1}.
+\end{equation}
+It computed an exact online row maximum, produced floating probabilities,
+reduced an N32 block maximum, encoded an E4M3 scale, divided by that scale,
+and packed E2M1. This path remained finite on downstream inputs but measured
+about 0.1884\,ms at S4096/H24. The sequence was numerically conservative and
+serial: scale selection could not start until floating probabilities existed.
+
+For a global NV encode factor $G$, payload and scale can be expressed as
+\begin{align}
+  S_B(G) &= Q_{\mathrm{E4M3}}\!\left(G\frac{a_B}{6}\right), \\
+  q_j(G) &= \Qe\!\left(\frac{G p_j}{S_B(G)}\right), \\
+  \widehat p_j(G) &= \frac{S_B(G)}{G}q_j(G).
+\end{align}
+If $G$ multiplies both numerator and denominator consistently and no
+rounding boundary changes, it cancels. It is not a free accuracy knob once
+scale rounding, underflow, and saturation are considered. Sweeping $G$
+without changing the shiftless estimator produced little benefit; adding
+full stabilization to make the sweep meaningful restored the expensive
+path.
+
+\subsection{Code-directed polynomial development}
+
+The key useful idea from NV/NV was to target E2M1 decisions directly. A
+cubic fit to the base-two locations of E2M1 thresholds was
+\begin{equation}
+  \begin{aligned}
+    p(x)={}&0.07839806x^3+0.28625049x^2 \\
+           &+0.63145205x+0.99202336.
+  \end{aligned}
+\end{equation}
+After folding the score and block scale into its coefficients, two values
+could be evaluated with packed Horner operations:
+\begin{align}
+  r_1 &= \operatorname{FMA2}(x,a,b), \\
+  r_2 &= \operatorname{FMA2}(r_1,x,c), \\
+  y &= \operatorname{FMA2}(r_2,x,d).
+\end{align}
+This was faster than a full exponential and more accurate than early linear
+fits. It also established that the fitting target should be
+$\Qe(f(x))$, not $f(x)$ itself.
+
+An intermediate SFU/ALU hybrid issued four native \code{EX2} pairs first and
+filled their latency with twelve cubic or affine pairs. The native samples
+also supplied an approximate denominator. This improved over pure-SFU and
+pure-ALU variants on that schedule, but it coupled numerator and denominator
+sampling to one distribution.
+
+The later affine endpoint
+\begin{equation}
+  \ell(x)=\max(0,1.62330034x+0.92083546)
+\end{equation}
+reduced non-native work to one packed FMA per pair. That mechanism survives
+in the retained NV/MX path, with policy-specific coefficients and an exact
+represented denominator.
+
+\subsection{Sampled denominator}
+
+The NV/NV throughput path sampled eight of 32 scalar probability values in
+each quarter. If $\mathcal J_q$ is the rotated sample set, it estimated
+\begin{equation}
+  \widetilde L_B = A_B\,4
+  \sum_{j\in\mathcal J_q}2^{x_j}.
+\end{equation}
+The factor four compensates for sampling one quarter of the values. This
+saved a complete denominator pass but could miss a concentrated maximum or
+misestimate a nonuniform tail. Two- and three-word denominator reductions
+were faster diagnostics but failed downstream: in a 20-image ViT gate they
+gave respectively 0\% and 75\% top-1 agreement with BF16. The retained
+NV/MX path instead sums all represented E2M1 payload words.
+
+\subsection{Policy ladder and distribution dependence}
+
+The NV/NV investigation exposed \code{fast}, \code{universal}, and
+\code{hao-l2} style policies. \code{Fast} used the most aggressive
+shiftless approximation. \code{Universal} restored scale guards and a more
+reliable row reference. \code{Hao-l2} retained full stabilization. Their
+rough latency hierarchy at S4096/H24 was approximately 0.10, 0.11--0.13,
+and 0.188\,ms, respectively, depending on the exact generation of the
+kernel.
+
+The important result was not one latency number. Fast NV/NV could have good
+cosine on Gaussian scores and still generate non-finite or highly distorted
+model outputs when its row-reference assumptions changed. Stabilization
+fixed those cases but consumed the desired speedup. Fixed-scale sweeps on
+the shiftless estimator did not reproduce the accuracy of the fully
+stabilized E4M3 control.
+
+\subsection{Why NV/NV was not retained}
+
+NV/NV contributed three ideas that remain: code-directed approximation,
+early partial P publication, and the need to evaluate speed and downstream
+accuracy together. It was superseded for four reasons:
+\begin{enumerate}
+  \item an E4M3 P scale without a robust global factor can round
+  low-amplitude N32 blocks to zero; applying the factor correctly fixes the
+  format-level underflow but restores work on the exposed P path;
+  \item independent block-16 scale work does not align as naturally with the
+  N32 software producer;
+  \item the robust stabilized path was too slow, while the fastest shiftless
+  path was distribution-sensitive;
+  \item the HAO-derived 512-column layout and MXFP4 scale handoff provided a
+  cleaner way to retain small P blocks without adding another score bank.
+\end{enumerate}
+
+The fixed-schedule format table remains in the main paper because it is a useful
+control: NV/NV can outperform NV/MX on a specific synthetic metric. The
+format-range and downstream experiments explain why that isolated result is
+not sufficient to select the production route.
+
+\subsection{B300 D64 sweep and range failure}
+\label{app:nvnv-d64}
+
+The D64 specialization provides a wider test of this distinction. Its B300
+NV/MX route combines fused TMEM load/reduction with eight native-EX2 pairs and
+eight affine pairs per score quarter. Every NV/MX output in the 24-shape
+matrix is finite. The raw shiftless NV/NV control is often locally more
+accurate because its E4M3 scale can fit a benign block more closely, but it is
+finite on only \BThreeDsixtyfourNVNVFiniteCases\ of the 24 tested cases.
+
+\begin{table}[htbp]
+\centering
+\caption{Selected B300 D64 format diagnostics. NV/MX is the retained finite
+route. NV/NV timings are shown only to explain the rejected control and must
+not be treated as production performance when the status is non-finite.}
+\label{tab:b300-d64-diagnostic}
+\scriptsize
+\begin{adjustbox}{max width=\textwidth}
+\begin{tabular}{rrrrrrrrrl}
+\toprule
+$H$ & $S$ & \multicolumn{4}{c}{NV/MX} & \multicolumn{3}{c}{raw NV/NV} & Status \\
+\cmidrule(lr){3-6}\cmidrule(lr){7-9}
+ & & ms & TFLOP/s & Cosine & Rel.-$L_2$ & ms & Cosine & Rel.-$L_2$ & \\
+\midrule
+\input{../fp4_fa4_b300_tuning_20260802/tables/b300_d64_rows.tex}%
+\end{tabular}
+\end{adjustbox}
+\end{table}
+
+Across S4096-and-longer rows, retained NV/MX is
+\BThreeDsixtyfourMinSpeedup--\BThreeDsixtyfourMaxSpeedup$\times$ faster than
+the matched B300 BF16 kernel. Density two wins or ties density one on
+\BThreeDsixtyfourDensityWins\ of 24 shapes. H32/S2048 and H64/S1024 need
+136-CTA and 128-CTA grid caps, respectively, because their short logical job
+counts interact poorly with the full 148-worker persistent grid. Other shapes
+retain 148 CTAs. Every promoted build uses 128 registers, one barrier, and no
+local-memory spills.
+
+The decisive failure occurs at H32/S32768. Seed 20260802 produces exactly 64
+non-finite raw NV/NV outputs while BF16 and NV/MX remain finite; another seed
+passes. Saturating the E4M3 scale encoder repairs the failing distribution at
+\BThreeDsixtyfourBoundedNVNVTime\,ms and
+\BThreeDsixtyfourBoundedNVNVSpeedup$\times$ BF16, with 0.962921 cosine and
+0.275742 relative-$L_2$. This bounded mode costs roughly 2--3\%. MXFP4's E8M0
+scale is not finer than E4M3, but its exponent range represents tiny
+probability blocks without a separately materialized row shift. Raw NV/NV can
+therefore win a local error metric when it remains in range; NV/MX is the
+retained low-latency route because it remains finite across the matrix.
+
+\subsection{Measured downstream failure mechanism}
+\label{app:nvnv-failure}
+
+The expanded provider matrix isolates the failure. Native HAO and the TK
+fixed-schedule control receive the same NVFP4-quantized Q, K, and V tensors.
+HAO first subtracts a row maximum. The TK control instead forms a shiftless
+block scale from
+\begin{equation}
+  s_B^{\mathrm{shiftless}}
+  = \frac{1}{6}\max_{j\in B}\exp(z_j),
+\end{equation}
+then encodes it in E4M3. Model scores make this quantity exceed the finite
+E4M3 maximum of 448 in every tested workload. This control has no
+satfinite guard, so its out-of-range scale conversion contaminates the
+dependent P and denominator path and produces non-finite context rows.
+
+With row-max stabilization,
+\begin{equation}
+  s_B^{\mathrm{stable}}
+  = \frac{1}{6}\max_{j\in B}\exp(z_j-m),
+  \qquad m=\max_j z_j,
+\end{equation}
+so $0\le s_B^{\mathrm{stable}}\le 1/6$. Table~\ref{tab:nvnv-failure}
+reports the first-sample diagnostic. The non-finite count is accumulated
+over all attention layers evaluated for that sample. Small stabilized blocks
+can still underflow, but they contain negligible probability mass relative
+to the row anchor; HAO remains finite on every full replay.
+
+\begin{table}[htbp]
+\centering
+\caption{Shiftless TK NV/NV failure on model activations. Overflow is the
+fraction of N32 P scales above E4M3's maximum before encoding.}
+\label{tab:nvnv-failure}
+\scriptsize
+\begin{adjustbox}{max width=\textwidth}
+\begin{tabular}{lrrrrrr}
+\toprule
+Task & Failed sample & Non-finite rows & Shiftless overflow (\%)
+& Shiftless max & Stable overflow (\%) & Stable max \\
+\midrule
+\input{../fp4_fa4_unified_20260801/tables/downstream_nvnv_failure_rows.tex}%
+\end{tabular}
+\end{adjustbox}
+\end{table}

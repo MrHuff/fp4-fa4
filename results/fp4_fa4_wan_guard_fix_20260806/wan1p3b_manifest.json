@@ -1,0 +1,49 @@
+{
+  "schema": "tk_wan_nv_mx_policy_bundle_v1",
+  "model": "Wan-AI/Wan2.1-T2V-1.3B-Diffusers",
+  "shape": {
+    "batch": 1,
+    "seqlen": 7680,
+    "heads": 12,
+    "dim": 128
+  },
+  "formats": {
+    "qk": "nvfp4",
+    "pv": "mxfp4"
+  },
+  "softmax": "shiftless/sampled; no stable-softmax fallback",
+  "guard_layers": "27-29",
+  "qk_guard": {
+    "samples": 128,
+    "margin_log2": 110,
+    "stored_scale_shift_log2": 16
+  },
+  "fast_affine_code_map": {
+    "base": {
+      "a": 1.6,
+      "b": 0.95
+    },
+    "layer_overrides": [],
+    "calibration": "global map retained; layer-local effect below repeat variance"
+  },
+  "affine_calibration": {
+    "enabled": false,
+    "status": "rejected as non-robust"
+  },
+  "policies": {
+    "fast": {
+      "base": {
+        "path": "/tmp/wan_cute_bf16_20260806/1p3b/nvmx-fast.so",
+        "module": "_C_tk_hao_direct_fp4pv_fast_h12"
+      },
+      "layer_extensions": [
+        {
+          "layers": "27-29",
+          "path": "/tmp/wan_cute_bf16_20260806/1p3b/nvmx-anchor128-m110-s16.so",
+          "module": "_C_tk_hao_direct_fp4pv_anchor128_m110_s16_h12",
+          "purpose": "wide global QK probe for extreme-logit layers"
+        }
+      ]
+    }
+  }
+}

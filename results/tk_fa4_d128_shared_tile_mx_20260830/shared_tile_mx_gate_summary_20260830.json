@@ -1,0 +1,242 @@
+{
+    "schema": "tkfa4.d128_shared_tile_mx_gate_summary.v2",
+    "created_utc": "2026-08-30T04:16:55+00:00",
+  "shape": {
+    "batch": 2,
+    "sequence": 4096,
+    "hidden": 4096,
+    "query_heads": 32,
+    "kv_heads": 8,
+    "head_dim": 128,
+    "causal": true
+  },
+  "hardware": "NVIDIA GB200",
+  "producer": {
+    "contract": "one D32xS32 MXFP4 quantization; exact register transpose into forward feature-major and backward row-major payloads; identical four E8M0 anchors under their physical swizzles",
+    "forward_backward_code_bytes": 8388608,
+    "forward_backward_code_mismatches": 0,
+    "scale_replication_mismatches": 0,
+    "scale_anchor_mismatches": 0,
+    "forward_reference_payload_mismatches": 0,
+    "forward_reference_scale_mismatches": 0,
+    "route_neutral_qk_bitwise": true,
+    "numerics_vs_bf16_v": {
+      "cosine": 0.9935693188726382,
+      "relative_l2": 0.11322791208255797,
+      "norm_ratio": 0.9943119356064714,
+      "max_abs": 1.96875
+    },
+    "timing_us": {
+      "retained_two_mx_quantizations_median": 206.84799551963806,
+      "shared_one_quantization_median": 202.7519941329956,
+      "paired_candidate_minus_retained_median": -4.223998636007309,
+      "paired_candidate_minus_retained_mean": -4.491201043128967
+    }
+  },
+  "exact_four_anchor_consumer_v507": {
+    "status": "correct_negative_performance_result",
+    "represented_oracle": {
+      "dq_cosine": 0.9999909635651066,
+      "dq_relative_l2": 0.004266115250512765,
+      "dk_cosine": 0.9999999203872459,
+      "dk_relative_l2": 0.00016419174042933403,
+      "dv_bitwise_equal_to_v501": true,
+      "exact_zero_dout": true
+    },
+    "timing_us": {
+      "v501_no_clear_median": 485.3760004043579,
+      "v507_no_clear_median": 581.6320180892944,
+      "paired_v507_minus_v501_median": 95.19200772047043,
+      "v501_reset_inclusive_median": 494.9119985103607,
+      "v507_reset_inclusive_median": 592.8959846496582,
+      "paired_v507_minus_v501_reset_inclusive_median": 96.23999893665314
+    },
+    "interpretation": "early score issue recovers about 39 us versus the prior 620.512 us exact v502 result, but block-scale scale-TMEM restaging remains too expensive"
+  },
+  "shared_producer_common_row_v503": {
+        "status": "selected_short_synthetic_full_model_gate_passed_pending_real_data_training",
+    "consumer_contract": "v503 collapses the four shared D32 anchors to their common maximum and requantizes in the backward shared-memory restage",
+    "represented_v_vs_direct_four_anchor_mx": {
+      "cosine": 0.9998973546418488,
+      "relative_l2": 0.014329879781662854,
+      "norm_ratio": 1.000249566442141,
+      "requantized_code_values": 63359,
+      "total_code_values": 8388608
+    },
+    "represented_oracle": {
+      "dq_cosine": 0.9999909258524239,
+      "dq_relative_l2": 0.004265845413914674,
+      "dk_cosine": 0.999999968143749,
+      "dk_relative_l2": 0.00016419365294515699,
+      "dv_bitwise_equal_to_v501": true,
+      "exact_zero_dout": true
+    },
+    "gradient_vs_v501_e4m3_v": {
+      "dq_cosine": 0.9892336190813753,
+      "dq_relative_l2": 0.1465832675608611,
+      "dk_cosine": 0.9895832629850992,
+      "dk_relative_l2": 0.1441744652562429,
+      "dv_bitwise_equal": true
+    },
+    "backward_timing_us": {
+      "v501_no_clear_median": 485.3760004043579,
+      "v503_no_clear_median": 499.7119903564453,
+      "paired_v503_minus_v501_median": 13.327986001968384
+    },
+        "composed_projection_plus_backward_timing_us": {
+      "retained_e4m3_backward_v_plus_v501_median": 758.2559883594513,
+      "shared_single_quant_mx_v_plus_v503_median": 719.871997833252,
+      "raw_saving": 38.38399052619934,
+      "paired_saving_median": 38.59199583530426,
+            "speedup": 1.0533205773272631
+        }
+    },
+    "saturated_8b_full_model_gate": {
+        "status": "passed_short_synthetic_A_control_B_not_convergence_evidence",
+        "protocol": {
+            "model": "llama3.1-8b",
+            "layers": 32,
+            "batch": 2,
+            "sequence": 4096,
+            "warmups": 3,
+            "measured_updates": 20,
+            "seed": 20260829,
+            "learning_rate": 0.0001,
+            "token_source": "deterministic_uniform_synthetic",
+            "loss": "torch_compiled_cut_cross_entropy",
+            "order": "shared_mx_A_then_fp8_control_then_shared_mx_B",
+            "same_gpu_checkpoint_projection_and_common_source_hashes": true,
+            "mx_only_runner_source_hash_same_across_mx_repeats": true,
+            "fp8_control_records_inactive_mx_only_runner_source": false
+        },
+        "fp8_pv_v501_control": {
+            "step_p50_ms": 434.26220703125,
+            "sustained_step_ms": 435.5474475421943,
+            "decoder_forward_p50_ms": 121.05657577514648,
+            "backward_p50_ms": 240.29730224609375,
+            "tokens_per_second_p50": 18864.17898532555,
+            "useful_bf16_equivalent_mfu": 0.4045315238043507,
+            "step_coefficient_of_variation": 0.003439400126138212,
+            "heldout_initial": 12.58324909210205,
+            "heldout_final": 12.575045585632324,
+            "initial_global_gradient_l2_ratio_vs_bf16": 0.9207309272521523,
+            "peak_allocated_gib": 110.52865314483643,
+            "peak_reserved_gib": 121.791015625
+        },
+        "shared_mx_v503_A": {
+            "step_p50_ms": 433.49134826660156,
+            "sustained_step_ms": 435.14295029453933,
+            "decoder_forward_p50_ms": 118.78923034667969,
+            "backward_p50_ms": 240.76331329345703,
+            "tokens_per_second_p50": 18897.724332347774,
+            "useful_bf16_equivalent_mfu": 0.40525088457578967,
+            "step_coefficient_of_variation": 0.00490127245509352,
+            "heldout_initial": 12.593218803405762,
+            "heldout_final": 12.594352722167969,
+            "initial_global_gradient_l2_ratio_vs_bf16": 0.9308963741271662,
+            "peak_allocated_gib": 110.66048908233643,
+            "peak_reserved_gib": 121.876953125
+        },
+        "shared_mx_v503_B": {
+            "step_p50_ms": 433.35308837890625,
+            "sustained_step_ms": 435.06714334944263,
+            "decoder_forward_p50_ms": 118.82032012939453,
+            "backward_p50_ms": 241.0154571533203,
+            "tokens_per_second_p50": 18903.75358958386,
+            "useful_bf16_equivalent_mfu": 0.4053801785471318,
+            "step_coefficient_of_variation": 0.005204575791030012,
+            "heldout_initial": 12.593218803405762,
+            "heldout_final": 12.576876640319824,
+            "initial_global_gradient_l2_ratio_vs_bf16": 0.9306225968709385,
+            "peak_allocated_gib": 110.66048908233643,
+            "peak_reserved_gib": 121.876953125
+        },
+        "shared_mx_A_B_mean_vs_fp8": {
+            "step_p50_ms": 433.4222183227539,
+            "sustained_step_ms": 435.105046821991,
+            "decoder_forward_p50_ms": 118.80477523803711,
+            "backward_p50_ms": 240.88938522338867,
+            "tokens_per_second_p50": 18900.738960965817,
+            "useful_bf16_equivalent_mfu": 0.4053155315614607,
+            "step_p50_delta_ms": -0.8399887084960938,
+            "step_p50_speedup": 1.0019380379523382,
+            "sustained_step_delta_ms": -0.44240072020329535,
+            "sustained_speedup": 1.0010167676137858,
+            "decoder_forward_delta_ms": -2.251800537109375,
+            "decoder_forward_speedup": 1.0189537881166617,
+            "backward_delta_ms": 0.5920829772949219,
+            "backward_speedup": 0.9975420960257512,
+            "interpretation": "repeatable_small_whole_step_win_below_single_run_variability_not_material"
+        },
+        "runtime_contract": {
+            "scale_policy": "shared_d32xs32_forward_anchors",
+            "producer_authentication": "exact_type_extension_callables_and_first_use_workspace",
+            "workspace_lifetime": "strongly_retained_while_bound",
+            "consumer": "v503_commonrow_requantizing_consumer",
+            "legacy_rowwise_v502_v507_and_cross_runtime_reuse_rejected": true
+        }
+    },
+  "artifacts": {
+    "projection_extension": {
+      "bytes": 48740144,
+      "sha256": "83cc6374a4d70e15fafed829ab05cc1d99d8abcfea12a6e67c256f928d4068b1"
+    },
+    "v507_extension": {
+      "bytes": 5967536,
+      "sha256": "188602b5b272a79e2b8b90f17f5e409f5831aa58519b1569bfb96149a612b17c"
+    },
+        "v503_extension": {
+      "bytes": 5967472,
+            "sha256": "5e2af1d140181c344167ea2bda091970dc8fe265e3d0abd79672dd6bfd93dcf8"
+        },
+        "fp8_forward_extension": {
+            "bytes": 1817144,
+            "sha256": "8c3ca848c6524347b99a69cb24b80c86d680b83e84c2e49c6e39be8b16118aba"
+        },
+        "mx_forward_extension": {
+            "bytes": 1958376,
+            "sha256": "38d709f0b2b789664dee53dc1a9edec7bb8dc5000dadb8a47989a5b8a4faeb9d"
+        },
+        "v501_extension": {
+            "bytes": 6627392,
+            "sha256": "839c0bc55f809f6ecf6e5e31696c7f89b5a21c26559001dc6d47e80f00a5bf80"
+        }
+  },
+  "raw_receipts": {
+    "producer": {
+      "path": "/tmp/tkfa4_shared_tile_producer_gate_20260830.json",
+      "bytes": 6858,
+      "sha256": "0626e4a8c79e78fe3a99f2ed8d0fc4ee1ef101a4ad3a7fab2d6ea28e6247178d"
+    },
+    "v507": {
+      "path": "/tmp/tkfa4_v507_sharedtile_b2_s4096_gate_20260830.json",
+      "bytes": 42662,
+      "sha256": "7a493be309e6a87a9f73bf5fd97802466e7db1a557d52e971dd4ef30401bbbad"
+    },
+    "v503_oracle": {
+      "path": "/tmp/tkfa4_v503_sharedtile_producer_b2_s4096_gate_20260830.json",
+      "bytes": 42599,
+      "sha256": "3b906f65fcdf8640ec3173f7e7dd4ad22ae2bd31a2cead6958436364d30c7556"
+    },
+        "v503_composed": {
+      "path": "/tmp/tkfa4_sharedtile_v503_composed_chain_gate_20260830.json",
+      "bytes": 26565,
+            "sha256": "367651dd6ee1617c92f01352281c5e0635f94adc98ff6cfb199eb15e3eedb349"
+        },
+        "saturated_8b_shared_mx_A": {
+            "path": "/tmp/tkfa4_sharedtile_e2e_8b_b2_20260830/mx_shared_v503_stable.json",
+            "bytes": 72567,
+            "sha256": "8d6a30fc73232525b71ecb16c84b5d982de0013143dd3ff5dc2a7cb94c7f91a8"
+        },
+        "saturated_8b_fp8_control": {
+            "path": "/tmp/tkfa4_sharedtile_e2e_8b_b2_20260830/fp8_stable.json",
+            "bytes": 62492,
+            "sha256": "9f355f6376f3241cd555979c8532f882c17084f9b63c11e8f12aefb3a21df03b"
+        },
+        "saturated_8b_shared_mx_B": {
+            "path": "/tmp/tkfa4_sharedtile_e2e_8b_b2_20260830/mx_shared_v503_stable_repeat.json",
+            "bytes": 72573,
+            "sha256": "52620a233330a98e16ab4b4d9dade67cd3fcdaf84f312d68736a3f1c0a92b684"
+        }
+  }
+}

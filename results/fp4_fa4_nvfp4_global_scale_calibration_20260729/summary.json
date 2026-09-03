@@ -1,0 +1,190 @@
+{
+  "schema": "tk_nvfp4_global_scale_calibration_v1",
+  "created_utc": "2026-07-29",
+  "hardware": "NVIDIA GB200",
+  "kernel": {
+    "route": "fast shiftless NVFP4/NVFP4 mode 9",
+    "q_global_encode": 1.25,
+    "k_global_encode": 1.25,
+    "v_global_encode": 1.40625,
+    "p_global_encode": 1.0,
+    "default_promoted": false
+  },
+  "five_seed_validation": [
+    {
+      "shape": "B1_S1024_H16_D128",
+      "candidate": {
+        "q_global_encode": 1.09375,
+        "k_global_encode": 1.40625,
+        "v_global_encode": 1.9375
+      },
+      "baseline": {
+        "cosine": 0.960866940,
+        "relative_l2": 0.284267002,
+        "rmse": 0.014721988
+      },
+      "calibrated": {
+        "cosine": 0.960925472,
+        "relative_l2": 0.283966810,
+        "rmse": 0.014706463
+      },
+      "all_seeds_improved": false
+    },
+    {
+      "shape": "B1_S4096_H24_D128",
+      "candidate": {
+        "q_global_encode": 1.25,
+        "k_global_encode": 1.25,
+        "v_global_encode": 1.40625
+      },
+      "baseline": {
+        "cosine": 0.962183177,
+        "relative_l2": 0.278307348,
+        "rmse": 0.007184514
+      },
+      "calibrated": {
+        "cosine": 0.962250841,
+        "relative_l2": 0.277571636,
+        "rmse": 0.007165523
+      }
+    },
+    {
+      "shape": "B1_S8192_H24_D128",
+      "candidate": {
+        "q_global_encode": 1.25,
+        "k_global_encode": 1.25,
+        "v_global_encode": 1.40625
+      },
+      "baseline": {
+        "cosine": 0.962602651,
+        "relative_l2": 0.276622242,
+        "rmse": 0.005053181
+      },
+      "calibrated": {
+        "cosine": 0.962688756,
+        "relative_l2": 0.275802064,
+        "rmse": 0.005038207
+      },
+      "relative_l2_improved_all_seeds": true
+    },
+    {
+      "shape": "B4_S4096_H32_D128",
+      "candidate": {
+        "q_global_encode": 1.25,
+        "k_global_encode": 1.25,
+        "v_global_encode": 1.40625
+      },
+      "baseline": {
+        "cosine": 0.962335265,
+        "relative_l2": 0.277757603,
+        "rmse": 0.007179712
+      },
+      "calibrated": {
+        "cosine": 0.962358546,
+        "relative_l2": 0.277168179,
+        "rmse": 0.007164483
+      }
+    }
+  ],
+  "paired_timing_ms": [
+    {
+      "shape": "B1_S1024_H16_D128",
+      "identity": 0.016672,
+      "calibrated": 0.016672
+    },
+    {
+      "shape": "B1_S4096_H24_D128",
+      "identity": 0.104448,
+      "calibrated": 0.104416
+    },
+    {
+      "shape": "B1_S8192_H24_D128",
+      "identity": 0.378032,
+      "calibrated": 0.377152
+    },
+    {
+      "shape": "B4_S4096_H32_D128",
+      "identity": 0.450144,
+      "calibrated": 0.450192
+    }
+  ],
+  "full_comparison_b1_s4096_h24": {
+    "tk_calibrated_ms": 0.104416,
+    "hao_bf16_ms": 0.163872,
+    "hao_native_nv_nv_ms": 0.192512,
+    "tk_speedup_vs_hao_bf16": 1.5694,
+    "tk_vs_bf16": {
+      "cosine": 0.961983025,
+      "relative_l2": 0.278785795,
+      "rmse": 0.007153794
+    },
+    "hao_vs_bf16": {
+      "cosine": 0.981414557,
+      "relative_l2": 0.192766950
+    }
+  },
+  "sass": {
+    "identity_static_instructions": 3012,
+    "v_decode_static_instructions": 3015,
+    "delta": {
+      "FMUL": 2,
+      "LDCU": 1
+    },
+    "registers": 128,
+    "spills": 0,
+    "shared_memory_unchanged": true,
+    "barriers_unchanged": true
+  },
+  "direct_e4m3_max_replacement": {
+    "formula": "global_encode = 6 * C / tensor_amax",
+    "shared_c_seed0_best": {
+      "C": 334,
+      "cosine": 0.961923659,
+      "relative_l2": 0.279608488,
+      "rmse": 0.007174905
+    },
+    "shared_c334_five_seed_mean": {
+      "cosine": 0.962166476,
+      "relative_l2": 0.278542089,
+      "rmse": 0.007190582
+    },
+    "identity_five_seed_mean": {
+      "cosine": 0.962183177,
+      "relative_l2": 0.278307348,
+      "rmse": 0.007184514
+    },
+    "v_only_c256_five_seed": [
+      {
+        "shape": "B1_S1024_H16_D128",
+        "identity_relative_l2": 0.284267002,
+        "calibrated_relative_l2": 0.284526408
+      },
+      {
+        "shape": "B1_S4096_H24_D128",
+        "identity_relative_l2": 0.278307348,
+        "calibrated_relative_l2": 0.278211039
+      },
+      {
+        "shape": "B1_S8192_H24_D128",
+        "identity_relative_l2": 0.276622242,
+        "calibrated_relative_l2": 0.276682860
+      },
+      {
+        "shape": "B4_S4096_H32_D128",
+        "identity_relative_l2": 0.277757603,
+        "calibrated_relative_l2": 0.277878046
+      }
+    ],
+    "universal_replacement_promoted": false
+  },
+  "negative_controls": {
+    "p_identity_seed0_relative_l2": 0.279944688,
+    "p_best_local_phase": 1.28125,
+    "p_best_local_seed0_relative_l2": 0.279921323,
+    "p_transformer_engine_phase": 1.3125,
+    "p_transformer_engine_phase_seed0_relative_l2": 0.279961526,
+    "p_reciprocal_448_phase": 1.142857143,
+    "p_reciprocal_448_seed0_relative_l2": 0.279993057,
+    "dynamic_transformer_engine_policy_promoted": false
+  }
+}

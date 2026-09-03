@@ -1,0 +1,723 @@
+--- a/fmha_bwd.py
++++ b/fmha_bwd.py
+@@ -337,6 +337,188 @@
+     )
+
+
++@dsl_user_op
++def tk_mxfp4_scale_exponent(
++    group_max_log2: Float32, *, loc=None, ip=None
++) -> Float32:
++    """Select the forward E8M0 code and return its unbiased exponent."""
++    result = llvm.inline_asm(
++        T.i32(),
++        [Float32(group_max_log2).ir_value(loc=loc, ip=ip)],
++        """{
++        .reg .f32 bounded;
++        .reg .s32 exponent;
++        max.f32 bounded, $1, 0fC2FE0000;
++        add.rn.f32 bounded, bounded, 0f3ED47FCC;
++        cvt.rmi.s32.f32 exponent, bounded;
++        max.s32 exponent, exponent, -127;
++        min.s32 exponent, exponent, 127;
++        cvt.rn.f32.s32 bounded, exponent;
++        mov.b32 $0, bounded;
++        }""",
++        "=r,f",
++        has_side_effects=False,
++        is_align_stack=False,
++        asm_dialect=llvm.AsmDialect.AD_ATT,
++        loc=loc,
++        ip=ip,
++    )
++    return Float32(llvm.bitcast(Float32.mlir_type, result, loc=loc, ip=ip))
++
++
++@dsl_user_op
++def tk_mxfp4_unpack_scale_exponent(
++    packed_scale: Int32, scale_group: Int32, *, loc=None, ip=None
++) -> Float32:
++    """Decode one stored forward E8M0 byte to the replay exponent."""
++    result = llvm.inline_asm(
++        T.i32(),
++        [
++            Int32(packed_scale).ir_value(loc=loc, ip=ip),
++            Int32(scale_group).ir_value(loc=loc, ip=ip),
++        ],
++        """{
++        .reg .pred invalid;
++        .reg .u32 code, shift;
++        .reg .s32 exponent;
++        .reg .f32 decoded;
++        shl.b32 shift, $2, 3;
++        shr.u32 code, $1, shift;
++        and.b32 code, code, 255;
++        sub.s32 exponent, code, 111;
++        setp.eq.u32 invalid, code, 0;
++        selp.s32 exponent, -127, exponent, invalid;
++        cvt.rn.f32.s32 decoded, exponent;
++        mov.b32 $0, decoded;
++        }""",
++        "=r,r,r",
++        has_side_effects=False,
++        is_align_stack=False,
++        asm_dialect=llvm.AsmDialect.AD_ATT,
++        loc=loc,
++        ip=ip,
++    )
++    return Float32(llvm.bitcast(Float32.mlir_type, result, loc=loc, ip=ip))
++
++
++@dsl_user_op
++def tk_lane_mod4_max(value: Float32, *, loc=None, ip=None) -> Float32:
++    """Max over the eight warp lanes with the same lane modulo four."""
++    result = llvm.inline_asm(
++        T.i32(),
++        [Float32(value).ir_value(loc=loc, ip=ip)],
++        """{
++        .reg .f32 maximum, peer;
++        mov.b32 maximum, $1;
++        shfl.sync.bfly.b32 peer, maximum, 4, 31, -1;
++        max.f32 maximum, maximum, peer;
++        shfl.sync.bfly.b32 peer, maximum, 8, 31, -1;
++        max.f32 maximum, maximum, peer;
++        shfl.sync.bfly.b32 peer, maximum, 16, 31, -1;
++        max.f32 maximum, maximum, peer;
++        mov.b32 $0, maximum;
++        }""",
++        "=r,f",
++        has_side_effects=False,
++        is_align_stack=False,
++        asm_dialect=llvm.AsmDialect.AD_ATT,
++        loc=loc,
++        ip=ip,
++    )
++    return Float32(llvm.bitcast(Float32.mlir_type, result, loc=loc, ip=ip))
++
++
++@dsl_user_op
++def tk_lane_mod4_broadcast(value: Float32, *, loc=None, ip=None) -> Float32:
++    """Broadcast lanes 0..3 to the eight lanes sharing their lane modulo 4."""
++    result = llvm.inline_asm(
++        T.i32(),
++        [Float32(value).ir_value(loc=loc, ip=ip)],
++        """{
++        .reg .b32 broadcast;
++        .reg .u32 lane, source;
++        mov.u32 lane, %laneid;
++        and.b32 source, lane, 3;
++        shfl.sync.idx.b32 broadcast, $1, source, 31, -1;
++        mov.b32 $0, broadcast;
++        }""",
++        "=r,f",
++        has_side_effects=False,
++        is_align_stack=False,
++        asm_dialect=llvm.AsmDialect.AD_ATT,
++        loc=loc,
++        ip=ip,
++    )
++    return Float32(llvm.bitcast(Float32.mlir_type, result, loc=loc, ip=ip))
++
++
++@dsl_user_op
++def tk_mxfp4_zero_invalid(
++    value: Float32, raw_exponent: Float32, *, loc=None, ip=None
++) -> Float32:
++    """Zero payloads whose forward E8M0 scale code saturated to zero."""
++    result = llvm.inline_asm(
++        T.i32(),
++        [
++            Float32(value).ir_value(loc=loc, ip=ip),
++            Float32(raw_exponent).ir_value(loc=loc, ip=ip),
++        ],
++        """{
++        .reg .pred valid;
++        .reg .f32 selected;
++        setp.gt.f32 valid, $2, 0fC2FE0000;
++        selp.f32 selected, $1, 0f00000000, valid;
++        mov.b32 $0, selected;
++        }""",
++        "=r,f,f",
++        has_side_effects=False,
++        is_align_stack=False,
++        asm_dialect=llvm.AsmDialect.AD_ATT,
++        loc=loc,
++        ip=ip,
++    )
++    return Float32(llvm.bitcast(Float32.mlir_type, result, loc=loc, ip=ip))
++
++
++@dsl_user_op
++def tk_e2m1_rn_decode_f32x2(
++    x: Float32, y: Float32, *, loc=None, ip=None
++) -> Tuple[Float32, Float32]:
++    """Round native-EX2 results to E2M1 and return decoded values."""
++    result = llvm.inline_asm(
++        llvm.StructType.get_literal([T.i32(), T.i32()]),
++        [
++            Float32(x).ir_value(loc=loc, ip=ip),
++            Float32(y).ir_value(loc=loc, ip=ip),
++        ],
++        """{
++        .reg .f32 dx, dy;
++        .reg .b8 packed;
++        .reg .b32 halves;
++        .reg .b16 hx, hy;
++        cvt.rn.relu.satfinite.e2m1x2.f32 packed, $3, $2;
++        cvt.rn.f16x2.e2m1x2 halves, packed;
++        mov.b32 {hx, hy}, halves;
++        cvt.f32.f16 dx, hx;
++        cvt.f32.f16 dy, hy;
++        mov.b32 $0, dx;
++        mov.b32 $1, dy;
++        }""",
++        "=r,=r,f,f",
++        has_side_effects=False,
++        is_align_stack=False,
++        asm_dialect=llvm.AsmDialect.AD_ATT,
++        loc=loc,
++        ip=ip,
++    )
++    result_x = llvm.extractvalue(T.i32(), result, [0], loc=loc, ip=ip)
++    result_y = llvm.extractvalue(T.i32(), result, [1], loc=loc, ip=ip)
++    return (
++        Float32(llvm.bitcast(Float32.mlir_type, result_x, loc=loc, ip=ip)),
++        Float32(llvm.bitcast(Float32.mlir_type, result_y, loc=loc, ip=ip)),
++    )
++
++
+ current_dir = os.path.dirname(os.path.abspath(__file__))
+ sys.path.insert(0, os.path.join(current_dir, ".."))
+ from utils import fmha_helpers as fmha_utils
+@@ -401,6 +583,8 @@
+         self.prelift_probability_lse = False
+         self.exp2_alu_period = 0
+         self.exp2_alu_degree = 1
++        self.forward_mx_probability_replay = False
++        self.use_forward_mx_probability_scales = False
+         self.compact_dq_acc = False
+         self.direct_compact_dq = False
+         self.hierarchical_dq_lanes = 1
+@@ -566,6 +750,7 @@
+         window_size_left: Optional[Int32],
+         window_size_right: Optional[Int32],
+         workspace: cute.Tensor,
++        forward_mx_probability_scales_ptr: Any,
+         owner_dq_fp4_iter: Any,
+         owner_dq_scale_iter: Any,
+         owner_dq_global_scale: Union[cute.Tensor, None],
+@@ -578,6 +763,18 @@
+         precomputed_scaled_LSE = LSE
+         h, b = hb
+         h_r, h_k = h
++        if cutlass.const_expr(
++            self.use_forward_mx_probability_scales
++            and not self.forward_mx_probability_replay
++        ):
++            raise RuntimeError(
++                "forward MX probability scales require exact probability replay"
++            )
++        if cutlass.const_expr(
++            self.use_forward_mx_probability_scales
++            and forward_mx_probability_scales_ptr is None
++        ):
++            raise RuntimeError("forward MX probability scales are not bound")
+         owner_dq_fp4 = None
+         owner_dq_scales = None
+         if cutlass.const_expr(self.owner_quantize_dq):
+@@ -930,6 +1127,17 @@
+         owner_scale_smem_elements = 0
+         p_smem_elements = 0
+         owner_smem_alignment = 1
++        mx_probability_scale_smem_elements = 0
++        mx_probability_scale_smem_alignment = 1
++        if cutlass.const_expr(
++            self.forward_mx_probability_replay
++            and not self.use_forward_mx_probability_scales
++        ):
++            # Two query warp-groups, four K warps, 64 query rows, and four
++            # physical N32 groups.  Keeping q innermost lets leader lanes
++            # 0..3 read adjacent banks during the cross-warp combine.
++            mx_probability_scale_smem_elements = 2 * 4 * 4 * 64
++            mx_probability_scale_smem_alignment = self.buffer_align_bytes
+         if cutlass.const_expr(self.owner_quantize_dq):
+             owner_smem_alignment = self.buffer_align_bytes
+             # Append two prior stages to the existing aligned owner field.
+@@ -1012,6 +1220,12 @@
+                 ],
+                 self.buffer_align_bytes,
+             ]
++            sMxProbabilityScales: cute.struct.Align[
++                cute.struct.MemRange[
++                    Float32, mx_probability_scale_smem_elements
++                ],
++                mx_probability_scale_smem_alignment,
++            ]
+             sdQ: cute.struct.Align[
+                 cute.struct.MemRange[
+                     dQ_store_dtype, cute.cosize(dQ_smem_layout_staged)
+@@ -1168,6 +1382,7 @@
+             scale_softmax,
+             sum_OdO,
+             dq_tile_arrivals,
++            forward_mx_probability_scales_ptr,
+             owner_dq_fp4,
+             owner_dq_scales,
+             owner_dq_global_scale,
+@@ -1446,6 +1661,7 @@
+         scale_softmax: Float32,
+         sum_OdO: cute.Tensor,
+         dq_tile_arrivals: cute.Tensor,
++        forward_mx_probability_scales_ptr: Any,
+         owner_dq_fp4: Union[cute.Tensor, None],
+         owner_dq_scales: Union[cute.Tensor, None],
+         owner_dq_global_scale: Union[cute.Tensor, None],
+@@ -1574,6 +1790,16 @@
+             )
+         sLSE = storage.sLSE.get_tensor(LSE_smem_layout)
+         sSum_OdO = storage.sSum_OdO.get_tensor(sum_OdO_smem_layout)
++        sMxProbabilityScales = cute.make_tensor(
++            sLSE.iterator, cute.make_layout(2 * 4 * 4 * 64)
++        )
++        if cutlass.const_expr(
++            self.forward_mx_probability_replay
++            and not self.use_forward_mx_probability_scales
++        ):
++            sMxProbabilityScales = storage.sMxProbabilityScales.get_tensor(
++                cute.make_layout(2 * 4 * 4 * 64)
++            )
+         tmem_holding_buf = storage.tmem_holding_buf
+
+         sQT_ptr = cute.recast_ptr(sQ.iterator, QT_smem_layout_staged.inner)
+@@ -1816,6 +2042,8 @@
+                     sP,
+                     sLSE,
+                     sdS,
++                    sMxProbabilityScales,
++                    forward_mx_probability_scales_ptr,
+                     sSum_OdO,
+                     dK,
+                     dV,
+@@ -2880,6 +3108,8 @@
+         sP: cute.Tensor,
+         sLSE: cute.Tensor,
+         sdS: cute.Tensor,
++        sMxProbabilityScales: cute.Tensor,
++        forward_mx_probability_scales_ptr: Any,
+         sSum_OdO: cute.Tensor,
+         dK: cute.Tensor,
+         dV: cute.Tensor,
+@@ -2985,6 +3215,40 @@
+             tRT_sP = thr_t2r.partition_D(sP_logical)
+             tRT_sP = self.split_wg(tRT_sP, num_warp_groups, wg_idx)
+
++        # CuTe owns scores in normal K order: warp w/lane l owns K=32w+l.
++        # Forward's interleaved physical N32 group q is logical K mod 4, so
++        # each group draws eight lanes from each of the four K warps.  The
++        # fallback publishes modulo-four partial maxima through shared
++        # storage; the compact path consumes the forward word directly.
++        forward_mx_probability_scale_rows = None
++        if cutlass.const_expr(self.forward_mx_probability_replay):
++            score_lane = dp_idx % 32
++            if cutlass.const_expr(
++                self.use_forward_mx_probability_scales
++            ):
++                # Public storage is contiguous [B,H,Ktile,Q].  Form the
++                # CTA/head/key-tile base once, leaving only +query_row in the
++                # leader load loop below.
++                linear_head = (
++                    blk_coord_batch[0][0]
++                    + HB[0][0] * blk_coord_batch[0][1]
++                )
++                head_count = HB[0][0] * HB[0][1]
++                key_tiles = cute.ceil_div(K, self.tile_shape_K)
++                scale_base = (
++                    (
++                        blk_coord_batch[1] * head_count + linear_head
++                    )
++                    * key_tiles
++                    + blk_coord_k
++                ) * Q
++                forward_mx_probability_scale_rows = cute.make_tensor(
++                    forward_mx_probability_scales_ptr + scale_base,
++                    cute.make_layout(Q),
++                )
++            else:
++                score_warp = dp_idx // 32
++
+         tTR_cdPT_p = thr_t2r.partition_D(cdPT)
+         tTR_cdPT = self.split_wg(tTR_cdPT_p, num_warp_groups, wg_idx)
+         tTR_rdPT = cute.make_rmem_tensor(tTR_cdPT.shape, self.acc_dtype)
+@@ -3008,14 +3250,17 @@
+             # Wait for LSE
+             load_compute_LSE_pipeline.consumer_wait(load_compute_LSE_consumer_state)
+
+-            # Compute P = softmax(S, LSE)
+-            cute.copy(tiled_t2r, tTR_tST, tTR_rST)
+-
+             # Equal-length, tile-aligned causal training leaves only the
+             # diagonal trip requiring element masking; trip bounds exclude
+             # every fully masked query tile.
+             is_masked_tile = iter_index == iter_start
+
++            log2_e = Float32(math.log2(math.e))
++            softmax_scale_log2_e = scale_softmax * log2_e
++
++            # Compute P from the normal-K score fragment owned by this warp.
++            cute.copy(tiled_t2r, tTR_tST, tTR_rST)
++
+             if is_masked_tile:
+                 fmha_utils.FusedMask.apply_mask(
+                     self.mask_type,
+@@ -3031,71 +3276,266 @@
+                     ),
+                 )
+
+-            log2_e = Float32(math.log2(math.e))
+-            softmax_scale_log2_e = scale_softmax * log2_e
+-
+-            for i in cutlass.range_constexpr(0, cute.size(tTR_rST), 2):
+-                lse = (
+-                    sLSE[
+-                        cute.get(tTR_cST[i], mode=[1]),
+-                        load_compute_LSE_consumer_state.index,
+-                    ],
+-                    sLSE[
+-                        cute.get(tTR_cST[i + 1], mode=[1]),
+-                        load_compute_LSE_consumer_state.index,
+-                    ],
+-                )
+-                tTR_rST[i], tTR_rST[i + 1] = cute.arch.fma_packed_f32x2(
+-                    (tTR_rST[i], tTR_rST[i + 1]),
+-                    (softmax_scale_log2_e, softmax_scale_log2_e),
+-                    lse,
+-                )
++            if cutlass.const_expr(self.forward_mx_probability_replay):
+                 if cutlass.const_expr(
+-                    self.element_dtype == Float8E4M3FN
+-                    and self.fuse_probability_lift
+-                    and not self.prelift_probability_lse
++                    not self.use_forward_mx_probability_scales
+                 ):
+-                    tTR_rST[i], tTR_rST[i + 1] = cute.arch.add_packed_f32x2(
+-                        (tTR_rST[i], tTR_rST[i + 1]), (Float32(8.0), Float32(8.0))
+-                    )
+-                if cutlass.const_expr(
+-                    self.element_dtype == Float8E4M3FN
++                    # Exact fallback: each K warp reduces its eight q lanes,
++                    # then all four K warps combine through the shared page.
++                    for replay_i in cutlass.range_constexpr(
++                        cute.size(tTR_rST)
++                    ):
++                        partial_max = tk_lane_mod4_max(
++                            tTR_rST[replay_i] * softmax_scale_log2_e
++                        )
++                        if score_lane < 4:
++                            sMxProbabilityScales[
++                                (
++                                    (
++                                        (wg_idx * 4 + score_warp) * 64
++                                        + replay_i
++                                    )
++                                    * 4
++                                    + score_lane
++                                )
++                            ] = partial_max
++
++                    self.compute_sync_barrier.arrive_and_wait()
++
++                # The active d4all forward may use Q0's exponent as a
++                # provisional scheduling aid for Stage-0 Q1, but its
++                # SelfInterleaveQ1Max/RebaseInterleavedScale path ultimately
++                # selects and stores Q1's own exact exponent.  Replay must
++                # therefore select all four physical groups independently.
++                scale_group = score_lane & 3
++
++                log2_six = Float32(math.log2(6.0))
++                for i in cutlass.range_constexpr(
++                    0, cute.size(tTR_rST), 2
+                 ):
+-                    # Forward LSE bounds the forward quantized score, not
+-                    # the independently published backward FP8 Q/K score.
+-                    # Enforce P <= 1 before either the native or polynomial
+-                    # exp2 path, accounting for the D64 fused 2**8 lift.
+-                    probability_log2_ceiling = (
+-                        Float32(8.0)
+-                        if self.fuse_probability_lift
+-                        else Float32(0.0)
++                    # Only q leaders load/combine and decode.  A modulo-four
++                    # shuffle broadcasts each result to the other seven lanes
++                    # consuming the same physical N32 group.
++                    exponent0 = Float32(-127.0)
++                    exponent1 = Float32(-127.0)
++                    if score_lane < 4:
++                        if cutlass.const_expr(
++                            self.use_forward_mx_probability_scales
++                        ):
++                            # Fragment coordinates identify query rows; the
++                            # flat query-contiguous base was formed once per
++                            # CTA above.
++                            query_row0 = (
++                                iter_index * self.tile_shape_Q
++                                + cute.get(tTR_cST[i], mode=[1])
++                            )
++                            query_row1 = (
++                                iter_index * self.tile_shape_Q
++                                + cute.get(tTR_cST[i + 1], mode=[1])
++                            )
++                            packed0 = forward_mx_probability_scale_rows[
++                                query_row0
++                            ]
++                            packed1 = forward_mx_probability_scale_rows[
++                                query_row1
++                            ]
++                            exponent0 = tk_mxfp4_unpack_scale_exponent(
++                                packed0, scale_group
++                            )
++                            exponent1 = tk_mxfp4_unpack_scale_exponent(
++                                packed1, scale_group
++                            )
++                        else:
++                            partial00 = sMxProbabilityScales[
++                                ((wg_idx * 4) * 64 + i) * 4 + scale_group
++                            ]
++                            partial01 = sMxProbabilityScales[
++                                ((wg_idx * 4 + 1) * 64 + i) * 4
++                                + scale_group
++                            ]
++                            partial02 = sMxProbabilityScales[
++                                ((wg_idx * 4 + 2) * 64 + i) * 4
++                                + scale_group
++                            ]
++                            partial03 = sMxProbabilityScales[
++                                ((wg_idx * 4 + 3) * 64 + i) * 4
++                                + scale_group
++                            ]
++                            partial10 = sMxProbabilityScales[
++                                ((wg_idx * 4) * 64 + i + 1) * 4
++                                + scale_group
++                            ]
++                            partial11 = sMxProbabilityScales[
++                                ((wg_idx * 4 + 1) * 64 + i + 1) * 4
++                                + scale_group
++                            ]
++                            partial12 = sMxProbabilityScales[
++                                ((wg_idx * 4 + 2) * 64 + i + 1) * 4
++                                + scale_group
++                            ]
++                            partial13 = sMxProbabilityScales[
++                                ((wg_idx * 4 + 3) * 64 + i + 1) * 4
++                                + scale_group
++                            ]
++                            group_max0 = cute.arch.fmax(
++                                cute.arch.fmax(partial00, partial01),
++                                cute.arch.fmax(partial02, partial03),
++                            )
++                            group_max1 = cute.arch.fmax(
++                                cute.arch.fmax(partial10, partial11),
++                                cute.arch.fmax(partial12, partial13),
++                            )
++                            exponent0 = tk_mxfp4_scale_exponent(group_max0)
++                            exponent1 = tk_mxfp4_scale_exponent(group_max1)
++                    exponent0 = tk_lane_mod4_broadcast(exponent0)
++                    exponent1 = tk_lane_mod4_broadcast(exponent1)
++                    working_exponent0 = cute.arch.fmax(
++                        exponent0, Float32(-126.0)
+                     )
+-                    tTR_rST[i] = -cute.arch.fmax(
+-                        -tTR_rST[i], -probability_log2_ceiling
++                    working_exponent1 = cute.arch.fmax(
++                        exponent1, Float32(-126.0)
+                     )
+-                    tTR_rST[i + 1] = -cute.arch.fmax(
+-                        -tTR_rST[i + 1], -probability_log2_ceiling
++                    native_log0, native_log1 = (
++                        cute.arch.fma_packed_f32x2(
++                            (tTR_rST[i], tTR_rST[i + 1]),
++                            (
++                                softmax_scale_log2_e,
++                                softmax_scale_log2_e,
++                            ),
++                            (
++                                log2_six - working_exponent0,
++                                log2_six - working_exponent1,
++                            ),
++                        )
+                     )
+-                if cutlass.const_expr(
+-                    self.element_dtype == Float8E4M3FN
+-                    and self.exp2_alu_period > 0
+-                    and (i // 2) % self.exp2_alu_period == 0
++                    native0 = cute.math.exp2(native_log0, fastmath=True)
++                    native1 = cute.math.exp2(native_log1, fastmath=True)
++                    represented0, represented1 = (
++                        tk_e2m1_rn_decode_f32x2(native0, native1)
++                    )
++                    represented0 = tk_mxfp4_zero_invalid(
++                        represented0, exponent0
++                    )
++                    represented1 = tk_mxfp4_zero_invalid(
++                        represented1, exponent1
++                    )
++                    # LSE and the physical-group exponent are identical for
++                    # all eight lanes in a modulo-four subgroup.  Compute the
++                    # normalization EX2 only in q leaders and broadcast it.
++                    probability_scale0 = Float32(0.0)
++                    probability_scale1 = Float32(0.0)
++                    if score_lane < 4:
++                        lse0 = sLSE[
++                            cute.get(tTR_cST[i], mode=[1]),
++                            load_compute_LSE_consumer_state.index,
++                        ]
++                        lse1 = sLSE[
++                            cute.get(tTR_cST[i + 1], mode=[1]),
++                            load_compute_LSE_consumer_state.index,
++                        ]
++                        # Forward stores scale_code=max(e-16+127, 0) and
++                        # restores the shift in saved LSE.  The payload used
++                        # the original exponent e, while represented
++                        # probability decodes through max(e, -110).
++                        decode_exponent0 = cute.arch.fmax(
++                            exponent0, Float32(-110.0)
++                        )
++                        decode_exponent1 = cute.arch.fmax(
++                            exponent1, Float32(-110.0)
++                        )
++                        probability_scale0 = cute.math.exp2(
++                            decode_exponent0 - log2_six + lse0,
++                            fastmath=True,
++                        )
++                        probability_scale1 = cute.math.exp2(
++                            decode_exponent1 - log2_six + lse1,
++                            fastmath=True,
++                        )
++                    probability_scale0 = tk_lane_mod4_broadcast(
++                        probability_scale0
++                    )
++                    probability_scale1 = tk_lane_mod4_broadcast(
++                        probability_scale1
++                    )
++                    tTR_rST[i] = represented0 * probability_scale0
++                    tTR_rST[i + 1] = represented1 * probability_scale1
++            else:
++                for i in cutlass.range_constexpr(
++                    0, cute.size(tTR_rST), 2
+                 ):
+-                    if cutlass.const_expr(self.exp2_alu_degree == 1):
++                    lse = (
++                        sLSE[
++                            cute.get(tTR_cST[i], mode=[1]),
++                            load_compute_LSE_consumer_state.index,
++                        ],
++                        sLSE[
++                            cute.get(tTR_cST[i + 1], mode=[1]),
++                            load_compute_LSE_consumer_state.index,
++                        ],
++                    )
++                    tTR_rST[i], tTR_rST[i + 1] = (
++                        cute.arch.fma_packed_f32x2(
++                            (tTR_rST[i], tTR_rST[i + 1]),
++                            (
++                                softmax_scale_log2_e,
++                                softmax_scale_log2_e,
++                            ),
++                            lse,
++                        )
++                    )
++                    if cutlass.const_expr(
++                        self.element_dtype == Float8E4M3FN
++                        and self.fuse_probability_lift
++                        and not self.prelift_probability_lse
++                    ):
+                         tTR_rST[i], tTR_rST[i + 1] = (
+-                            tk_exp2_alu_degree1_f32x2(
+-                                tTR_rST[i], tTR_rST[i + 1]
++                            cute.arch.add_packed_f32x2(
++                                (tTR_rST[i], tTR_rST[i + 1]),
++                                (Float32(8.0), Float32(8.0)),
+                             )
+                         )
+-                    else:
+-                        tTR_rST[i], tTR_rST[i + 1] = (
+-                            tk_exp2_alu_degree2_f32x2(
+-                                tTR_rST[i], tTR_rST[i + 1]
++                    if cutlass.const_expr(
++                        self.element_dtype == Float8E4M3FN
++                    ):
++                        # Forward LSE bounds the forward quantized score, not
++                        # the independently published backward FP8 Q/K score.
++                        # Enforce P <= 1 before either the native or polynomial
++                        # exp2 path, accounting for the D64 fused 2**8 lift.
++                        probability_log2_ceiling = (
++                            Float32(8.0)
++                            if self.fuse_probability_lift
++                            else Float32(0.0)
++                        )
++                        tTR_rST[i] = -cute.arch.fmax(
++                            -tTR_rST[i], -probability_log2_ceiling
++                        )
++                        tTR_rST[i + 1] = -cute.arch.fmax(
++                            -tTR_rST[i + 1], -probability_log2_ceiling
++                        )
++                    if cutlass.const_expr(
++                        self.element_dtype == Float8E4M3FN
++                        and self.exp2_alu_period > 0
++                        and (i // 2) % self.exp2_alu_period == 0
++                    ):
++                        if cutlass.const_expr(self.exp2_alu_degree == 1):
++                            tTR_rST[i], tTR_rST[i + 1] = (
++                                tk_exp2_alu_degree1_f32x2(
++                                    tTR_rST[i], tTR_rST[i + 1]
++                                )
+                             )
++                        else:
++                            tTR_rST[i], tTR_rST[i + 1] = (
++                                tk_exp2_alu_degree2_f32x2(
++                                    tTR_rST[i], tTR_rST[i + 1]
++                                )
++                            )
++                    else:
++                        tTR_rST[i] = cute.math.exp2(
++                            tTR_rST[i], fastmath=True
++                        )
++                        tTR_rST[i + 1] = cute.math.exp2(
++                            tTR_rST[i + 1], fastmath=True
+                         )
+-                else:
+-                    tTR_rST[i] = cute.math.exp2(tTR_rST[i], fastmath=True)
+-                    tTR_rST[i + 1] = cute.math.exp2(tTR_rST[i + 1], fastmath=True)
+
+             # Normalized probabilities are O(1/S) and underflow in E4M3 at
+             # long sequence lengths.  Lift only the tensor-core dV operand;
+@@ -4726,6 +5177,7 @@
+         None,
+         None,
+         None,
++        None,
+         current_stream,
+     )
+     compilation_time = time.time() - start_time
+@@ -4758,6 +5210,7 @@
+             None,
+             None,
+             None,
++            None,
+             current_stream,
+         )
+
+@@ -4788,6 +5241,7 @@
+             None,
+             None,
+             None,
++            None,
+             current_stream,
+         )
+
+@@ -4819,6 +5273,7 @@
+             None,
+             None,
+             None,
++            None,
+             None,
+             None,
+             current_stream,

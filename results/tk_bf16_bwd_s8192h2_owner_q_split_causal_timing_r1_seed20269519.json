@@ -1,0 +1,5370 @@
+{
+  "campaign_harness": {
+    "path": "/workspace/codebases/pv/fp4_matmul/results/tk_bf16_bwd_split2_bf16_cached_acc_u19_tmem_operand_release_harness.py",
+    "sha256": "0839ed281249c8d92e44ca6fde3831677e6ad9fa1a61016c430496c314ba41e4"
+  },
+  "command": [
+    "results/tk_bf16_bwd_s8192h2_owner_q_split_harness.py",
+    "timing",
+    "--matrix-cell-id",
+    "U15",
+    "--seed",
+    "20269519",
+    "--samples",
+    "201",
+    "--warmups",
+    "12",
+    "--replicate",
+    "1",
+    "--output",
+    "results/tk_bf16_bwd_s8192h2_owner_q_split_causal_timing_r1_seed20269519.json"
+  ],
+  "complete": true,
+  "correctness_pass": true,
+  "created_at_utc": "2026-07-17T22:16:36.156576+00:00",
+  "cuda_visible_devices": "1",
+  "derived_harness": {
+    "path": "/workspace/codebases/pv/fp4_matmul/results/tk_bf16_bwd_s8192h16_persistent_v_branchless_harness.py",
+    "sha256": "d2d0e37f84c300df381f61dcc96908809171830b76df015ee0a8ec2f4e338bf5"
+  },
+  "evaluation": {
+    "correctness_pass": true,
+    "gate_checks": {
+      "input_immutability": true,
+      "input_reference_contract": true,
+      "non_alias": true,
+      "persistent_v_branchless_contract": true,
+      "reference_error_pass": true,
+      "split_control_contract": true
+    },
+    "input_immutability_contract": {
+      "pass": true,
+      "rows": [
+        {
+          "contiguous": true,
+          "device": "cuda:0",
+          "dtype": "torch.bfloat16",
+          "dtype_match": true,
+          "name": "q",
+          "pass": true,
+          "shape": [
+            1,
+            8192,
+            2,
+            192
+          ],
+          "shape_match": true,
+          "unchanged": true
+        },
+        {
+          "contiguous": true,
+          "device": "cuda:0",
+          "dtype": "torch.bfloat16",
+          "dtype_match": true,
+          "name": "k",
+          "pass": true,
+          "shape": [
+            1,
+            8192,
+            2,
+            192
+          ],
+          "shape_match": true,
+          "unchanged": true
+        },
+        {
+          "contiguous": true,
+          "device": "cuda:0",
+          "dtype": "torch.bfloat16",
+          "dtype_match": true,
+          "name": "v",
+          "pass": true,
+          "shape": [
+            1,
+            8192,
+            2,
+            128
+          ],
+          "shape_match": true,
+          "unchanged": true
+        },
+        {
+          "contiguous": true,
+          "device": "cuda:0",
+          "dtype": "torch.bfloat16",
+          "dtype_match": true,
+          "name": "dout",
+          "pass": true,
+          "shape": [
+            1,
+            8192,
+            2,
+            128
+          ],
+          "shape_match": true,
+          "unchanged": true
+        },
+        {
+          "contiguous": true,
+          "device": "cuda:0",
+          "dtype": "torch.bfloat16",
+          "dtype_match": true,
+          "name": "out",
+          "pass": true,
+          "shape": [
+            1,
+            8192,
+            2,
+            128
+          ],
+          "shape_match": true,
+          "unchanged": true
+        },
+        {
+          "contiguous": true,
+          "device": "cuda:0",
+          "dtype": "torch.float32",
+          "dtype_match": true,
+          "name": "lse_raw",
+          "pass": true,
+          "shape": [
+            1,
+            2,
+            8192
+          ],
+          "shape_match": true,
+          "unchanged": true
+        },
+        {
+          "contiguous": true,
+          "device": "cuda:0",
+          "dtype": "torch.float32",
+          "dtype_match": true,
+          "name": "lse_tk",
+          "pass": true,
+          "shape": [
+            1,
+            8192,
+            2
+          ],
+          "shape_match": true,
+          "unchanged": true
+        }
+      ]
+    },
+    "input_reference_contract": {
+      "cute_exact_arity_three": true,
+      "cute_outputs": {
+        "dk": {
+          "contiguous": true,
+          "device": "cuda:0",
+          "dtype": "torch.bfloat16",
+          "finite": true,
+          "pass": true,
+          "shape": [
+            1,
+            8192,
+            2,
+            192
+          ]
+        },
+        "dq": {
+          "contiguous": true,
+          "device": "cuda:0",
+          "dtype": "torch.bfloat16",
+          "finite": true,
+          "pass": true,
+          "shape": [
+            1,
+            8192,
+            2,
+            192
+          ]
+        },
+        "dv": {
+          "contiguous": true,
+          "device": "cuda:0",
+          "dtype": "torch.bfloat16",
+          "finite": true,
+          "pass": true,
+          "shape": [
+            1,
+            8192,
+            2,
+            128
+          ]
+        }
+      },
+      "inputs": {
+        "dout": {
+          "contiguous": true,
+          "device": "cuda:0",
+          "dtype": "torch.bfloat16",
+          "finite": true,
+          "pass": true,
+          "shape": [
+            1,
+            8192,
+            2,
+            128
+          ]
+        },
+        "k": {
+          "contiguous": true,
+          "device": "cuda:0",
+          "dtype": "torch.bfloat16",
+          "finite": true,
+          "pass": true,
+          "shape": [
+            1,
+            8192,
+            2,
+            192
+          ]
+        },
+        "lse_raw": {
+          "contiguous": true,
+          "device": "cuda:0",
+          "dtype": "torch.float32",
+          "finite": true,
+          "pass": true,
+          "shape": [
+            1,
+            2,
+            8192
+          ]
+        },
+        "lse_tk": {
+          "contiguous": true,
+          "device": "cuda:0",
+          "dtype": "torch.float32",
+          "finite": true,
+          "pass": true,
+          "shape": [
+            1,
+            8192,
+            2
+          ]
+        },
+        "out": {
+          "contiguous": true,
+          "device": "cuda:0",
+          "dtype": "torch.bfloat16",
+          "finite": true,
+          "pass": true,
+          "shape": [
+            1,
+            8192,
+            2,
+            128
+          ]
+        },
+        "q": {
+          "contiguous": true,
+          "device": "cuda:0",
+          "dtype": "torch.bfloat16",
+          "finite": true,
+          "pass": true,
+          "shape": [
+            1,
+            8192,
+            2,
+            192
+          ]
+        },
+        "v": {
+          "contiguous": true,
+          "device": "cuda:0",
+          "dtype": "torch.bfloat16",
+          "finite": true,
+          "pass": true,
+          "shape": [
+            1,
+            8192,
+            2,
+            128
+          ]
+        }
+      },
+      "pass": true
+    },
+    "metrics_vs_cute": {
+      "persistent_v_branchless_child": [
+        {
+          "finite": true,
+          "max_abs": 0.013959646224975586,
+          "name": "dq",
+          "rel_l2": 0.003320013638585806
+        },
+        {
+          "finite": true,
+          "max_abs": 0.015625,
+          "name": "dk",
+          "rel_l2": 0.0035901940427720547
+        },
+        {
+          "finite": true,
+          "max_abs": 0.00390625,
+          "name": "dv",
+          "rel_l2": 0.00019239584798924625
+        }
+      ],
+      "split_full_overlap_control": [
+        {
+          "finite": true,
+          "max_abs": 0.013959646224975586,
+          "name": "dq",
+          "rel_l2": 0.003320013638585806
+        },
+        {
+          "finite": true,
+          "max_abs": 0.015625,
+          "name": "dk",
+          "rel_l2": 0.003589167259633541
+        },
+        {
+          "finite": true,
+          "max_abs": 0.0009765625,
+          "name": "dv",
+          "rel_l2": 5.020120079279877e-05
+        }
+      ]
+    },
+    "non_alias_contract": {
+      "conflicts": [],
+      "output_storages": {
+        "cute_reference.dk": {
+          "data_ptr": 13717471232,
+          "device": "cuda:0",
+          "nbytes": 6291456,
+          "tensor_dtype": "torch.bfloat16",
+          "tensor_shape": [
+            1,
+            8192,
+            2,
+            192
+          ],
+          "tensor_storage_offset": 0
+        },
+        "cute_reference.dq": {
+          "data_ptr": 13711179776,
+          "device": "cuda:0",
+          "nbytes": 6291456,
+          "tensor_dtype": "torch.bfloat16",
+          "tensor_shape": [
+            1,
+            8192,
+            2,
+            192
+          ],
+          "tensor_storage_offset": 0
+        },
+        "cute_reference.dv": {
+          "data_ptr": 13723762688,
+          "device": "cuda:0",
+          "nbytes": 4194304,
+          "tensor_dtype": "torch.bfloat16",
+          "tensor_shape": [
+            1,
+            8192,
+            2,
+            128
+          ],
+          "tensor_storage_offset": 0
+        },
+        "persistent_v_branchless_child.dk": {
+          "data_ptr": 281454114242560,
+          "device": "cuda:0",
+          "nbytes": 6291456,
+          "tensor_dtype": "torch.bfloat16",
+          "tensor_shape": [
+            1,
+            8192,
+            2,
+            192
+          ],
+          "tensor_storage_offset": 0
+        },
+        "persistent_v_branchless_child.dq": {
+          "data_ptr": 281454101659648,
+          "device": "cuda:0",
+          "nbytes": 12582912,
+          "tensor_dtype": "torch.float32",
+          "tensor_shape": [
+            1,
+            8192,
+            2,
+            192
+          ],
+          "tensor_storage_offset": 0
+        },
+        "persistent_v_branchless_child.dv": {
+          "data_ptr": 281454120534016,
+          "device": "cuda:0",
+          "nbytes": 4194304,
+          "tensor_dtype": "torch.bfloat16",
+          "tensor_shape": [
+            1,
+            8192,
+            2,
+            128
+          ],
+          "tensor_storage_offset": 0
+        },
+        "split_full_overlap_control.dk": {
+          "data_ptr": 281454248460288,
+          "device": "cuda:0",
+          "nbytes": 6291456,
+          "tensor_dtype": "torch.bfloat16",
+          "tensor_shape": [
+            1,
+            8192,
+            2,
+            192
+          ],
+          "tensor_storage_offset": 0
+        },
+        "split_full_overlap_control.dq": {
+          "data_ptr": 281454235877376,
+          "device": "cuda:0",
+          "nbytes": 12582912,
+          "tensor_dtype": "torch.float32",
+          "tensor_shape": [
+            1,
+            8192,
+            2,
+            192
+          ],
+          "tensor_storage_offset": 0
+        },
+        "split_full_overlap_control.dv": {
+          "data_ptr": 281454254751744,
+          "device": "cuda:0",
+          "nbytes": 4194304,
+          "tensor_dtype": "torch.bfloat16",
+          "tensor_shape": [
+            1,
+            8192,
+            2,
+            128
+          ],
+          "tensor_storage_offset": 0
+        }
+      },
+      "output_tensor_count": 9,
+      "pass": true,
+      "protected_storages": {
+        "inputs.dout": {
+          "data_ptr": 281456702128128,
+          "device": "cuda:0",
+          "nbytes": 4194304,
+          "tensor_dtype": "torch.bfloat16",
+          "tensor_shape": [
+            1,
+            8192,
+            2,
+            128
+          ],
+          "tensor_storage_offset": 0
+        },
+        "inputs.k": {
+          "data_ptr": 281456691642368,
+          "device": "cuda:0",
+          "nbytes": 6291456,
+          "tensor_dtype": "torch.bfloat16",
+          "tensor_shape": [
+            1,
+            8192,
+            2,
+            192
+          ],
+          "tensor_storage_offset": 0
+        },
+        "inputs.lse_raw": {
+          "data_ptr": 281456708419584,
+          "device": "cuda:0",
+          "nbytes": 65536,
+          "tensor_dtype": "torch.float32",
+          "tensor_shape": [
+            1,
+            2,
+            8192
+          ],
+          "tensor_storage_offset": 0
+        },
+        "inputs.lse_tk": {
+          "data_ptr": 281456708485120,
+          "device": "cuda:0",
+          "nbytes": 65536,
+          "tensor_dtype": "torch.float32",
+          "tensor_shape": [
+            1,
+            8192,
+            2
+          ],
+          "tensor_storage_offset": 0
+        },
+        "inputs.out": {
+          "data_ptr": 13706985472,
+          "device": "cuda:0",
+          "nbytes": 4194304,
+          "tensor_dtype": "torch.bfloat16",
+          "tensor_shape": [
+            1,
+            8192,
+            2,
+            128
+          ],
+          "tensor_storage_offset": 0
+        },
+        "inputs.q": {
+          "data_ptr": 281456685350912,
+          "device": "cuda:0",
+          "nbytes": 6291456,
+          "tensor_dtype": "torch.bfloat16",
+          "tensor_shape": [
+            1,
+            8192,
+            2,
+            192
+          ],
+          "tensor_storage_offset": 0
+        },
+        "inputs.v": {
+          "data_ptr": 281456697933824,
+          "device": "cuda:0",
+          "nbytes": 4194304,
+          "tensor_dtype": "torch.bfloat16",
+          "tensor_shape": [
+            1,
+            8192,
+            2,
+            128
+          ],
+          "tensor_storage_offset": 0
+        }
+      },
+      "protected_tensor_count": 7
+    },
+    "persistent_v_branchless_contract": {
+      "exact_arity_three": true,
+      "pass": true,
+      "rows": [
+        {
+          "contiguous": true,
+          "device": "cuda:0",
+          "dtype": "torch.float32",
+          "finite": true,
+          "name": "dq",
+          "pass": true,
+          "shape": [
+            1,
+            8192,
+            2,
+            192
+          ]
+        },
+        {
+          "contiguous": true,
+          "device": "cuda:0",
+          "dtype": "torch.bfloat16",
+          "finite": true,
+          "name": "dk",
+          "pass": true,
+          "shape": [
+            1,
+            8192,
+            2,
+            192
+          ]
+        },
+        {
+          "contiguous": true,
+          "device": "cuda:0",
+          "dtype": "torch.bfloat16",
+          "finite": true,
+          "name": "dv",
+          "pass": true,
+          "shape": [
+            1,
+            8192,
+            2,
+            128
+          ]
+        }
+      ]
+    },
+    "split_control_contract": {
+      "exact_arity_three": true,
+      "pass": true,
+      "rows": [
+        {
+          "contiguous": true,
+          "device": "cuda:0",
+          "dtype": "torch.float32",
+          "finite": true,
+          "name": "dq",
+          "pass": true,
+          "shape": [
+            1,
+            8192,
+            2,
+            192
+          ]
+        },
+        {
+          "contiguous": true,
+          "device": "cuda:0",
+          "dtype": "torch.bfloat16",
+          "finite": true,
+          "name": "dk",
+          "pass": true,
+          "shape": [
+            1,
+            8192,
+            2,
+            192
+          ]
+        },
+        {
+          "contiguous": true,
+          "device": "cuda:0",
+          "dtype": "torch.bfloat16",
+          "finite": true,
+          "name": "dv",
+          "pass": true,
+          "shape": [
+            1,
+            8192,
+            2,
+            128
+          ]
+        }
+      ]
+    }
+  },
+  "extension": {
+    "path": "/workspace/codebases/pv/fp4_matmul/results/.artifacts/tk_bf16_bwd_s8192h2_owner_q_split_causal_20260717/_C.cpython-312-aarch64-linux-gnu.so",
+    "sha256": "b0845f3d46174184566f619ec5edfe6e8c53b8b97b6034da8622856d0c31acd1",
+    "size_bytes": 10794312
+  },
+  "gate_pass": true,
+  "harness": {
+    "path": "/workspace/codebases/pv/fp4_matmul/results/tk_bf16_bwd_s8192h2_owner_q_split_harness.py",
+    "sha256": "d0c6e870277ffea954c86fc8457e982ab8307088914b9d9f43ecbb92523dcb1f"
+  },
+  "matrix_cell_id": "U15",
+  "mode": "timing",
+  "objective_beats_cute": true,
+  "output_path": "/workspace/codebases/pv/fp4_matmul/results/tk_bf16_bwd_s8192h2_owner_q_split_causal_timing_r1_seed20269519.json",
+  "paired_offset": 0,
+  "ratios": {
+    "persistent_v_branchless_over_cute": 0.9332570283997424,
+    "persistent_v_branchless_over_split_control": 0.7618102189781022
+  },
+  "raw_samples": [
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "split_full_overlap_control",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 233.152,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 364.16,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 330.368,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 0,
+      "sample_index": 0
+    },
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "cute",
+        "split_full_overlap_control"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 242.464,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 432.192,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 653.6,
+          "route": "split_full_overlap_control"
+        }
+      ],
+      "permutation_index": 1,
+      "sample_index": 1
+    },
+    {
+      "execution_order": [
+        "split_full_overlap_control",
+        "persistent_v_branchless_child",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 602.752,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 441.344,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 713.984,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 2,
+      "sample_index": 2
+    },
+    {
+      "execution_order": [
+        "split_full_overlap_control",
+        "cute",
+        "persistent_v_branchless_child"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 568.32,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 1059.104,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 1939.04,
+          "route": "persistent_v_branchless_child"
+        }
+      ],
+      "permutation_index": 3,
+      "sample_index": 3
+    },
+    {
+      "execution_order": [
+        "cute",
+        "persistent_v_branchless_child",
+        "split_full_overlap_control"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 2574.368,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 2538.72,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 2690.08,
+          "route": "split_full_overlap_control"
+        }
+      ],
+      "permutation_index": 4,
+      "sample_index": 4
+    },
+    {
+      "execution_order": [
+        "cute",
+        "split_full_overlap_control",
+        "persistent_v_branchless_child"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 2585.984,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 2349.792,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 2532.48,
+          "route": "persistent_v_branchless_child"
+        }
+      ],
+      "permutation_index": 5,
+      "sample_index": 5
+    },
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "split_full_overlap_control",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 2550.432,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 2676.544,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 2569.152,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 0,
+      "sample_index": 6
+    },
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "cute",
+        "split_full_overlap_control"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 2539.295,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 1216.832,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 2676.384,
+          "route": "split_full_overlap_control"
+        }
+      ],
+      "permutation_index": 1,
+      "sample_index": 7
+    },
+    {
+      "execution_order": [
+        "split_full_overlap_control",
+        "persistent_v_branchless_child",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 1872.128,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 429.504,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 483.712,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 2,
+      "sample_index": 8
+    },
+    {
+      "execution_order": [
+        "split_full_overlap_control",
+        "cute",
+        "persistent_v_branchless_child"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 597.408,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 596.128,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 419.328,
+          "route": "persistent_v_branchless_child"
+        }
+      ],
+      "permutation_index": 3,
+      "sample_index": 9
+    },
+    {
+      "execution_order": [
+        "cute",
+        "persistent_v_branchless_child",
+        "split_full_overlap_control"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 317.536,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 238.304,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 365.536,
+          "route": "split_full_overlap_control"
+        }
+      ],
+      "permutation_index": 4,
+      "sample_index": 10
+    },
+    {
+      "execution_order": [
+        "cute",
+        "split_full_overlap_control",
+        "persistent_v_branchless_child"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 319.872,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 374.848,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 228.832,
+          "route": "persistent_v_branchless_child"
+        }
+      ],
+      "permutation_index": 5,
+      "sample_index": 11
+    },
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "split_full_overlap_control",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 224.96,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 365.024,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 323.232,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 0,
+      "sample_index": 12
+    },
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "cute",
+        "split_full_overlap_control"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 240.672,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 327.84,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 375.232,
+          "route": "split_full_overlap_control"
+        }
+      ],
+      "permutation_index": 1,
+      "sample_index": 13
+    },
+    {
+      "execution_order": [
+        "split_full_overlap_control",
+        "persistent_v_branchless_child",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 362.432,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 225.376,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 316.544,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 2,
+      "sample_index": 14
+    },
+    {
+      "execution_order": [
+        "split_full_overlap_control",
+        "cute",
+        "persistent_v_branchless_child"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 375.232,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 311.36,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 239.072,
+          "route": "persistent_v_branchless_child"
+        }
+      ],
+      "permutation_index": 3,
+      "sample_index": 15
+    },
+    {
+      "execution_order": [
+        "cute",
+        "persistent_v_branchless_child",
+        "split_full_overlap_control"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 438.816,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 519.904,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 563.424,
+          "route": "split_full_overlap_control"
+        }
+      ],
+      "permutation_index": 4,
+      "sample_index": 16
+    },
+    {
+      "execution_order": [
+        "cute",
+        "split_full_overlap_control",
+        "persistent_v_branchless_child"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 489.312,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 685.152,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 581.312,
+          "route": "persistent_v_branchless_child"
+        }
+      ],
+      "permutation_index": 5,
+      "sample_index": 17
+    },
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "split_full_overlap_control",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 430.88,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 2679.648,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 2568.992,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 0,
+      "sample_index": 18
+    },
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "cute",
+        "split_full_overlap_control"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 2502.4,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 2551.456,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 2691.328,
+          "route": "split_full_overlap_control"
+        }
+      ],
+      "permutation_index": 1,
+      "sample_index": 19
+    },
+    {
+      "execution_order": [
+        "split_full_overlap_control",
+        "persistent_v_branchless_child",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 2091.872,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 2538.624,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 2577.12,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 2,
+      "sample_index": 20
+    },
+    {
+      "execution_order": [
+        "split_full_overlap_control",
+        "cute",
+        "persistent_v_branchless_child"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 2672.416,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 2573.344,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 2544.032,
+          "route": "persistent_v_branchless_child"
+        }
+      ],
+      "permutation_index": 3,
+      "sample_index": 21
+    },
+    {
+      "execution_order": [
+        "cute",
+        "persistent_v_branchless_child",
+        "split_full_overlap_control"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 1205.696,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 2541.376,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 1706.944,
+          "route": "split_full_overlap_control"
+        }
+      ],
+      "permutation_index": 4,
+      "sample_index": 22
+    },
+    {
+      "execution_order": [
+        "cute",
+        "split_full_overlap_control",
+        "persistent_v_branchless_child"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 634.368,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 588.544,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 471.168,
+          "route": "persistent_v_branchless_child"
+        }
+      ],
+      "permutation_index": 5,
+      "sample_index": 23
+    },
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "split_full_overlap_control",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 566.656,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 577.6,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 434.016,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 0,
+      "sample_index": 24
+    },
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "cute",
+        "split_full_overlap_control"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 267.072,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 329.76,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 378.944,
+          "route": "split_full_overlap_control"
+        }
+      ],
+      "permutation_index": 1,
+      "sample_index": 25
+    },
+    {
+      "execution_order": [
+        "split_full_overlap_control",
+        "persistent_v_branchless_child",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 362.304,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 225.92,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 331.84,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 2,
+      "sample_index": 26
+    },
+    {
+      "execution_order": [
+        "split_full_overlap_control",
+        "cute",
+        "persistent_v_branchless_child"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 377.824,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 319.904,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 240.447,
+          "route": "persistent_v_branchless_child"
+        }
+      ],
+      "permutation_index": 3,
+      "sample_index": 27
+    },
+    {
+      "execution_order": [
+        "cute",
+        "persistent_v_branchless_child",
+        "split_full_overlap_control"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 319.136,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 237.216,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 378.4,
+          "route": "split_full_overlap_control"
+        }
+      ],
+      "permutation_index": 4,
+      "sample_index": 28
+    },
+    {
+      "execution_order": [
+        "cute",
+        "split_full_overlap_control",
+        "persistent_v_branchless_child"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 330.88,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 377.44,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 230.336,
+          "route": "persistent_v_branchless_child"
+        }
+      ],
+      "permutation_index": 5,
+      "sample_index": 29
+    },
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "split_full_overlap_control",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 226.816,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 360.128,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 322.848,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 0,
+      "sample_index": 30
+    },
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "cute",
+        "split_full_overlap_control"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 403.008,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 551.52,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 560.384,
+          "route": "split_full_overlap_control"
+        }
+      ],
+      "permutation_index": 1,
+      "sample_index": 31
+    },
+    {
+      "execution_order": [
+        "split_full_overlap_control",
+        "persistent_v_branchless_child",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 596.64,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 555.04,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 601.6,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 2,
+      "sample_index": 32
+    },
+    {
+      "execution_order": [
+        "split_full_overlap_control",
+        "cute",
+        "persistent_v_branchless_child"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 568.704,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 2519.648,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 496.544,
+          "route": "persistent_v_branchless_child"
+        }
+      ],
+      "permutation_index": 3,
+      "sample_index": 33
+    },
+    {
+      "execution_order": [
+        "cute",
+        "persistent_v_branchless_child",
+        "split_full_overlap_control"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 2571.712,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 2546.08,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 2694.848,
+          "route": "split_full_overlap_control"
+        }
+      ],
+      "permutation_index": 4,
+      "sample_index": 34
+    },
+    {
+      "execution_order": [
+        "cute",
+        "split_full_overlap_control",
+        "persistent_v_branchless_child"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 2584.64,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 2296.704,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 2537.888,
+          "route": "persistent_v_branchless_child"
+        }
+      ],
+      "permutation_index": 5,
+      "sample_index": 35
+    },
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "split_full_overlap_control",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 2553.216,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 2674.816,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 2573.664,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 0,
+      "sample_index": 36
+    },
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "cute",
+        "split_full_overlap_control"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 2537.024,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 1213.376,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 2676.896,
+          "route": "split_full_overlap_control"
+        }
+      ],
+      "permutation_index": 1,
+      "sample_index": 37
+    },
+    {
+      "execution_order": [
+        "split_full_overlap_control",
+        "persistent_v_branchless_child",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 1699.936,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 580.416,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 447.136,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 2,
+      "sample_index": 38
+    },
+    {
+      "execution_order": [
+        "split_full_overlap_control",
+        "cute",
+        "persistent_v_branchless_child"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 588.0,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 493.728,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 567.2,
+          "route": "persistent_v_branchless_child"
+        }
+      ],
+      "permutation_index": 3,
+      "sample_index": 39
+    },
+    {
+      "execution_order": [
+        "cute",
+        "persistent_v_branchless_child",
+        "split_full_overlap_control"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 465.632,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 407.776,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 371.84,
+          "route": "split_full_overlap_control"
+        }
+      ],
+      "permutation_index": 4,
+      "sample_index": 40
+    },
+    {
+      "execution_order": [
+        "cute",
+        "split_full_overlap_control",
+        "persistent_v_branchless_child"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 333.088,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 376.48,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 231.168,
+          "route": "persistent_v_branchless_child"
+        }
+      ],
+      "permutation_index": 5,
+      "sample_index": 41
+    },
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "split_full_overlap_control",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 229.696,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 364.736,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 2145.919,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 0,
+      "sample_index": 42
+    },
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "cute",
+        "split_full_overlap_control"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 266.688,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 354.624,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 378.08,
+          "route": "split_full_overlap_control"
+        }
+      ],
+      "permutation_index": 1,
+      "sample_index": 43
+    },
+    {
+      "execution_order": [
+        "split_full_overlap_control",
+        "persistent_v_branchless_child",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 361.856,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 229.376,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 339.36,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 2,
+      "sample_index": 44
+    },
+    {
+      "execution_order": [
+        "split_full_overlap_control",
+        "cute",
+        "persistent_v_branchless_child"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 379.328,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 465.024,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 501.952,
+          "route": "persistent_v_branchless_child"
+        }
+      ],
+      "permutation_index": 3,
+      "sample_index": 45
+    },
+    {
+      "execution_order": [
+        "cute",
+        "persistent_v_branchless_child",
+        "split_full_overlap_control"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 454.048,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 438.784,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 558.592,
+          "route": "split_full_overlap_control"
+        }
+      ],
+      "permutation_index": 4,
+      "sample_index": 46
+    },
+    {
+      "execution_order": [
+        "cute",
+        "split_full_overlap_control",
+        "persistent_v_branchless_child"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 727.68,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 569.12,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 1013.728,
+          "route": "persistent_v_branchless_child"
+        }
+      ],
+      "permutation_index": 5,
+      "sample_index": 47
+    },
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "split_full_overlap_control",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 1929.919,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 1078.656,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 2570.528,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 0,
+      "sample_index": 48
+    },
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "cute",
+        "split_full_overlap_control"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 2542.592,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 2556.384,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 2695.616,
+          "route": "split_full_overlap_control"
+        }
+      ],
+      "permutation_index": 1,
+      "sample_index": 49
+    },
+    {
+      "execution_order": [
+        "split_full_overlap_control",
+        "persistent_v_branchless_child",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 2073.92,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 2541.632,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 2581.728,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 2,
+      "sample_index": 50
+    },
+    {
+      "execution_order": [
+        "split_full_overlap_control",
+        "cute",
+        "persistent_v_branchless_child"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 2670.656,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 2572.512,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 2539.84,
+          "route": "persistent_v_branchless_child"
+        }
+      ],
+      "permutation_index": 3,
+      "sample_index": 51
+    },
+    {
+      "execution_order": [
+        "cute",
+        "persistent_v_branchless_child",
+        "split_full_overlap_control"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 1201.152,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 2535.872,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 1684.576,
+          "route": "split_full_overlap_control"
+        }
+      ],
+      "permutation_index": 4,
+      "sample_index": 52
+    },
+    {
+      "execution_order": [
+        "cute",
+        "split_full_overlap_control",
+        "persistent_v_branchless_child"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 623.904,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 542.688,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 457.248,
+          "route": "persistent_v_branchless_child"
+        }
+      ],
+      "permutation_index": 5,
+      "sample_index": 53
+    },
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "split_full_overlap_control",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 465.056,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 705.216,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 437.984,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 0,
+      "sample_index": 54
+    },
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "cute",
+        "split_full_overlap_control"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 403.84,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 316.608,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 374.944,
+          "route": "split_full_overlap_control"
+        }
+      ],
+      "permutation_index": 1,
+      "sample_index": 55
+    },
+    {
+      "execution_order": [
+        "split_full_overlap_control",
+        "persistent_v_branchless_child",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 361.6,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 226.4,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 322.56,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 2,
+      "sample_index": 56
+    },
+    {
+      "execution_order": [
+        "split_full_overlap_control",
+        "cute",
+        "persistent_v_branchless_child"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 376.448,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 321.408,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 235.424,
+          "route": "persistent_v_branchless_child"
+        }
+      ],
+      "permutation_index": 3,
+      "sample_index": 57
+    },
+    {
+      "execution_order": [
+        "cute",
+        "persistent_v_branchless_child",
+        "split_full_overlap_control"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 320.288,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 241.216,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 369.28,
+          "route": "split_full_overlap_control"
+        }
+      ],
+      "permutation_index": 4,
+      "sample_index": 58
+    },
+    {
+      "execution_order": [
+        "cute",
+        "split_full_overlap_control",
+        "persistent_v_branchless_child"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 329.216,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 377.792,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 228.96,
+          "route": "persistent_v_branchless_child"
+        }
+      ],
+      "permutation_index": 5,
+      "sample_index": 59
+    },
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "split_full_overlap_control",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 223.072,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 361.952,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 328.832,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 0,
+      "sample_index": 60
+    },
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "cute",
+        "split_full_overlap_control"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 241.888,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 433.408,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 655.424,
+          "route": "split_full_overlap_control"
+        }
+      ],
+      "permutation_index": 1,
+      "sample_index": 61
+    },
+    {
+      "execution_order": [
+        "split_full_overlap_control",
+        "persistent_v_branchless_child",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 571.328,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 472.768,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 710.88,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 2,
+      "sample_index": 62
+    },
+    {
+      "execution_order": [
+        "split_full_overlap_control",
+        "cute",
+        "persistent_v_branchless_child"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 584.448,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 866.144,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 2125.76,
+          "route": "persistent_v_branchless_child"
+        }
+      ],
+      "permutation_index": 3,
+      "sample_index": 63
+    },
+    {
+      "execution_order": [
+        "cute",
+        "persistent_v_branchless_child",
+        "split_full_overlap_control"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 2572.608,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 2542.784,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 2696.864,
+          "route": "split_full_overlap_control"
+        }
+      ],
+      "permutation_index": 4,
+      "sample_index": 64
+    },
+    {
+      "execution_order": [
+        "cute",
+        "split_full_overlap_control",
+        "persistent_v_branchless_child"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 2585.631,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 2325.312,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 2537.248,
+          "route": "persistent_v_branchless_child"
+        }
+      ],
+      "permutation_index": 5,
+      "sample_index": 65
+    },
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "split_full_overlap_control",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 2548.64,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 2677.28,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 2571.872,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 0,
+      "sample_index": 66
+    },
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "cute",
+        "split_full_overlap_control"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 2533.568,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 1206.592,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 2672.384,
+          "route": "split_full_overlap_control"
+        }
+      ],
+      "permutation_index": 1,
+      "sample_index": 67
+    },
+    {
+      "execution_order": [
+        "split_full_overlap_control",
+        "persistent_v_branchless_child",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 2674.208,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 2530.72,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 2534.624,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 2,
+      "sample_index": 68
+    },
+    {
+      "execution_order": [
+        "split_full_overlap_control",
+        "cute",
+        "persistent_v_branchless_child"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 2666.72,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 2564.544,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 2502.88,
+          "route": "persistent_v_branchless_child"
+        }
+      ],
+      "permutation_index": 3,
+      "sample_index": 69
+    },
+    {
+      "execution_order": [
+        "cute",
+        "persistent_v_branchless_child",
+        "split_full_overlap_control"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 2555.136,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 2504.448,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 2680.0,
+          "route": "split_full_overlap_control"
+        }
+      ],
+      "permutation_index": 4,
+      "sample_index": 70
+    },
+    {
+      "execution_order": [
+        "cute",
+        "split_full_overlap_control",
+        "persistent_v_branchless_child"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 2563.744,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 2659.071,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 2507.648,
+          "route": "persistent_v_branchless_child"
+        }
+      ],
+      "permutation_index": 5,
+      "sample_index": 71
+    },
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "split_full_overlap_control",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 1904.8,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 381.824,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 346.016,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 0,
+      "sample_index": 72
+    },
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "cute",
+        "split_full_overlap_control"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 240.672,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 331.904,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 375.744,
+          "route": "split_full_overlap_control"
+        }
+      ],
+      "permutation_index": 1,
+      "sample_index": 73
+    },
+    {
+      "execution_order": [
+        "split_full_overlap_control",
+        "persistent_v_branchless_child",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 360.576,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 223.776,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 330.912,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 2,
+      "sample_index": 74
+    },
+    {
+      "execution_order": [
+        "split_full_overlap_control",
+        "cute",
+        "persistent_v_branchless_child"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 378.112,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 324.352,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 243.264,
+          "route": "persistent_v_branchless_child"
+        }
+      ],
+      "permutation_index": 3,
+      "sample_index": 75
+    },
+    {
+      "execution_order": [
+        "cute",
+        "persistent_v_branchless_child",
+        "split_full_overlap_control"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 322.304,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 238.304,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 369.984,
+          "route": "split_full_overlap_control"
+        }
+      ],
+      "permutation_index": 4,
+      "sample_index": 76
+    },
+    {
+      "execution_order": [
+        "cute",
+        "split_full_overlap_control",
+        "persistent_v_branchless_child"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 325.792,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 374.432,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 229.824,
+          "route": "persistent_v_branchless_child"
+        }
+      ],
+      "permutation_index": 5,
+      "sample_index": 77
+    },
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "split_full_overlap_control",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 223.104,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 360.192,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 325.728,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 0,
+      "sample_index": 78
+    },
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "cute",
+        "split_full_overlap_control"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 240.704,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 323.744,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 376.512,
+          "route": "split_full_overlap_control"
+        }
+      ],
+      "permutation_index": 1,
+      "sample_index": 79
+    },
+    {
+      "execution_order": [
+        "split_full_overlap_control",
+        "persistent_v_branchless_child",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 364.544,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 227.808,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 336.704,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 2,
+      "sample_index": 80
+    },
+    {
+      "execution_order": [
+        "split_full_overlap_control",
+        "cute",
+        "persistent_v_branchless_child"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 380.224,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 332.32,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 244.256,
+          "route": "persistent_v_branchless_child"
+        }
+      ],
+      "permutation_index": 3,
+      "sample_index": 81
+    },
+    {
+      "execution_order": [
+        "cute",
+        "persistent_v_branchless_child",
+        "split_full_overlap_control"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 320.704,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 241.664,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 364.096,
+          "route": "split_full_overlap_control"
+        }
+      ],
+      "permutation_index": 4,
+      "sample_index": 82
+    },
+    {
+      "execution_order": [
+        "cute",
+        "split_full_overlap_control",
+        "persistent_v_branchless_child"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 319.168,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 372.448,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 229.696,
+          "route": "persistent_v_branchless_child"
+        }
+      ],
+      "permutation_index": 5,
+      "sample_index": 83
+    },
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "split_full_overlap_control",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 222.848,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 361.312,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 324.576,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 0,
+      "sample_index": 84
+    },
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "cute",
+        "split_full_overlap_control"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 248.192,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 325.44,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 378.144,
+          "route": "split_full_overlap_control"
+        }
+      ],
+      "permutation_index": 1,
+      "sample_index": 85
+    },
+    {
+      "execution_order": [
+        "split_full_overlap_control",
+        "persistent_v_branchless_child",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 364.96,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 225.568,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 329.536,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 2,
+      "sample_index": 86
+    },
+    {
+      "execution_order": [
+        "split_full_overlap_control",
+        "cute",
+        "persistent_v_branchless_child"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 378.912,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 317.024,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 402.944,
+          "route": "persistent_v_branchless_child"
+        }
+      ],
+      "permutation_index": 3,
+      "sample_index": 87
+    },
+    {
+      "execution_order": [
+        "cute",
+        "persistent_v_branchless_child",
+        "split_full_overlap_control"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 433.728,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 436.512,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 600.832,
+          "route": "split_full_overlap_control"
+        }
+      ],
+      "permutation_index": 4,
+      "sample_index": 88
+    },
+    {
+      "execution_order": [
+        "cute",
+        "split_full_overlap_control",
+        "persistent_v_branchless_child"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 475.136,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 1958.496,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 479.584,
+          "route": "persistent_v_branchless_child"
+        }
+      ],
+      "permutation_index": 5,
+      "sample_index": 89
+    },
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "split_full_overlap_control",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 560.512,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 582.656,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 491.072,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 0,
+      "sample_index": 90
+    },
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "cute",
+        "split_full_overlap_control"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 463.584,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 600.416,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 376.672,
+          "route": "split_full_overlap_control"
+        }
+      ],
+      "permutation_index": 1,
+      "sample_index": 91
+    },
+    {
+      "execution_order": [
+        "split_full_overlap_control",
+        "persistent_v_branchless_child",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 548.0,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 228.064,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 323.936,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 2,
+      "sample_index": 92
+    },
+    {
+      "execution_order": [
+        "split_full_overlap_control",
+        "cute",
+        "persistent_v_branchless_child"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 381.216,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 313.792,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 242.464,
+          "route": "persistent_v_branchless_child"
+        }
+      ],
+      "permutation_index": 3,
+      "sample_index": 93
+    },
+    {
+      "execution_order": [
+        "cute",
+        "persistent_v_branchless_child",
+        "split_full_overlap_control"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 315.968,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 242.08,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 363.52,
+          "route": "split_full_overlap_control"
+        }
+      ],
+      "permutation_index": 4,
+      "sample_index": 94
+    },
+    {
+      "execution_order": [
+        "cute",
+        "split_full_overlap_control",
+        "persistent_v_branchless_child"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 316.128,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 373.984,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 230.304,
+          "route": "persistent_v_branchless_child"
+        }
+      ],
+      "permutation_index": 5,
+      "sample_index": 95
+    },
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "split_full_overlap_control",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 224.416,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 362.016,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 320.288,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 0,
+      "sample_index": 96
+    },
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "cute",
+        "split_full_overlap_control"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 238.848,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 320.384,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 378.496,
+          "route": "split_full_overlap_control"
+        }
+      ],
+      "permutation_index": 1,
+      "sample_index": 97
+    },
+    {
+      "execution_order": [
+        "split_full_overlap_control",
+        "persistent_v_branchless_child",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 371.296,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 228.032,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 2583.584,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 2,
+      "sample_index": 98
+    },
+    {
+      "execution_order": [
+        "split_full_overlap_control",
+        "cute",
+        "persistent_v_branchless_child"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 958.688,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 324.224,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 242.24,
+          "route": "persistent_v_branchless_child"
+        }
+      ],
+      "permutation_index": 3,
+      "sample_index": 99
+    },
+    {
+      "execution_order": [
+        "cute",
+        "persistent_v_branchless_child",
+        "split_full_overlap_control"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 316.16,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 240.832,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 366.464,
+          "route": "split_full_overlap_control"
+        }
+      ],
+      "permutation_index": 4,
+      "sample_index": 100
+    },
+    {
+      "execution_order": [
+        "cute",
+        "split_full_overlap_control",
+        "persistent_v_branchless_child"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 319.2,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 376.352,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 227.2,
+          "route": "persistent_v_branchless_child"
+        }
+      ],
+      "permutation_index": 5,
+      "sample_index": 101
+    },
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "split_full_overlap_control",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 417.472,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 364.512,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 605.824,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 0,
+      "sample_index": 102
+    },
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "cute",
+        "split_full_overlap_control"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 400.128,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 2573.856,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 2632.896,
+          "route": "split_full_overlap_control"
+        }
+      ],
+      "permutation_index": 1,
+      "sample_index": 103
+    },
+    {
+      "execution_order": [
+        "split_full_overlap_control",
+        "persistent_v_branchless_child",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 2670.048,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 2538.304,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 2579.232,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 2,
+      "sample_index": 104
+    },
+    {
+      "execution_order": [
+        "split_full_overlap_control",
+        "cute",
+        "persistent_v_branchless_child"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 2631.584,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 1999.903,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 243.072,
+          "route": "persistent_v_branchless_child"
+        }
+      ],
+      "permutation_index": 3,
+      "sample_index": 105
+    },
+    {
+      "execution_order": [
+        "cute",
+        "persistent_v_branchless_child",
+        "split_full_overlap_control"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 321.184,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 238.368,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 365.472,
+          "route": "split_full_overlap_control"
+        }
+      ],
+      "permutation_index": 4,
+      "sample_index": 106
+    },
+    {
+      "execution_order": [
+        "cute",
+        "split_full_overlap_control",
+        "persistent_v_branchless_child"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 333.856,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 377.184,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 231.552,
+          "route": "persistent_v_branchless_child"
+        }
+      ],
+      "permutation_index": 5,
+      "sample_index": 107
+    },
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "split_full_overlap_control",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 224.768,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 360.224,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 321.6,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 0,
+      "sample_index": 108
+    },
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "cute",
+        "split_full_overlap_control"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 238.24,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 2583.424,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 946.816,
+          "route": "split_full_overlap_control"
+        }
+      ],
+      "permutation_index": 1,
+      "sample_index": 109
+    },
+    {
+      "execution_order": [
+        "split_full_overlap_control",
+        "persistent_v_branchless_child",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 367.168,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 229.28,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 448.896,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 2,
+      "sample_index": 110
+    },
+    {
+      "execution_order": [
+        "split_full_overlap_control",
+        "cute",
+        "persistent_v_branchless_child"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 376.288,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 604.768,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 398.432,
+          "route": "persistent_v_branchless_child"
+        }
+      ],
+      "permutation_index": 3,
+      "sample_index": 111
+    },
+    {
+      "execution_order": [
+        "cute",
+        "persistent_v_branchless_child",
+        "split_full_overlap_control"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 2574.56,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 2503.008,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 2671.392,
+          "route": "split_full_overlap_control"
+        }
+      ],
+      "permutation_index": 4,
+      "sample_index": 112
+    },
+    {
+      "execution_order": [
+        "cute",
+        "split_full_overlap_control",
+        "persistent_v_branchless_child"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 2567.136,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 2680.832,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 2503.36,
+          "route": "persistent_v_branchless_child"
+        }
+      ],
+      "permutation_index": 5,
+      "sample_index": 113
+    },
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "split_full_overlap_control",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 1951.424,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 364.736,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 337.792,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 0,
+      "sample_index": 114
+    },
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "cute",
+        "split_full_overlap_control"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 243.456,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 317.568,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 374.56,
+          "route": "split_full_overlap_control"
+        }
+      ],
+      "permutation_index": 1,
+      "sample_index": 115
+    },
+    {
+      "execution_order": [
+        "split_full_overlap_control",
+        "persistent_v_branchless_child",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 362.752,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 236.896,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 328.864,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 2,
+      "sample_index": 116
+    },
+    {
+      "execution_order": [
+        "split_full_overlap_control",
+        "cute",
+        "persistent_v_branchless_child"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 378.432,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 390.656,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 2553.344,
+          "route": "persistent_v_branchless_child"
+        }
+      ],
+      "permutation_index": 3,
+      "sample_index": 117
+    },
+    {
+      "execution_order": [
+        "cute",
+        "persistent_v_branchless_child",
+        "split_full_overlap_control"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 844.8,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 246.624,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 367.136,
+          "route": "split_full_overlap_control"
+        }
+      ],
+      "permutation_index": 4,
+      "sample_index": 118
+    },
+    {
+      "execution_order": [
+        "cute",
+        "split_full_overlap_control",
+        "persistent_v_branchless_child"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 447.328,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 378.24,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 571.808,
+          "route": "persistent_v_branchless_child"
+        }
+      ],
+      "permutation_index": 5,
+      "sample_index": 119
+    },
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "split_full_overlap_control",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 402.56,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 2684.448,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 2533.056,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 0,
+      "sample_index": 120
+    },
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "cute",
+        "split_full_overlap_control"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 2538.208,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 2560.191,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 2676.992,
+          "route": "split_full_overlap_control"
+        }
+      ],
+      "permutation_index": 1,
+      "sample_index": 121
+    },
+    {
+      "execution_order": [
+        "split_full_overlap_control",
+        "persistent_v_branchless_child",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 2664.192,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 1976.608,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 355.936,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 2,
+      "sample_index": 122
+    },
+    {
+      "execution_order": [
+        "split_full_overlap_control",
+        "cute",
+        "persistent_v_branchless_child"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 381.824,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 314.112,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 239.68,
+          "route": "persistent_v_branchless_child"
+        }
+      ],
+      "permutation_index": 3,
+      "sample_index": 123
+    },
+    {
+      "execution_order": [
+        "cute",
+        "persistent_v_branchless_child",
+        "split_full_overlap_control"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 315.232,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 236.992,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 367.712,
+          "route": "split_full_overlap_control"
+        }
+      ],
+      "permutation_index": 4,
+      "sample_index": 124
+    },
+    {
+      "execution_order": [
+        "cute",
+        "split_full_overlap_control",
+        "persistent_v_branchless_child"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 313.536,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 372.0,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 2559.552,
+          "route": "persistent_v_branchless_child"
+        }
+      ],
+      "permutation_index": 5,
+      "sample_index": 125
+    },
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "split_full_overlap_control",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 820.288,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 362.08,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 320.0,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 0,
+      "sample_index": 126
+    },
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "cute",
+        "split_full_overlap_control"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 418.208,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 313.312,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 709.696,
+          "route": "split_full_overlap_control"
+        }
+      ],
+      "permutation_index": 1,
+      "sample_index": 127
+    },
+    {
+      "execution_order": [
+        "split_full_overlap_control",
+        "persistent_v_branchless_child",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 533.44,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 2542.528,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 2525.024,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 2,
+      "sample_index": 128
+    },
+    {
+      "execution_order": [
+        "split_full_overlap_control",
+        "cute",
+        "persistent_v_branchless_child"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 2671.648,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 2565.76,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 2550.272,
+          "route": "persistent_v_branchless_child"
+        }
+      ],
+      "permutation_index": 3,
+      "sample_index": 129
+    },
+    {
+      "execution_order": [
+        "cute",
+        "persistent_v_branchless_child",
+        "split_full_overlap_control"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 2530.496,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 1956.384,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 369.12,
+          "route": "split_full_overlap_control"
+        }
+      ],
+      "permutation_index": 4,
+      "sample_index": 130
+    },
+    {
+      "execution_order": [
+        "cute",
+        "split_full_overlap_control",
+        "persistent_v_branchless_child"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 322.976,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 379.808,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 228.512,
+          "route": "persistent_v_branchless_child"
+        }
+      ],
+      "permutation_index": 5,
+      "sample_index": 131
+    },
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "split_full_overlap_control",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 225.888,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 361.024,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 2683.04,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 0,
+      "sample_index": 132
+    },
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "cute",
+        "split_full_overlap_control"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 824.032,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 320.896,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 375.744,
+          "route": "split_full_overlap_control"
+        }
+      ],
+      "permutation_index": 1,
+      "sample_index": 133
+    },
+    {
+      "execution_order": [
+        "split_full_overlap_control",
+        "persistent_v_branchless_child",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 550.72,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 576.0,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 433.824,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 2,
+      "sample_index": 134
+    },
+    {
+      "execution_order": [
+        "split_full_overlap_control",
+        "cute",
+        "persistent_v_branchless_child"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 2686.528,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 2530.912,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 2520.384,
+          "route": "persistent_v_branchless_child"
+        }
+      ],
+      "permutation_index": 3,
+      "sample_index": 135
+    },
+    {
+      "execution_order": [
+        "cute",
+        "persistent_v_branchless_child",
+        "split_full_overlap_control"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 2566.368,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 2543.168,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 2676.192,
+          "route": "split_full_overlap_control"
+        }
+      ],
+      "permutation_index": 4,
+      "sample_index": 136
+    },
+    {
+      "execution_order": [
+        "cute",
+        "split_full_overlap_control",
+        "persistent_v_branchless_child"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 2001.471,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 378.112,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 226.752,
+          "route": "persistent_v_branchless_child"
+        }
+      ],
+      "permutation_index": 5,
+      "sample_index": 137
+    },
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "split_full_overlap_control",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 223.744,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 361.952,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 325.152,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 0,
+      "sample_index": 138
+    },
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "cute",
+        "split_full_overlap_control"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 241.28,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 2597.088,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 962.24,
+          "route": "split_full_overlap_control"
+        }
+      ],
+      "permutation_index": 1,
+      "sample_index": 139
+    },
+    {
+      "execution_order": [
+        "split_full_overlap_control",
+        "persistent_v_branchless_child",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 360.768,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 416.512,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 321.376,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 2,
+      "sample_index": 140
+    },
+    {
+      "execution_order": [
+        "split_full_overlap_control",
+        "cute",
+        "persistent_v_branchless_child"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 712.896,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 429.343,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 2544.544,
+          "route": "persistent_v_branchless_child"
+        }
+      ],
+      "permutation_index": 3,
+      "sample_index": 141
+    },
+    {
+      "execution_order": [
+        "cute",
+        "persistent_v_branchless_child",
+        "split_full_overlap_control"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 2531.648,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 2538.336,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 2674.912,
+          "route": "split_full_overlap_control"
+        }
+      ],
+      "permutation_index": 4,
+      "sample_index": 142
+    },
+    {
+      "execution_order": [
+        "cute",
+        "split_full_overlap_control",
+        "persistent_v_branchless_child"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 2572.448,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 2668.064,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 1989.184,
+          "route": "persistent_v_branchless_child"
+        }
+      ],
+      "permutation_index": 5,
+      "sample_index": 143
+    },
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "split_full_overlap_control",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 228.128,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 363.936,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 331.04,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 0,
+      "sample_index": 144
+    },
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "cute",
+        "split_full_overlap_control"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 242.464,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 314.976,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 2692.448,
+          "route": "split_full_overlap_control"
+        }
+      ],
+      "permutation_index": 1,
+      "sample_index": 145
+    },
+    {
+      "execution_order": [
+        "split_full_overlap_control",
+        "persistent_v_branchless_child",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 951.104,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 228.736,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 522.144,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 2,
+      "sample_index": 146
+    },
+    {
+      "execution_order": [
+        "split_full_overlap_control",
+        "cute",
+        "persistent_v_branchless_child"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 381.216,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 605.888,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 399.424,
+          "route": "persistent_v_branchless_child"
+        }
+      ],
+      "permutation_index": 3,
+      "sample_index": 147
+    },
+    {
+      "execution_order": [
+        "cute",
+        "persistent_v_branchless_child",
+        "split_full_overlap_control"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 2576.352,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 2503.2,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 2664.416,
+          "route": "split_full_overlap_control"
+        }
+      ],
+      "permutation_index": 4,
+      "sample_index": 148
+    },
+    {
+      "execution_order": [
+        "cute",
+        "split_full_overlap_control",
+        "persistent_v_branchless_child"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 2562.528,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 2680.544,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 2535.008,
+          "route": "persistent_v_branchless_child"
+        }
+      ],
+      "permutation_index": 5,
+      "sample_index": 149
+    },
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "split_full_overlap_control",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 1971.168,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 369.696,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 348.864,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 0,
+      "sample_index": 150
+    },
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "cute",
+        "split_full_overlap_control"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 241.664,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 324.96,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 375.84,
+          "route": "split_full_overlap_control"
+        }
+      ],
+      "permutation_index": 1,
+      "sample_index": 151
+    },
+    {
+      "execution_order": [
+        "split_full_overlap_control",
+        "persistent_v_branchless_child",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 2706.944,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 807.68,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 335.679,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 2,
+      "sample_index": 152
+    },
+    {
+      "execution_order": [
+        "split_full_overlap_control",
+        "cute",
+        "persistent_v_branchless_child"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 379.296,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 319.264,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 420.48,
+          "route": "persistent_v_branchless_child"
+        }
+      ],
+      "permutation_index": 3,
+      "sample_index": 153
+    },
+    {
+      "execution_order": [
+        "cute",
+        "persistent_v_branchless_child",
+        "split_full_overlap_control"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 318.336,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 242.528,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 370.208,
+          "route": "split_full_overlap_control"
+        }
+      ],
+      "permutation_index": 4,
+      "sample_index": 154
+    },
+    {
+      "execution_order": [
+        "cute",
+        "split_full_overlap_control",
+        "persistent_v_branchless_child"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 342.848,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 380.928,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 420.48,
+          "route": "persistent_v_branchless_child"
+        }
+      ],
+      "permutation_index": 5,
+      "sample_index": 155
+    },
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "split_full_overlap_control",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 242.624,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 711.648,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 428.288,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 0,
+      "sample_index": 156
+    },
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "cute",
+        "split_full_overlap_control"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 2545.76,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 2531.488,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 2674.464,
+          "route": "split_full_overlap_control"
+        }
+      ],
+      "permutation_index": 1,
+      "sample_index": 157
+    },
+    {
+      "execution_order": [
+        "split_full_overlap_control",
+        "persistent_v_branchless_child",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 2663.808,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 2547.072,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 2565.376,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 2,
+      "sample_index": 158
+    },
+    {
+      "execution_order": [
+        "split_full_overlap_control",
+        "cute",
+        "persistent_v_branchless_child"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 2107.616,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 343.584,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 246.176,
+          "route": "persistent_v_branchless_child"
+        }
+      ],
+      "permutation_index": 3,
+      "sample_index": 159
+    },
+    {
+      "execution_order": [
+        "cute",
+        "persistent_v_branchless_child",
+        "split_full_overlap_control"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 322.528,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 242.176,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 365.056,
+          "route": "split_full_overlap_control"
+        }
+      ],
+      "permutation_index": 4,
+      "sample_index": 160
+    },
+    {
+      "execution_order": [
+        "cute",
+        "split_full_overlap_control",
+        "persistent_v_branchless_child"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 322.528,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 376.32,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 230.656,
+          "route": "persistent_v_branchless_child"
+        }
+      ],
+      "permutation_index": 5,
+      "sample_index": 161
+    },
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "split_full_overlap_control",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 222.4,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 362.528,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 2580.864,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 0,
+      "sample_index": 162
+    },
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "cute",
+        "split_full_overlap_control"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 815.2,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 321.088,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 376.64,
+          "route": "split_full_overlap_control"
+        }
+      ],
+      "permutation_index": 1,
+      "sample_index": 163
+    },
+    {
+      "execution_order": [
+        "split_full_overlap_control",
+        "persistent_v_branchless_child",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 551.424,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 575.168,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 432.48,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 2,
+      "sample_index": 164
+    },
+    {
+      "execution_order": [
+        "split_full_overlap_control",
+        "cute",
+        "persistent_v_branchless_child"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 2682.752,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 2527.232,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 2536.0,
+          "route": "persistent_v_branchless_child"
+        }
+      ],
+      "permutation_index": 3,
+      "sample_index": 165
+    },
+    {
+      "execution_order": [
+        "cute",
+        "persistent_v_branchless_child",
+        "split_full_overlap_control"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 2564.288,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 2540.832,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 2665.344,
+          "route": "split_full_overlap_control"
+        }
+      ],
+      "permutation_index": 4,
+      "sample_index": 166
+    },
+    {
+      "execution_order": [
+        "cute",
+        "split_full_overlap_control",
+        "persistent_v_branchless_child"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 1998.944,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 379.616,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 228.288,
+          "route": "persistent_v_branchless_child"
+        }
+      ],
+      "permutation_index": 5,
+      "sample_index": 167
+    },
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "split_full_overlap_control",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 224.128,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 359.68,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 329.248,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 0,
+      "sample_index": 168
+    },
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "cute",
+        "split_full_overlap_control"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 239.552,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 318.048,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 376.992,
+          "route": "split_full_overlap_control"
+        }
+      ],
+      "permutation_index": 1,
+      "sample_index": 169
+    },
+    {
+      "execution_order": [
+        "split_full_overlap_control",
+        "persistent_v_branchless_child",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 369.792,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 2553.824,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 849.888,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 2,
+      "sample_index": 170
+    },
+    {
+      "execution_order": [
+        "split_full_overlap_control",
+        "cute",
+        "persistent_v_branchless_child"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 379.008,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 324.992,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 415.392,
+          "route": "persistent_v_branchless_child"
+        }
+      ],
+      "permutation_index": 3,
+      "sample_index": 171
+    },
+    {
+      "execution_order": [
+        "cute",
+        "persistent_v_branchless_child",
+        "split_full_overlap_control"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 317.056,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 575.296,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 2684.735,
+          "route": "split_full_overlap_control"
+        }
+      ],
+      "permutation_index": 4,
+      "sample_index": 172
+    },
+    {
+      "execution_order": [
+        "cute",
+        "split_full_overlap_control",
+        "persistent_v_branchless_child"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 2534.336,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 2668.832,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 2538.688,
+          "route": "persistent_v_branchless_child"
+        }
+      ],
+      "permutation_index": 5,
+      "sample_index": 173
+    },
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "split_full_overlap_control",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 2543.36,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 2641.888,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 1992.032,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 0,
+      "sample_index": 174
+    },
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "cute",
+        "split_full_overlap_control"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 244.128,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 319.84,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 378.176,
+          "route": "split_full_overlap_control"
+        }
+      ],
+      "permutation_index": 1,
+      "sample_index": 175
+    },
+    {
+      "execution_order": [
+        "split_full_overlap_control",
+        "persistent_v_branchless_child",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 365.76,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 229.088,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 326.048,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 2,
+      "sample_index": 176
+    },
+    {
+      "execution_order": [
+        "split_full_overlap_control",
+        "cute",
+        "persistent_v_branchless_child"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 376.64,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 2661.376,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 816.64,
+          "route": "persistent_v_branchless_child"
+        }
+      ],
+      "permutation_index": 3,
+      "sample_index": 177
+    },
+    {
+      "execution_order": [
+        "cute",
+        "persistent_v_branchless_child",
+        "split_full_overlap_control"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 316.544,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 238.432,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 556.096,
+          "route": "split_full_overlap_control"
+        }
+      ],
+      "permutation_index": 4,
+      "sample_index": 178
+    },
+    {
+      "execution_order": [
+        "cute",
+        "split_full_overlap_control",
+        "persistent_v_branchless_child"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 339.008,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 709.504,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 398.784,
+          "route": "persistent_v_branchless_child"
+        }
+      ],
+      "permutation_index": 5,
+      "sample_index": 179
+    },
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "split_full_overlap_control",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 2547.328,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 2638.72,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 2569.312,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 0,
+      "sample_index": 180
+    },
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "cute",
+        "split_full_overlap_control"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 2535.872,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 2571.008,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 2670.08,
+          "route": "split_full_overlap_control"
+        }
+      ],
+      "permutation_index": 1,
+      "sample_index": 181
+    },
+    {
+      "execution_order": [
+        "split_full_overlap_control",
+        "persistent_v_branchless_child",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 2110.752,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 230.784,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 337.152,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 2,
+      "sample_index": 182
+    },
+    {
+      "execution_order": [
+        "split_full_overlap_control",
+        "cute",
+        "persistent_v_branchless_child"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 378.272,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 324.448,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 242.048,
+          "route": "persistent_v_branchless_child"
+        }
+      ],
+      "permutation_index": 3,
+      "sample_index": 183
+    },
+    {
+      "execution_order": [
+        "cute",
+        "persistent_v_branchless_child",
+        "split_full_overlap_control"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 330.816,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 241.12,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 366.72,
+          "route": "split_full_overlap_control"
+        }
+      ],
+      "permutation_index": 4,
+      "sample_index": 184
+    },
+    {
+      "execution_order": [
+        "cute",
+        "split_full_overlap_control",
+        "persistent_v_branchless_child"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 2578.688,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 964.959,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 232.768,
+          "route": "persistent_v_branchless_child"
+        }
+      ],
+      "permutation_index": 5,
+      "sample_index": 185
+    },
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "split_full_overlap_control",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 226.88,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 556.448,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 606.72,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 0,
+      "sample_index": 186
+    },
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "cute",
+        "split_full_overlap_control"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 397.792,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 2581.536,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 2632.512,
+          "route": "split_full_overlap_control"
+        }
+      ],
+      "permutation_index": 1,
+      "sample_index": 187
+    },
+    {
+      "execution_order": [
+        "split_full_overlap_control",
+        "persistent_v_branchless_child",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 2670.784,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 2537.216,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 2575.904,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 2,
+      "sample_index": 188
+    },
+    {
+      "execution_order": [
+        "split_full_overlap_control",
+        "cute",
+        "persistent_v_branchless_child"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 2662.944,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 1992.256,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 243.296,
+          "route": "persistent_v_branchless_child"
+        }
+      ],
+      "permutation_index": 3,
+      "sample_index": 189
+    },
+    {
+      "execution_order": [
+        "cute",
+        "persistent_v_branchless_child",
+        "split_full_overlap_control"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 329.248,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 239.936,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 364.032,
+          "route": "split_full_overlap_control"
+        }
+      ],
+      "permutation_index": 4,
+      "sample_index": 190
+    },
+    {
+      "execution_order": [
+        "cute",
+        "split_full_overlap_control",
+        "persistent_v_branchless_child"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 317.696,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 373.664,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 2559.488,
+          "route": "persistent_v_branchless_child"
+        }
+      ],
+      "permutation_index": 5,
+      "sample_index": 191
+    },
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "split_full_overlap_control",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 826.592,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 367.68,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 488.832,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 0,
+      "sample_index": 192
+    },
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "cute",
+        "split_full_overlap_control"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 241.568,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 606.432,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 536.256,
+          "route": "split_full_overlap_control"
+        }
+      ],
+      "permutation_index": 1,
+      "sample_index": 193
+    },
+    {
+      "execution_order": [
+        "split_full_overlap_control",
+        "persistent_v_branchless_child",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 2679.904,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 2538.272,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 2571.584,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 2,
+      "sample_index": 194
+    },
+    {
+      "execution_order": [
+        "split_full_overlap_control",
+        "cute",
+        "persistent_v_branchless_child"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 2664.16,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 2573.024,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 2527.712,
+          "route": "persistent_v_branchless_child"
+        }
+      ],
+      "permutation_index": 3,
+      "sample_index": 195
+    },
+    {
+      "execution_order": [
+        "cute",
+        "persistent_v_branchless_child",
+        "split_full_overlap_control"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 2580.032,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 2536.032,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 2640.704,
+          "route": "split_full_overlap_control"
+        }
+      ],
+      "permutation_index": 4,
+      "sample_index": 196
+    },
+    {
+      "execution_order": [
+        "cute",
+        "split_full_overlap_control",
+        "persistent_v_branchless_child"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 2571.456,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 2679.232,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 2537.087,
+          "route": "persistent_v_branchless_child"
+        }
+      ],
+      "permutation_index": 5,
+      "sample_index": 197
+    },
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "split_full_overlap_control",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 2523.68,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 2681.312,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 2581.536,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 0,
+      "sample_index": 198
+    },
+    {
+      "execution_order": [
+        "persistent_v_branchless_child",
+        "cute",
+        "split_full_overlap_control"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 2539.712,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 2577.952,
+          "route": "cute"
+        },
+        {
+          "elapsed_us": 2664.288,
+          "route": "split_full_overlap_control"
+        }
+      ],
+      "permutation_index": 1,
+      "sample_index": 199
+    },
+    {
+      "execution_order": [
+        "split_full_overlap_control",
+        "persistent_v_branchless_child",
+        "cute"
+      ],
+      "measurements": [
+        {
+          "elapsed_us": 2674.528,
+          "route": "split_full_overlap_control"
+        },
+        {
+          "elapsed_us": 1327.36,
+          "route": "persistent_v_branchless_child"
+        },
+        {
+          "elapsed_us": 2562.208,
+          "route": "cute"
+        }
+      ],
+      "permutation_index": 2,
+      "sample_index": 200
+    }
+  ],
+  "replicate": 1,
+  "resolved_shape": {
+    "batch": 1,
+    "dqk": 192,
+    "dv": 128,
+    "heads": 2,
+    "seqlen": 8192
+  },
+  "retention_pass": true,
+  "routes": {
+    "owner_q_split_child": "b300_mha_bwd_hot_cute16_candidate_s8192h2_owner_q_split_internal",
+    "persistent_v_branchless_parent": "b300_mha_bwd_hot_cute16_candidate_s8192h2_persistent_v_branchless_internal",
+    "reference": "CuTe DSL BF16 FA4 backward"
+  },
+  "samples": 201,
+  "seed": 20269519,
+  "state": "finished",
+  "static_gate": {
+    "extracted_sass_sha256": {
+      "parent": "3e782762ec81f5a4b5613de9be6ec66b04410c6b33a4f7f8eb6a7badf91a2299",
+      "split_0": "f77436cfdf7d37676c6666fbf9ed894e49e23e90fc72615c91828bb11a23dc5f",
+      "split_1": "53546f8755e68e70a6562f031d0177f09967d92fc5a00b24d923fbf887d38256"
+    },
+    "parent_payload_matches_frozen": true,
+    "parent_payload_sha256": "7a278e4ca15a24fb71ed6621e116093ad8f319612403cf91d5d251b94174e597",
+    "pass": true,
+    "public_dispatch_unchanged": true,
+    "resources": {
+      "parent": {
+        "local_bytes": 0,
+        "registers": 128,
+        "shared_bytes": 231276,
+        "spill_loads": 0,
+        "spill_stores": 0,
+        "stack_bytes": 0
+      },
+      "split_0": {
+        "local_bytes": 0,
+        "registers": 128,
+        "shared_bytes": 231276,
+        "spill_loads": 0,
+        "spill_stores": 0,
+        "stack_bytes": 0
+      },
+      "split_1": {
+        "local_bytes": 0,
+        "registers": 128,
+        "shared_bytes": 231276,
+        "spill_loads": 0,
+        "spill_stores": 0,
+        "stack_bytes": 0
+      }
+    },
+    "runtime_scope": "exact B1 S8192 H2 even/odd fused-Q-work owner split",
+    "same_method_instruction_counts": {
+      "parent": 4096,
+      "split_0": 3528,
+      "split_1": 3536
+    },
+    "utchmma_2cta_per_body": 52
+  },
+  "summaries": {
+    "cute": {
+      "max_us": 2683.04,
+      "median_us": 447.328,
+      "min_us": 311.36
+    },
+    "persistent_v_branchless_child": {
+      "max_us": 2559.552,
+      "median_us": 417.472,
+      "min_us": 222.4
+    },
+    "split_full_overlap_control": {
+      "max_us": 2706.944,
+      "median_us": 548.0,
+      "min_us": 359.68
+    }
+  },
+  "timing_evidence_pass": true,
+  "warmups": 12
+}

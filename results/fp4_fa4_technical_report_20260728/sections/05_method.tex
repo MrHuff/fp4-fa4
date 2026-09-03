@@ -1,0 +1,118 @@
+\section{Evaluation Method}
+
+\subsection{Matched speed and error records}
+
+Each principal row stores latency and numerical error from one deterministic
+case. Intentionally incorrect ceilings and older runs with different seeds or
+timing windows are used only as diagnostics. For approximate output
+$\widehat O$ and BF16 reference $O$, we report
+\begin{align}
+  \operatorname{cos}(\widehat O,O)
+    &=\frac{\langle\widehat O,O\rangle}
+      {\lVert\widehat O\rVert_2\lVert O\rVert_2}, \\
+  \operatorname{rel}L_2
+    &=\frac{\lVert\widehat O-O\rVert_2}{\lVert O\rVert_2}, \\
+  \operatorname{RMSE}
+    &=\sqrt{n^{-1}\sum_r(\widehat O_r-O_r)^2}.
+\end{align}
+Cosine can hide magnitude error and RMSE depends on output scale, so
+relative-$L_2$ is reported alongside both.
+
+\subsection{Operator benchmark suites}
+
+The primary GB200 suite reproduces the D128 shape grid in HAO's FP4 FA4
+README:
+\begin{equation}
+\begin{split}
+ &(B,S,H)\in\{(1,256,16),(1,1024,16),
+ (4,4096,16),\\
+ &(1,32768,16),(4,4096,32),(1,4096,12),
+ (1,32768,12),\\
+ &(1,4096,24),(1,32768,24)\}.
+\end{split}
+\label{eq:hao-grid}
+\end{equation}
+Every case is noncausal D128, uses HAO's
+\code{create\_nvfp4\_attention\_tensors} factory and seed 20260814, and is
+timed with 300 ms warmup and a 3000 ms median window. TK \code{fast}, TK
+\code{accurate}, native HAO NV/NV, and HAO CuTe-DSL BF16 receive the same
+prepared Q/K/V. The two TK binaries run in separate processes, but both use
+the controls from one canonical manifest:
+\begin{equation}
+  \operatorname{speedup}(k)=t_{\mathrm{HAO\ BF16}}/t_k.
+  \label{eq:canonical-speedup}
+\end{equation}
+Throughput follows HAO's matrix-operation convention,
+\begin{equation}
+  \mathrm{ops}=BH\,2S^2(D_{QK}+D_{VO}).
+  \label{eq:hao-flops}
+\end{equation}
+
+A saturation suite adds S4096/H64 and S8192/H64 plus local HAO and TK NV/FP8
+controls. Its six-order harness removes short-case provider-order bias. A
+separate D64 matrix covers
+$S\in\{1024,2048,4096,8192,16384,32768\}$ and
+$H\in\{12,24,32,64\}$ on both GB200 and B300. Those 24 cross-generation cases
+share the input factory, seed, 100 ms warmup, and 1000 ms timing window.
+
+B300 D128 rows are the best stable records from the final SM103 tuning
+campaign, not a same-binary hardware A/B. S4096 uses 300/3000 ms windows;
+S6144 and S32768 use repeated windows; S8192 and the wave-aligned S9472 case
+use five 2000-iteration windows and two correctness seeds. Published HAO B200
+and GB300 values are labeled as cross-run context rather than local timings.
+
+\subsection{Timed scope and operand contract}
+
+Kernel time includes score loading, NVFP4 QK, online state, P approximation
+and packing, MX scale publication, MXFP4 PV, correction, and the output
+epilogue. It excludes dynamic Q/K/V quantization and optional K/V
+permutations, matching HAO's attention-kernel scope rather than full layer
+latency.
+
+The fast path requires adjacent NVFP4 Q/K scale blocks folded for K64 access.
+The fold is chosen offline by reconstruction MSE. A production QKV projection
+should emit this layout directly. Pairing the binary with ordinary block-16
+scales is an invalid operand contract even if its timing looks plausible.
+
+\subsection{Model and reconstruction replays}
+
+Six fixed replays replace every eligible attention call in ViT and BERT:
+ViT classification at S256, S1024, and S4096; BERT masked-language modeling
+at S256 and S512; and SST-2 classification at S256. All providers receive the
+same weights, examples, masks, prepared operands, and BF16 replay digest. We
+report attention-layer error, final logits or hidden-state error, prediction
+agreement, and task score. These are inference replays, not training-stability
+claims.
+
+The ViT-MAE experiment replaces all 12 encoder self-attention layers for 100
+COCO validation images with a fixed 75\% patch mask
+\cite{he2022mae,lin2014coco}. Its D64 model attention is padded to the existing
+S256/H16/D128 specialization and padded keys are masked. Paired masked-patch
+PSNR, MSE, reconstruction cosine, and relative-$L_2$ are measured against the
+same BF16 decoder run.
+
+Wan2.1 uses the native noncausal D128 topology at S7680: H12 across 30 layers
+for 1.3B and H40 across 40 layers for 14B \cite{wanteam2025wan}. Every video
+self-attention call is replaced; cross-attention and the rest of the model
+remain BF16. The fast route uses the global $A=1.60,B=0.95$ map. The sampled
+guard in Algorithm~\ref{alg:sampled-guard} is routed only to layers 27--29 in
+1.3B and 33--34/38--39 in 14B. One-, four-, and twenty-step outputs are paired
+against HAO CuTe-DSL BF16 with identical prompt, seed, guidance, and initial
+latent. A second 14B prompt/seed checks the 20-step fix. Kernel timing uses
+independently warmed five-second windows and weights guarded and unguarded
+latencies by their layer counts.
+
+Layer-wise affine calibration is kept as a negative control, not part of the
+reported route. Isolated substitutions were scored on a BF16 teacher
+trajectory, then rejected because the composed all-FP4 route changed sign
+between calibration and held-out prompts. The full control is in
+Appendix~\ref{app:joint-affine}.
+
+\subsection{Reproducibility}
+
+Generated tables are built from JSON manifests rather than hand-transcribed.
+Commands, policy manifests, compile-time constants, hardware metadata, job
+identifiers, and artifact locations are collected in
+Appendix~\ref{app:reproduction}. Historical format paths and rejected timing
+experiments remain in the other appendices so they do not define the primary
+comparison.

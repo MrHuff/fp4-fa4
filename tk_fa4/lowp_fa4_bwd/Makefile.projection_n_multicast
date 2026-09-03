@@ -1,0 +1,13 @@
+GPU ?= B200
+SRC := projection_n_multicast_probe.cu
+MODULE ?= _C_tk_projection_n_multicast_probe
+EXT_SUFFIX := $(shell python3 -c "import sysconfig; print(sysconfig.get_config_var('EXT_SUFFIX'))")
+OUT ?= /tmp/$(MODULE)$(EXT_SUFFIX)
+CMD := python3 -c "import importlib.util; s=importlib.util.spec_from_file_location('$(MODULE)', '$(OUT)'); m=importlib.util.module_from_spec(s); s.loader.exec_module(m)"
+CONFIG := pytorch
+include ../../ThunderKittens/kernels/common.mk
+
+NVCCFLAGS += --threads 2 --split-compile=2 -I.. \
+	-UTORCH_EXTENSION_NAME -DTORCH_EXTENSION_NAME=$(MODULE)
+
+$(OUT): projection_n_multicast.cuh

@@ -1,0 +1,243 @@
+--- a/fmha_bwd.py
++++ b/fmha_bwd.py
+@@ -53,6 +53,21 @@
+
+
+ @dsl_user_op
++def tk_fence_proxy_async_global(*, loc=None, ip=None) -> None:
++    llvm.inline_asm(
++        T.i32(),
++        [],
++        "{fence.proxy.async.global; mov.u32 $0, 0;}",
++        "=r",
++        has_side_effects=True,
++        is_align_stack=False,
++        asm_dialect=llvm.AsmDialect.AD_ATT,
++        loc=loc,
++        ip=ip,
++    )
++
++
++@dsl_user_op
+ def tk_exp2_alu_degree1_f32x2(
+     x: Float32, y: Float32, *, loc=None, ip=None
+ ) -> Tuple[Float32, Float32]:
+@@ -222,6 +237,7 @@
+         self.compact_dq_acc = False
+         self.direct_compact_dq = False
+         self.hierarchical_dq_lanes = 1
++        self.signal_dq_tiles = False
+         self.use_precomputed_stats = False
+         self.skip_stats_preprocess = False
+         # The reference GQA topology serializes every query head that shares a
+@@ -768,9 +784,14 @@
+
+         self.shared_storage = SharedStorage
+
+-        sum_OdO, scaled_LSE, dQ_acc, dK_partial, dV_partial = self.get_workspace_tensor(
+-            problem_shape, workspace, self.acc_dtype
+-        )
++        (
++            sum_OdO,
++            scaled_LSE,
++            dQ_acc,
++            dK_partial,
++            dV_partial,
++            dq_tile_arrivals,
++        ) = self.get_workspace_tensor(problem_shape, workspace, self.acc_dtype)
+
+         if cutlass.const_expr(self.use_precomputed_stats):
+             sum_OdO = cute.make_tensor(
+@@ -846,6 +867,7 @@
+             scaled_LSE,
+             scale_softmax,
+             sum_OdO,
++            dq_tile_arrivals,
+             problem_shape,
+             cumulative_s_q,
+             cumulative_s_k,
+@@ -1100,6 +1122,7 @@
+         LSE: cute.Tensor,
+         scale_softmax: Float32,
+         sum_OdO: cute.Tensor,
++        dq_tile_arrivals: cute.Tensor,
+         problem_shape: Tuple[Int32, Int32, Int32, Tuple[Int32, Int32]],
+         cumulative_s_q: Union[cute.Tensor, None],
+         cumulative_s_k: Union[cute.Tensor, None],
+@@ -1476,6 +1499,7 @@
+                     trip_end,
+                     (mma_reduce_dQ_pipeline, reduce_tma_store_pipeline),
+                     scale_softmax,
++                    dq_tile_arrivals,
+                 )
+
+             else:
+@@ -2376,28 +2399,0 @@
+-        masked_leading_count = fmha_utils.FusedMask.get_masked_leading_count(
+-            self.mask_type,
+-            blk_coord,
+-            self.cta_tiler,
+-            Q,
+-            K,
+-            window_size_left,
+-            window_size_right,
+-        )
+-        unmasked_count = fmha_utils.FusedMask.get_unmasked_trip_count(
+-            self.mask_type,
+-            blk_coord,
+-            self.cta_tiler,
+-            Q,
+-            K,
+-            window_size_left,
+-            window_size_right,
+-        )
+-        masked_trailing_count = fmha_utils.FusedMask.get_masked_trailing_count(
+-            self.mask_type,
+-            blk_coord,
+-            self.cta_tiler,
+-            Q,
+-            K,
+-            window_size_left,
+-            window_size_right,
+-        )
+-
+@@ -2411 +2406,0 @@
+-            iter_num = iter_index - iter_start + 1
+@@ -2415,12 +2410,4 @@
+-            is_residual_k = Boolean(False)
+-            is_residual_k = blk_coord_k * self.tile_shape_K + self.tile_shape_K >= K
+-
+-            is_masked_tile = (
+-                is_residual_k
+-                or iter_num <= masked_leading_count
+-                or (
+-                    iter_num > masked_leading_count + unmasked_count
+-                    and iter_num
+-                    <= masked_leading_count + unmasked_count + masked_trailing_count
+-                )
+-            )
++            # Equal-length, tile-aligned causal training leaves only the
++            # diagonal trip requiring element masking; trip bounds exclude
++            # every fully masked query tile.
++            is_masked_tile = iter_index == iter_start
+@@ -2627,6 +2614,7 @@
+         # (mma_reduce_dQ_pipeline, reduce_tma_store_pipeline)
+         pipeline_args: tuple,
+         scale_softmax: Float32,
++        dq_tile_arrivals: cute.Tensor,
+     ):
+         tidx, tidy, tidz = cute.arch.thread_idx()
+         warp_idx = cute.arch.make_warp_uniform(cute.arch.warp_idx())
+@@ -2635,6 +2623,7 @@
+
+         blk_coord_h, blk_coord_b = blk_coord_batch
+         blk_coord_h_r, blk_coord_h_k = blk_coord_h
++        arrival_h_k = blk_coord_h_k
+         if cutlass.const_expr(self.hierarchical_dq_lanes > 1):
+             H_K = problem_shape[3][0][1]
+             dq_lane = blk_coord_k % self.hierarchical_dq_lanes
+@@ -2748,6 +2737,27 @@
+
+         reduce_tma_store_pipeline.producer_tail()
+
++        if cutlass.const_expr(self.signal_dq_tiles):
++            if warp_idx == self.reduce_warp_id[0] and tidx % 32 == 0:
++                tk_fence_proxy_async_global()
++                H_R, H_K = problem_shape[3][0]
++                k_tiles = cute.ceil_div(K, self.KQ_mma_tiler[0])
++                arrival_offset = (
++                    blk_coord_k
++                    + k_tiles
++                    * (
++                        blk_coord_h_r
++                        + H_R * (arrival_h_k + H_K * blk_coord_b)
++                    )
++                )
++                arrival_ptr = dq_tile_arrivals.iterator + arrival_offset
++                cute.arch.atomic_add(
++                    arrival_ptr.llvm_ptr,
++                    Int32(1),
++                    sem="release",
++                    scope="gpu",
++                )
++
+     @cute.jit
+     def split_wg(
+         self,
+@@ -2993,7 +3003,14 @@
+         problem_shape: Tuple[Int32, Int32, Int32, Tuple[Tuple[Int32, Int32], Int32]],
+         workspace: cute.Tensor,
+         acc_dtype: Type[cutlass.Numeric],
+-    ) -> Tuple[cute.Tensor, cute.Tensor, cute.Tensor, cute.Tensor, cute.Tensor]:
++    ) -> Tuple[
++        cute.Tensor,
++        cute.Tensor,
++        cute.Tensor,
++        cute.Tensor,
++        cute.Tensor,
++        cute.Tensor,
++    ]:
+         Q, D, HB = (
+             problem_shape[0],
+             problem_shape[2],
+@@ -3038,6 +3055,13 @@
+             + dK_partial_bytes,
+             divby=16,
+         )
++        dq_tile_arrival_iter = workspace.iterator + cute.assume(
++            sum_OdO_bytes
++            + scaled_lse_bytes
++            + dQ_acc_bytes
++            + 2 * dK_partial_bytes,
++            divby=16,
++        )
+
+         sum_OdO_iter = cute.recast_ptr(sum_OdO_iter, dtype=self.acc_dtype)
+         scaled_lse_iter = cute.recast_ptr(scaled_lse_iter, dtype=self.acc_dtype)
+@@ -3054,6 +3078,12 @@
+             cute.AddressSpace.gmem,
+             assumed_align=16,
+         )
++        dq_tile_arrival_iter = cute.make_ptr(
++            Int32,
++            dq_tile_arrival_iter.toint(),
++            cute.AddressSpace.gmem,
++            assumed_align=16,
++        )
+
+         sum_OdO = cute.make_tensor(
+             sum_OdO_iter,
+@@ -3086,8 +3116,23 @@
+         )
+         dK_partial = cute.make_tensor(dK_partial_iter, partial_layout)
+         dV_partial = cute.make_tensor(dV_partial_iter, partial_layout)
++        q_tiles = cute.ceil_div(Q, self.KQ_mma_tiler[1])
++        dq_tile_arrivals = cute.make_tensor(
++            dq_tile_arrival_iter,
++            cute.make_layout(
++                (q_tiles, ((H_r, H_k), B)),
++                stride=(1, ((q_tiles, q_tiles * H_r), q_tiles * H)),
++            ),
++        )
+
+-        return sum_OdO, scaled_lse, dQ_acc, dK_partial, dV_partial
++        return (
++            sum_OdO,
++            scaled_lse,
++            dQ_acc,
++            dK_partial,
++            dV_partial,
++            dq_tile_arrivals,
++        )
+
+     @staticmethod
+     def _compute_sum_OdO_grid(
+@@ -3143,6 +3188,8 @@
+         if self.split_gqa_heads:
+             # Per-query-head dK/dV partials for the split-GQA specialization.
+             workspace_bytes += 2 * b * h * k * d * output_dtype.width // 8
++        if self.signal_dq_tiles:
++            workspace_bytes += b * h * ((q + 127) // 128) * 4
+         return workspace_bytes
+
+     def make_and_init_load_mma_Q_pipeline(self, load_mma_Q_mbar_ptr):

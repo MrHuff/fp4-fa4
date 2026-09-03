@@ -1,0 +1,4737 @@
+From aa02150404418859e33d1ff99fb46543244b9b70 Mon Sep 17 00:00:00 2001
+From: Codex <codex@openai.com>
+Date: Mon, 31 Aug 2026 20:26:52 +0000
+Subject: [PATCH] Preserve fail-closed v510 dense-score negative experiment
+
+---
+ ..._tk_d128_dense_score_e5m2_dout_backward.py |  236 +++
+ tests/test_v509_e5m2_runtime_wiring.py        |  197 +++
+ tests/test_v510_dense_e5m2_runtime_wiring.py  |  260 ++++
+ ...0_dense_score_e5m2_dout_source_contract.py |  123 ++
+ .../test_v510_e5m2_dout_fused_publication.py  |  367 +++++
+ tk_fa4/__init__.py                            |    6 +
+ tk_fa4/interface.py                           |  242 ++++
+ tk_fa4/lowp_fa4_bwd/benchmark_llama12b_e2e.py |  586 +++++++-
+ tk_fa4/lowp_fa4_bwd/lowp_fa4_bwd.cu           |   84 ++
+ ..._tk_d128_dense_score_e5m2_dout_backward.py |  389 +++++
+ tk_fa4/native_gqa_tk_bwd/Makefile.v510        |   39 +
+ ...2_dout_b1_exact_s4096_experimental_bshd.cu |  256 ++++
+ ..._dout_b1_exact_s4096_experimental_bshd.cuh | 1264 +++++++++++++++++
+ .../validate_v510_dense_score_e5m2_dout.py    |  312 ++++
+ 14 files changed, 4332 insertions(+), 29 deletions(-)
+ create mode 100644 tests/test_native_tk_d128_dense_score_e5m2_dout_backward.py
+ create mode 100644 tests/test_v509_e5m2_runtime_wiring.py
+ create mode 100644 tests/test_v510_dense_e5m2_runtime_wiring.py
+ create mode 100644 tests/test_v510_dense_score_e5m2_dout_source_contract.py
+ create mode 100644 tests/test_v510_e5m2_dout_fused_publication.py
+ create mode 100644 tk_fa4/lowp_fa4_bwd/native_tk_d128_dense_score_e5m2_dout_backward.py
+ create mode 100644 tk_fa4/native_gqa_tk_bwd/Makefile.v510
+ create mode 100644 tk_fa4/native_gqa_tk_bwd/v510_d128_gqa_e4m3_score_qkv_e5m2_dout_b1_exact_s4096_experimental_bshd.cu
+ create mode 100644 tk_fa4/native_gqa_tk_bwd/v510_d128_gqa_e4m3_score_qkv_e5m2_dout_b1_exact_s4096_experimental_bshd.cuh
+ create mode 100644 tk_fa4/native_gqa_tk_bwd/validate_v510_dense_score_e5m2_dout.py
+
+diff --git a/tests/test_native_tk_d128_dense_score_e5m2_dout_backward.py b/tests/test_native_tk_d128_dense_score_e5m2_dout_backward.py
+new file mode 100644
+index 0000000..675165c
+--- /dev/null
++++ b/tests/test_native_tk_d128_dense_score_e5m2_dout_backward.py
+@@ -0,0 +1,236 @@
++from __future__ import annotations
++
++from dataclasses import dataclass, replace
++from typing import Any
++
++import pytest
++import torch
++
++from tk_fa4.lowp_fa4_bwd import (
++    native_tk_d128_dense_score_e5m2_dout_backward as native_module,
++)
++from tk_fa4.lowp_fa4_bwd.native_tk_d128_dense_score_e5m2_dout_backward import (
++    BACKEND,
++    BATCH,
++    EXPECTED_EXTENSION_METADATA,
++    HEAD_DIM,
++    KV_HEADS,
++    MAIN_ENTRYPOINT,
++    OUT_ENTRYPOINT,
++    Q_HEADS,
++    SEQUENCE,
++    SOFTMAX_SCALE,
++    V510_SOURCE_IDENTITY,
++    NativeTkD128DenseE4M3ScoreQKVE5M2DoutBackward,
++    _require_e5m2_bshd,
++    _require_extension_metadata,
++)
++
++
++def _exact_metadata() -> dict[str, Any]:
++    return {
++        **EXPECTED_EXTENSION_METADATA,
++        "source_file": (
++            "../native_gqa_tk_bwd/"
++            "v510_d128_gqa_e4m3_score_qkv_e5m2_dout_b1_exact_s4096_"
++            "experimental_bshd.cu"
++        ),
++    }
++
++
++class _FakeExtension:
++    def __init__(self, metadata: dict[str, Any] | None = None) -> None:
++        self.metadata = _exact_metadata() if metadata is None else metadata
++        self.calls: list[tuple[Any, ...]] = []
++        self._tk_fa4_loaded_artifact_identity = {
++            "path": "/tmp/v510.so",
++            "sha256": "a" * 64,
++            "bytes": 510,
++        }
++
++    def native_tk_d128_backward_metadata(self) -> dict[str, Any]:
++        return dict(self.metadata)
++
++    def backward_e4m3_score_qkv_e5m2_dout_bshd_precomputed_out(
++        self, *args: Any
++    ) -> None:
++        self.calls.append(("out", *args))
++
++    def main_e4m3_score_qkv_e5m2_dout_bshd_precomputed(
++        self, *args: Any
++    ) -> None:
++        self.calls.append(("main", *args))
++
++
++def test_v510_metadata_authenticates_the_dense_score_e5m2_route() -> None:
++    metadata = _exact_metadata()
++
++    observed = _require_extension_metadata(_FakeExtension(metadata))
++
++    assert observed == metadata
++    assert observed is not metadata
++    assert observed["source_identity"] == V510_SOURCE_IDENTITY
++    assert observed["score_qk_dtype"] == "float8_e4m3fn_represented_x4"
++    assert observed["dout_dtype"] == "float8_e5m2_represented_x4"
++    assert observed["mixed_mma_b_format_mask"] == 0x400
++    assert observed["production_dispatch_connected"] is False
++
++
++@pytest.mark.parametrize(
++    ("field", "value"),
++    (
++        ("source_identity", "v509"),
++        ("selected_kernel", "v488::kernel"),
++        ("score_qk_dtype", "float4_e2m1fn_x2"),
++        ("dout_dtype", "float8_e4m3fn_represented_x4"),
++        ("mixed_mma_b_format_mask", 0),
++        ("dstat_physical_abi", "-16*sum(O*raw_dO)"),
++        ("source_file", "wrong.cu"),
++    ),
++)
++def test_v510_metadata_rejects_any_abi_drift(
++    field: str, value: Any
++) -> None:
++    metadata = _exact_metadata()
++    metadata[field] = value
++
++    with pytest.raises(RuntimeError, match="experimental ABI"):
++        _require_extension_metadata(_FakeExtension(metadata))
++
++
++@dataclass(frozen=True)
++class _FakeTensor:
++    shape: tuple[int, ...]
++    dtype: torch.dtype
++    device: torch.device = torch.device("cuda:0")
++    is_cuda: bool = True
++    contiguous: bool = True
++
++    def is_contiguous(self) -> bool:
++        return self.contiguous
++
++
++def _dout(dtype: torch.dtype = torch.float8_e5m2) -> _FakeTensor:
++    return _FakeTensor((BATCH, SEQUENCE, Q_HEADS, HEAD_DIM), dtype)
++
++
++def test_v510_dout_requires_exact_e5m2_b1_bshd() -> None:
++    _require_e5m2_bshd(
++        _dout(),
++        name="dout",
++        batch=BATCH,
++        heads=Q_HEADS,
++        device=torch.device("cuda:0"),
++    )
++
++    for invalid in (
++        _dout(torch.float8_e4m3fn),
++        replace(_dout(), contiguous=False),
++        replace(_dout(), shape=(BATCH, SEQUENCE, Q_HEADS, 64)),
++        replace(_dout(), device=torch.device("cuda:1")),
++    ):
++        with pytest.raises(ValueError, match="float8_e5m2"):
++            _require_e5m2_bshd(
++                invalid,  # type: ignore[arg-type]
++                name="dout",
++                batch=BATCH,
++                heads=Q_HEADS,
++                device=torch.device("cuda:0"),
++            )
++
++
++def _bare_runner() -> NativeTkD128DenseE4M3ScoreQKVE5M2DoutBackward:
++    runner = object.__new__(
++        NativeTkD128DenseE4M3ScoreQKVE5M2DoutBackward
++    )
++    runner.batch = BATCH
++    runner.device = torch.device("cuda:0")
++    runner.loaded_artifact_identity = {
++        "path": "/tmp/v510.so",
++        "sha256": "a" * 64,
++        "bytes": 510,
++    }
++    runner.extension_metadata = _exact_metadata()
++    for name in ("_q", "_k", "_v", "_dout"):
++        setattr(runner, name, None)
++    runner._bind_generation = 0
++    runner._run_generation = 0
++    return runner
++
++
++def test_v510_bind_validates_e4_qkv_separately_from_e5_dout(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    runner = _bare_runner()
++    q, k, v, dout = (object() for _ in range(4))
++    e4_calls: list[tuple[Any, str, int]] = []
++    e5_calls: list[tuple[Any, str, int]] = []
++    monkeypatch.setattr(
++        native_module,
++        "_require_e4m3_bshd",
++        lambda tensor, *, name, batch, heads, device: e4_calls.append(
++            (tensor, name, heads)
++        ),
++    )
++    monkeypatch.setattr(
++        native_module,
++        "_require_e5m2_bshd",
++        lambda tensor, *, name, batch, heads, device: e5_calls.append(
++            (tensor, name, heads)
++        ),
++    )
++
++    runner.bind_inputs(q, k, v, dout)  # type: ignore[arg-type]
++
++    assert e4_calls == [(q, "q", Q_HEADS), (k, "k", KV_HEADS), (v, "v", KV_HEADS)]
++    assert e5_calls == [(dout, "dout", Q_HEADS)]
++    assert runner._dout is dout
++    assert runner._bind_generation == 1
++
++
++@pytest.mark.parametrize("reset", (False, True))
++def test_v510_run_always_calls_clearing_out_with_exact_abi(reset: bool) -> None:
++    runner = _bare_runner()
++    values = [object() for _ in range(9)]
++    (
++        runner._q,
++        runner._k,
++        runner._v,
++        runner._dout,
++        runner.lstat,
++        runner.dstat,
++        runner.dq,
++        runner.dk,
++        runner.dv,
++    ) = values
++    calls: list[tuple[Any, ...]] = []
++    runner.compiled_out = lambda *args: calls.append(args)
++
++    runner.run(reset=reset)
++
++    assert calls == [(*values, SOFTMAX_SCALE)]
++    assert runner._run_generation == 1
++
++
++def test_v510_contract_is_fail_closed_and_split_precision() -> None:
++    runner = _bare_runner()
++
++    contract = runner.contract()
++
++    assert contract["backend"] == BACKEND
++    assert contract["input"]["score_and_gradient_qkv"]["dtype"] == (
++        "torch.float8_e4m3fn"
++    )
++    assert contract["input"]["dout"]["dtype"] == "torch.float8_e5m2"
++    assert contract["statistics"]["workspace_page_0_physical"] == (
++        "-4_sum_O_raw_E5M2_dO"
++    )
++    assert contract["statistics"]["producer_native"] is False
++    assert contract["schedule"]["dispatch"] == (
++        "fail_closed_B1_S4096_only_no_fallback"
++    )
++    assert contract["schedule"]["direct_dkdv_unique_writer"] is False
++    assert contract["allocation"]["native_run_allocations"] is False
++    assert contract["allocation"]["e5m2_dout_external_caller_owned"] is True
++    assert contract["output"]["entrypoint"] == OUT_ENTRYPOINT
++    assert "e5m2_dout" in MAIN_ENTRYPOINT
+diff --git a/tests/test_v509_e5m2_runtime_wiring.py b/tests/test_v509_e5m2_runtime_wiring.py
+new file mode 100644
+index 0000000..b586e2e
+--- /dev/null
++++ b/tests/test_v509_e5m2_runtime_wiring.py
+@@ -0,0 +1,197 @@
++from __future__ import annotations
++
++import ast
++from pathlib import Path
++from types import SimpleNamespace
++from typing import Any
++
++import pytest
++
++
++ROOT = Path(__file__).resolve().parents[1]
++RUNTIME = ROOT / "tk_fa4/lowp_fa4_bwd/benchmark_llama12b_e2e.py"
++
++
++def _tree() -> ast.Module:
++    return ast.parse(RUNTIME.read_text())
++
++
++def _top_level_function(name: str) -> ast.FunctionDef:
++    return next(
++        node
++        for node in _tree().body
++        if isinstance(node, ast.FunctionDef) and node.name == name
++    )
++
++
++def _class_method(class_name: str, method_name: str) -> ast.FunctionDef:
++    class_node = next(
++        node
++        for node in _tree().body
++        if isinstance(node, ast.ClassDef) and node.name == class_name
++    )
++    return next(
++        node
++        for node in class_node.body
++        if isinstance(node, ast.FunctionDef) and node.name == method_name
++    )
++
++
++def _execute_function(name: str) -> Any:
++    module = ast.Module(
++        body=[
++            ast.parse("from __future__ import annotations").body[0],
++            _top_level_function(name),
++        ],
++        type_ignores=[],
++    )
++    ast.fix_missing_locations(module)
++    namespace: dict[str, Any] = {"Any": Any}
++    exec(compile(module, str(RUNTIME), "exec"), namespace)
++    return namespace[name]
++
++
++def _config(**overrides: int) -> SimpleNamespace:
++    values = {
++        "batch": 1,
++        "sequence": 4096,
++        "hidden": 4096,
++        "q_heads": 32,
++        "kv_heads": 8,
++        "head_dim": 128,
++    }
++    values.update(overrides)
++    return SimpleNamespace(**values)
++
++
++def _gate_kwargs(projection_format: str, **overrides: object) -> dict[str, object]:
++    values: dict[str, object] = {
++        "qkv_projection_format": projection_format,
++        "output_projection_format": projection_format,
++        "experimental_native_nvfp4_projection_out": projection_format == "nvfp4",
++        "native_tk_d128_native_score_backward": True,
++        "backward_match_forward_operands": False,
++        "per_block_qk_scales": True,
++        "experimental_split_v_backward": False,
++        "experimental_output_shared_split_v": False,
++        "experimental_d128_mxfp4_v_backward": False,
++        "v_mxfp4_scale_2d": False,
++        "shared_runtime": None,
++    }
++    values.update(overrides)
++    return values
++
++
++@pytest.mark.parametrize(
++    ("projection_format", "pv_format"),
++    [
++        ("e4m3", "e4m3_fp8"),
++        ("e4m3", "mxfp4_e8m0_block32"),
++        ("nvfp4", "e4m3_fp8"),
++        ("nvfp4", "mxfp4_e8m0_block32"),
++    ],
++)
++def test_v509_gate_admits_all_projection_pv_arms(
++    projection_format: str,
++    pv_format: str,
++) -> None:
++    require = _execute_function(
++        "_require_native_tk_d128_v509_e5m2_dout_runtime_contract"
++    )
++    require(
++        _config(),
++        {"pv_format": pv_format},
++        **_gate_kwargs(projection_format),
++    )
++
++
++@pytest.mark.parametrize(
++    ("config_overrides", "projection_format", "kwarg_overrides", "message"),
++    [
++        ({"batch": 2}, "e4m3", {}, "B1"),
++        ({"sequence": 2048}, "e4m3", {}, "S4096"),
++        ({}, "e4m3", {"output_projection_format": "nvfp4"}, "learned projections"),
++        ({}, "nvfp4", {"experimental_native_nvfp4_projection_out": False}, "caller-owned"),
++        ({}, "e4m3", {"experimental_native_nvfp4_projection_out": True}, "without the NVFP4"),
++        ({}, "e4m3", {"native_tk_d128_native_score_backward": False}, "native NVFP4 score"),
++        ({}, "e4m3", {"backward_match_forward_operands": True}, "projection-accumulator"),
++        ({}, "e4m3", {"per_block_qk_scales": False}, "row-by-K16"),
++        ({}, "e4m3", {"experimental_split_v_backward": True}, "retained"),
++        ({}, "e4m3", {"experimental_output_shared_split_v": True}, "disable"),
++        ({}, "e4m3", {"experimental_d128_mxfp4_v_backward": True}, "no MXFP4"),
++        ({}, "e4m3", {"v_mxfp4_scale_2d": True}, "no MXFP4"),
++    ],
++)
++def test_v509_gate_rejects_competing_abis(
++    config_overrides: dict[str, int],
++    projection_format: str,
++    kwarg_overrides: dict[str, object],
++    message: str,
++) -> None:
++    require = _execute_function(
++        "_require_native_tk_d128_v509_e5m2_dout_runtime_contract"
++    )
++    with pytest.raises(ValueError, match=message):
++        require(
++            _config(**config_overrides),
++            {"pv_format": "e4m3_fp8"},
++            **_gate_kwargs(projection_format, **kwarg_overrides),
++        )
++
++
++def test_v509_selector_is_explicit_default_off_and_separate() -> None:
++    init = _class_method("LowpAttentionRuntime", "__init__")
++    defaults = {
++        argument.arg: default
++        for argument, default in zip(
++            init.args.kwonlyargs,
++            init.args.kw_defaults,
++            strict=True,
++        )
++    }
++    selector = defaults["native_tk_d128_v509_e5m2_dout_backward"]
++    assert isinstance(selector, ast.Constant)
++    assert selector.value is False
++    source = RUNTIME.read_text()
++    assert "NativeTkD128NVFP4ScoreE4M3QKVE5M2DoutBackward" in source
++    assert "NATIVE_TK_D128_V509_E5M2_DOUT_BACKEND" in source
++    assert "b300_require_v509_e5m2_dout_route(" in source
++    assert '!= "v509_only_fail_closed"' not in source  # no weak string dispatch
++
++
++def test_v509_autograd_has_exact_publisher_and_no_fallback() -> None:
++    backward = _class_method("_LowpAttentionFunction", "backward")
++    selector_if = next(
++        node
++        for node in ast.walk(backward)
++        if isinstance(node, ast.If)
++        and "native_tk_d128_v509_e5m2_dout_backward" in ast.unparse(node.test)
++        and "b300_project_dout_unified_lowp_nvfp4_v509_e5m2" in ast.unparse(node)
++    )
++    selected = "\n".join(ast.unparse(node) for node in selector_if.body)
++    fallback = "\n".join(ast.unparse(node) for node in selector_if.orelse)
++    assert "b300_project_dout_unified_lowp_nvfp4_v509_e5m2" in selected
++    assert "b300_project_dout_unified_lowp_nvfp4(" not in selected
++    assert "stats_workspace=runtime.backward.workspace_torch" in selected
++    assert "dq_clear=runtime.backward.dq" in selected
++    assert "dout_bundle.dout_backward_e5m2" in selected
++    assert "b300_project_dout_unified_lowp_nvfp4(" in fallback
++    source = ast.unparse(backward)
++    assert "if runtime.native_tk_d128_native_score_backward else None" in source
++
++
++def test_v509_contract_and_cli_are_truthful() -> None:
++    source = RUNTIME.read_text()
++    for expected in (
++        '"native_tk_d128_v509_e5m2_dout_backward"',
++        '"v509_e5m2_dout_route"',
++        '"dout_backward_format": "e5m2"',
++        '"projection_accumulator_e5m2_x4"',
++        '"b300_project_dout_unified_lowp_nvfp4_v509_e5m2"',
++    ):
++        assert expected in source
++    main = ast.unparse(_top_level_function("main"))
++    assert "--native-tk-d128-v509-e5m2-dout-backward" in main
++    assert "action='store_true'" in main
++    assert "args.native_tk_d128_v509_e5m2_dout_backward" in main
++    assert "args.native_tk_d128_native_score_backward" in main
+diff --git a/tests/test_v510_dense_e5m2_runtime_wiring.py b/tests/test_v510_dense_e5m2_runtime_wiring.py
+new file mode 100644
+index 0000000..de94518
+--- /dev/null
++++ b/tests/test_v510_dense_e5m2_runtime_wiring.py
+@@ -0,0 +1,260 @@
++from __future__ import annotations
++
++import ast
++from pathlib import Path
++from types import SimpleNamespace
++from typing import Any
++
++import pytest
++
++
++ROOT = Path(__file__).resolve().parents[1]
++RUNTIME = (
++    ROOT / "tk_fa4" / "lowp_fa4_bwd" / "benchmark_llama12b_e2e.py"
++)
++
++
++def _tree() -> ast.Module:
++    return ast.parse(RUNTIME.read_text())
++
++
++def _top_level_function(name: str) -> ast.FunctionDef:
++    return next(
++        node
++        for node in _tree().body
++        if isinstance(node, ast.FunctionDef) and node.name == name
++    )
++
++
++def _class_method(class_name: str, method_name: str) -> ast.FunctionDef:
++    class_node = next(
++        node
++        for node in _tree().body
++        if isinstance(node, ast.ClassDef) and node.name == class_name
++    )
++    return next(
++        node
++        for node in class_node.body
++        if isinstance(node, ast.FunctionDef) and node.name == method_name
++    )
++
++
++def _execute_function(name: str) -> Any:
++    module = ast.Module(
++        body=[
++            ast.parse("from __future__ import annotations").body[0],
++            _top_level_function(name),
++        ],
++        type_ignores=[],
++    )
++    ast.fix_missing_locations(module)
++    namespace: dict[str, Any] = {"Any": Any}
++    exec(compile(module, str(RUNTIME), "exec"), namespace)
++    return namespace[name]
++
++
++def _config(**overrides: int) -> SimpleNamespace:
++    values = {
++        "batch": 1,
++        "sequence": 4096,
++        "hidden": 4096,
++        "q_heads": 32,
++        "kv_heads": 8,
++        "head_dim": 128,
++    }
++    values.update(overrides)
++    return SimpleNamespace(**values)
++
++
++def _gate_kwargs(**overrides: object) -> dict[str, object]:
++    values: dict[str, object] = {
++        "qkv_projection_format": "e4m3",
++        "output_projection_format": "e4m3",
++        "native_tk_d128_native_score_backward": False,
++        "backward_match_forward_operands": False,
++        "per_block_qk_scales": True,
++        "experimental_split_v_backward": False,
++        "experimental_output_shared_split_v": False,
++        "experimental_d128_mxfp4_v_backward": False,
++        "v_mxfp4_scale_2d": False,
++        "shared_runtime": None,
++    }
++    values.update(overrides)
++    return values
++
++
++@pytest.mark.parametrize(
++    ("projection_format", "pv_format"),
++    [
++        ("e4m3", "e4m3_fp8"),
++        ("e4m3", "mxfp4_e8m0_block32"),
++        ("nvfp4", "e4m3_fp8"),
++        ("nvfp4", "mxfp4_e8m0_block32"),
++    ],
++)
++def test_v510_gate_admits_all_four_learned_projection_pv_arms(
++    projection_format: str,
++    pv_format: str,
++) -> None:
++    require = _execute_function(
++        "_require_native_tk_d128_v510_e5m2_dout_runtime_contract"
++    )
++    require(
++        _config(),
++        {"pv_format": pv_format},
++        **_gate_kwargs(
++            qkv_projection_format=projection_format,
++            output_projection_format=projection_format,
++        ),
++    )
++    require(
++        _config(),
++        {"pv_format": pv_format},
++        **_gate_kwargs(
++            qkv_projection_format=projection_format,
++            output_projection_format=projection_format,
++            shared_runtime=SimpleNamespace(
++                native_tk_d128_v510_e5m2_dout_backward=True
++            ),
++        ),
++    )
++
++
++@pytest.mark.parametrize(
++    ("config_overrides", "kwarg_overrides", "message"),
++    [
++        ({"batch": 2}, {}, "B1"),
++        ({"sequence": 2048}, {}, "S4096"),
++        ({}, {"output_projection_format": "nvfp4"}, "learned projections"),
++        ({}, {"native_tk_d128_native_score_backward": True}, "dense E4M3"),
++        ({}, {"backward_match_forward_operands": True}, "E4M3 Q/K"),
++        ({}, {"per_block_qk_scales": False}, "row-by-K16"),
++        ({}, {"experimental_split_v_backward": True}, "retained"),
++        ({}, {"experimental_output_shared_split_v": True}, "disable"),
++        ({}, {"experimental_output_shared_split_v": None}, "disable"),
++        ({}, {"experimental_d128_mxfp4_v_backward": True}, "no MXFP4"),
++        ({}, {"v_mxfp4_scale_2d": True}, "no MXFP4"),
++        (
++            {},
++            {
++                "shared_runtime": SimpleNamespace(
++                    native_tk_d128_v510_e5m2_dout_backward=False
++                )
++            },
++            "shared v510",
++        ),
++    ],
++)
++def test_v510_gate_rejects_every_competing_operand_abi(
++    config_overrides: dict[str, int],
++    kwarg_overrides: dict[str, object],
++    message: str,
++) -> None:
++    require = _execute_function(
++        "_require_native_tk_d128_v510_e5m2_dout_runtime_contract"
++    )
++    with pytest.raises(ValueError, match=message):
++        require(
++            _config(**config_overrides),
++            {"pv_format": "e4m3_fp8"},
++            **_gate_kwargs(**kwarg_overrides),
++        )
++
++
++def test_v510_selector_is_separate_default_false_and_authenticates_pair() -> None:
++    init = _class_method("LowpAttentionRuntime", "__init__")
++    keyword_defaults = {
++        argument.arg: default
++        for argument, default in zip(
++            init.args.kwonlyargs,
++            init.args.kw_defaults,
++            strict=True,
++        )
++    }
++    selector_default = keyword_defaults[
++        "native_tk_d128_v510_e5m2_dout_backward"
++    ]
++    assert isinstance(selector_default, ast.Constant)
++    assert selector_default.value is False
++
++    source = RUNTIME.read_text()
++    assert "NativeTkD128DenseE4M3ScoreQKVE5M2DoutBackward" in source
++    assert "NATIVE_TK_D128_V510_E5M2_DOUT_BACKEND" in source
++    assert "b300_require_v510_e5m2_dout_route(" in source
++    assert "self.backward.extension_metadata" in source
++    assert '!= "v510_only_fail_closed"' in source
++    assert "v508 native-score and v510 dense-score" in source
++
++
++def test_v510_autograd_uses_only_e5_publisher_in_selected_branch() -> None:
++    backward = _class_method("_LowpAttentionFunction", "backward")
++    selector_if = next(
++        node
++        for node in ast.walk(backward)
++        if isinstance(node, ast.If)
++        and "native_tk_d128_v510_e5m2_dout_backward"
++        in ast.unparse(node.test)
++        and "b300_project_dout_unified_lowp_nvfp4_v510_e5m2"
++        in ast.unparse(node)
++    )
++    selected = "\n".join(ast.unparse(node) for node in selector_if.body)
++    ordinary = "\n".join(ast.unparse(node) for node in selector_if.orelse)
++    assert "b300_project_dout_unified_lowp_nvfp4_v510_e5m2" in selected
++    assert "b300_project_dout_unified_lowp_nvfp4(" not in selected
++    assert "stats_workspace=runtime.backward.workspace_torch" in selected
++    assert "dq_clear=runtime.backward.dq" in selected
++    assert "dout_bundle.dout_backward_e5m2" in selected
++    assert "b300_project_dout_unified_lowp_nvfp4(" in ordinary
++    assert "dout_bundle.dout_backward_fp8" in ordinary
++
++    backward_source = ast.unparse(backward)
++    assert (
++        "runtime.bind_backward_inputs(q_fp8, k_fp8, v_backward, "
++        "dout_backward"
++    ) in backward_source
++    assert (
++        "if runtime.native_tk_d128_native_score_backward else None"
++        in backward_source
++    )
++
++
++def test_v510_topology_and_contract_report_split_precision_truthfully() -> None:
++    source = RUNTIME.read_text()
++    for expected in (
++        '"backward_attention_dout_format": "e5m2"',
++        '"backward_attention_dout_source": (\n'
++        '                        "projection_accumulator_e5m2_x4"',
++        '"dout_backward_format": "e5m2"',
++        '"dout_backward_source": (',
++        '"dout_backward_kernel": (',
++        '"native_tk_d128_v510_e5m2_dout_backward": True',
++        '"v510_e5m2_dout_route": dict(',
++    ):
++        assert expected in source
++    assert (
++        '"b300_project_dout_unified_lowp_nvfp4_v510_e5m2"'
++        in source
++    )
++    assert (
++        '"projection_accumulator_e4m3"'
++        in source
++    )
++
++
++def test_v510_cli_is_explicit_fail_closed_and_persisted() -> None:
++    main = ast.unparse(_top_level_function("main"))
++    assert "--native-tk-d128-v510-e5m2-dout-backward" in main
++    assert "action='store_true'" in main
++    assert (
++        "args.native_tk_d128_v510_e5m2_dout_backward and (not "
++        "native_tk_d128_backward)"
++    ) in main
++    assert (
++        "args.native_tk_d128_native_score_backward and "
++        "args.native_tk_d128_v510_e5m2_dout_backward"
++    ) in main
++    assert (
++        "native_tk_d128_v510_e5m2_dout_backward="
++        "args.native_tk_d128_v510_e5m2_dout_backward"
++    ) in main
++    assert "'v510_e5m2_dout_route': runtime.v510_e5m2_dout_route" in main
+diff --git a/tests/test_v510_dense_score_e5m2_dout_source_contract.py b/tests/test_v510_dense_score_e5m2_dout_source_contract.py
+new file mode 100644
+index 0000000..d55616b
+--- /dev/null
++++ b/tests/test_v510_dense_score_e5m2_dout_source_contract.py
+@@ -0,0 +1,123 @@
++from __future__ import annotations
++
++import hashlib
++from pathlib import Path
++
++
++ROOT = Path(__file__).resolve().parents[1]
++NATIVE = ROOT / "tk_fa4" / "native_gqa_tk_bwd"
++V510_STEM = (
++    "v510_d128_gqa_e4m3_score_qkv_e5m2_dout_b1_exact_s4096_"
++    "experimental_bshd"
++)
++
++
++def _text(path: Path) -> str:
++    return path.read_text(encoding="utf-8")
++
++
++def _sha256(path: Path) -> str:
++    return hashlib.sha256(path.read_bytes()).hexdigest()
++
++
++def test_v510_preserves_v501_and_v509_sources_verbatim() -> None:
++    assert _sha256(
++        NATIVE / "v501_d128_gqa_e4m3_unified_best_route_production_bshd.cu"
++    ) == "1083abf27af1f392ecb436750787498942bca4b6200dbd8fe0d909a78ca8caa2"
++    assert _sha256(
++        NATIVE / "v501_d128_gqa_e4m3_unified_best_route_production_bshd.cuh"
++    ) == "3c940a227d5338445cdc114ab9e14d940f68d7fdb59cd13e38e2396dacc2e501"
++    assert _sha256(
++        NATIVE
++        / (
++            "v509_d128_gqa_nvfp4_score_e4m3_qkv_e5m2_dout_b1_exact_"
++            "s4096_experimental_bshd.cu"
++        )
++    ) == "4b9b52113d29b55ab72986c0a19983b1dff972c903ecfa038c877e8a49d24295"
++    assert _sha256(
++        NATIVE
++        / (
++            "v509_d128_gqa_nvfp4_score_e4m3_qkv_e5m2_dout_b1_exact_"
++            "s4096_experimental_bshd.cuh"
++        )
++    ) == "1243725218cdda7a461826e6e0200b23c012948e0fe32d6d991bd3d060414432"
++
++
++def test_v510_keeps_dense_e4_score_and_changes_only_dout_products() -> None:
++    header = _text(NATIVE / f"{V510_STEM}.cuh")
++
++    assert "using dout_tile = st_fp8e5m2<kKeyTile, core::kDepth>;" in header
++    assert "kittens::py::tensor_to_gl<globals::dout_gl>(dout)" in header
++    assert header.count("core::issue_score_or_dp(") == 2
++    assert "score_tmem,\n                storage.k," in header
++    assert "mixed::operation::dp_abt" in header
++    assert header.count("mixed::operation::dv_ab") == 2
++    assert header.count("issue_dp_e4m3_e5m2(") == 3
++    assert header.count("issue_dv_e4m3_e5m2_runtime_accumulate(") == 2
++
++    # dK = dS^T @ Q and dQ = dS @ K retain the dense E4M3 route.
++    assert header.count("exact::issue_gradient_ab_runtime_accumulate(") == 1
++    assert "storage.ds,\n                    storage.q[stage]" in header
++    assert header.count("core::issue_gradient_atb(") == 1
++    assert "storage.ds,\n                    storage.k" in header
++
++
++def test_v510_preserves_v488_scaling_and_is_shape_fail_closed() -> None:
++    header = _text(NATIVE / f"{V510_STEM}.cuh")
++
++    assert "const float beta = softmax_scale / 16.0f;" in header
++    assert "beta * kLog2E" in header
++    assert '"v510 is fail-closed to B1/S4096"' in header
++    assert "fallback::launch(" not in header
++    assert "namespace fallback" not in header
++    assert "static_assert(sizeof(shared_storage) == 162 * 1024);" in header
++    assert "e5m2_dout_mixed_mma_microgate_20260831.cuh" in header
++
++
++def test_v510_extension_metadata_and_makefile_are_unique() -> None:
++    source = _text(NATIVE / f"{V510_STEM}.cu")
++    makefile = _text(NATIVE / "Makefile.v510")
++
++    assert f'#include "{V510_STEM}.cuh"' in source
++    assert "Float8_e5m2" in source
++    assert 'check_bshd(\n        dout,\n        "dout_e5m2"' in source
++    assert (
++        "v510_dense_e4m3_score_qkv_e5m2_dout_b1_s4096_"
++        "experimental_v1"
++    ) in source
++    assert 'result["production_dispatch_connected"] = false;' in source
++    assert 'result["mixed_mma_b_format_mask"] = 1024;' in source
++    assert 'result["score_internal_beta_divisor"] = 16.0;' in source
++    assert 'result["dout_encode_scale"] = 4.0;' in source
++    assert 'result["dout_decode_scale"] = 0.25;' in source
++    assert (
++        'result["dstat_physical_abi"] = "-4*sum(O*raw_E5M2_dO)";'
++        in source
++    )
++
++    assert f"SRC := {V510_STEM}.cu" in makefile
++    assert "_C_sm100_gqa_tk_v510_" in makefile
++    assert "e5m2_dout_mixed_mma_microgate_20260831.cuh" in makefile
++    assert "v509_d128" not in makefile
++
++
++def test_v510_validator_is_authenticated_and_natural_capture_only() -> None:
++    validator = _text(NATIVE / "validate_v510_dense_score_e5m2_dout.py")
++
++    for field in (
++        '"q_fp8"',
++        '"k_fp8"',
++        '"v_fp8"',
++        '"dout_e5m2"',
++        '"lstat"',
++        '"dstat"',
++        '"dq_reference"',
++        '"dk_reference"',
++        '"dv_reference"',
++    ):
++        assert field in validator
++    assert "_authenticate_file(" in validator
++    assert "_require_extension_metadata(extension)" in validator
++    assert "actual.float().mul(0.25)" in validator
++    assert "exact_zero_dout" in validator
++    assert "torch.cuda" not in validator.split("def main", 1)[0]
+diff --git a/tests/test_v510_e5m2_dout_fused_publication.py b/tests/test_v510_e5m2_dout_fused_publication.py
+new file mode 100644
+index 0000000..9a17a45
+--- /dev/null
++++ b/tests/test_v510_e5m2_dout_fused_publication.py
+@@ -0,0 +1,367 @@
++from __future__ import annotations
++
++from pathlib import Path
++from types import SimpleNamespace
++
++import pytest
++import torch
++
++import tk_fa4
++import tk_fa4.interface as interface
++from tk_fa4.lowp_fa4_bwd.native_tk_d128_dense_score_e5m2_dout_backward import (
++    EXPECTED_EXTENSION_METADATA as EXPECTED_V510_BACKWARD_METADATA,
++)
++from tk_fa4.lowp_fa4_bwd.native_tk_d128_nvfp4_score_e5m2_dout_backward import (
++    EXPECTED_EXTENSION_METADATA as EXPECTED_V509_BACKWARD_METADATA,
++)
++
++
++ROOT = Path(__file__).resolve().parents[1]
++CUDA = ROOT / "tk_fa4/lowp_fa4_bwd/lowp_fa4_bwd.cu"
++
++
++class _FakeTensor:
++    def __init__(
++        self,
++        dtype: object,
++        shape: tuple[int, ...],
++        *,
++        pointer: int = 0,
++        contiguous: bool = True,
++        device: str = "cuda:0",
++    ) -> None:
++        self.dtype = dtype
++        self.shape = shape
++        self.ndim = len(shape)
++        self.is_cuda = True
++        self.device = device
++        self._pointer = pointer
++        self._contiguous = contiguous
++
++    def is_contiguous(self) -> bool:
++        return self._contiguous
++
++    def numel(self) -> int:
++        elements = 1
++        for extent in self.shape:
++            elements *= extent
++        return elements
++
++    def data_ptr(self) -> int:
++        return self._pointer
++
++
++def _publisher_extension(
++    *,
++    source_file: str = str(CUDA),
++    **overrides: object,
++) -> SimpleNamespace:
++    metadata = dict(interface.V510_E5M2_DOUT_PUBLISHER_METADATA)
++    metadata.update(overrides)
++    metadata["source_file"] = source_file
++    return SimpleNamespace(
++        project_dout_unified_fp4_nvfp4_v510_e5m2_metadata=(
++            lambda: dict(metadata)
++        )
++    )
++
++
++def test_v510_fused_publication_is_separate_from_v509() -> None:
++    assert (
++        tk_fa4.B300V510E5M2DoutPublication
++        is interface.B300V510E5M2DoutPublication
++    )
++    assert (
++        tk_fa4.b300_project_dout_unified_lowp_nvfp4_v510_e5m2
++        is interface.b300_project_dout_unified_lowp_nvfp4_v510_e5m2
++    )
++    assert (
++        tk_fa4.b300_require_v510_e5m2_dout_route
++        is interface.b300_require_v510_e5m2_dout_route
++    )
++    assert (
++        interface.B300V510E5M2DoutPublication
++        is not interface.B300V509E5M2DoutPublication
++    )
++    assert (
++        interface.b300_project_dout_unified_lowp_nvfp4_v510_e5m2
++        is not interface.b300_project_dout_unified_lowp_nvfp4_v509_e5m2
++    )
++    assert (
++        interface.b300_require_v510_e5m2_dout_route
++        is not interface.b300_require_v509_e5m2_dout_route
++    )
++
++
++def test_v510_route_pairing_accepts_only_exact_publisher_and_backward(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    monkeypatch.setattr(
++        interface,
++        "_C_b300_lowp_bwd",
++        _publisher_extension(),
++    )
++
++    receipt = interface.b300_require_v510_e5m2_dout_route(
++        dict(EXPECTED_V510_BACKWARD_METADATA)
++    )
++
++    assert receipt == {
++        "route": "v510_only_fail_closed",
++        "publisher": dict(interface.V510_E5M2_DOUT_PUBLISHER_METADATA),
++        "backward": dict(EXPECTED_V510_BACKWARD_METADATA),
++    }
++
++
++@pytest.mark.parametrize(
++    "source_file",
++    (
++        "lowp_fa4_bwd.cu",
++        "tk_fa4/lowp_fa4_bwd/lowp_fa4_bwd.cu",
++        "/workspace/fp4_matmul/tk_fa4/lowp_fa4_bwd/lowp_fa4_bwd.cu",
++    ),
++)
++def test_v510_route_accepts_only_canonical_publisher_source(
++    monkeypatch: pytest.MonkeyPatch,
++    source_file: str,
++) -> None:
++    monkeypatch.setattr(
++        interface,
++        "_C_b300_lowp_bwd",
++        _publisher_extension(source_file=source_file),
++    )
++    interface.b300_require_v510_e5m2_dout_route(
++        dict(EXPECTED_V510_BACKWARD_METADATA)
++    )
++
++
++@pytest.mark.parametrize(
++    "source_file",
++    (
++        "/tmp/lowp_fa4_bwd.cu",
++        "projection_fp4_epilogue.cuh",
++        "lowp_fa4_bwd.cu.bak",
++    ),
++)
++def test_v510_route_rejects_noncanonical_publisher_source(
++    monkeypatch: pytest.MonkeyPatch,
++    source_file: str,
++) -> None:
++    monkeypatch.setattr(
++        interface,
++        "_C_b300_lowp_bwd",
++        _publisher_extension(source_file=source_file),
++    )
++    with pytest.raises(RuntimeError, match="v510 E5M2 dO route"):
++        interface.b300_require_v510_e5m2_dout_route(
++            dict(EXPECTED_V510_BACKWARD_METADATA)
++        )
++
++
++@pytest.mark.parametrize(
++    ("side", "field", "value"),
++    (
++        ("publisher", "payload_dtype", "float8_e4m3fn"),
++        ("publisher", "batch", 2),
++        ("publisher", "probability_log2_lift", 0.0),
++        ("publisher", "dstat_physical_abi", "-16*sum(O*dO)"),
++        ("backward", "dout_dtype", "float8_e4m3fn_represented_x4"),
++        ("backward", "score_qk_dtype", "float4_e2m1fn_x2"),
++        ("backward", "batch", 2),
++        ("backward", "lstat_abi", "-LSE*log2(e)"),
++    ),
++)
++def test_v510_route_pairing_rejects_any_metadata_drift(
++    monkeypatch: pytest.MonkeyPatch,
++    side: str,
++    field: str,
++    value: object,
++) -> None:
++    publisher_overrides = {field: value} if side == "publisher" else {}
++    monkeypatch.setattr(
++        interface,
++        "_C_b300_lowp_bwd",
++        _publisher_extension(**publisher_overrides),
++    )
++    backward = dict(EXPECTED_V510_BACKWARD_METADATA)
++    if side == "backward":
++        backward[field] = value
++
++    with pytest.raises(RuntimeError, match="v510 E5M2 dO route"):
++        interface.b300_require_v510_e5m2_dout_route(backward)
++
++
++def test_v509_and_v510_backward_receipts_cannot_cross_pair(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    v509_metadata = dict(interface.V509_E5M2_DOUT_PUBLISHER_METADATA)
++    v509_metadata["source_file"] = str(CUDA)
++    v510_metadata = dict(interface.V510_E5M2_DOUT_PUBLISHER_METADATA)
++    v510_metadata["source_file"] = str(CUDA)
++    monkeypatch.setattr(
++        interface,
++        "_C_b300_lowp_bwd",
++        SimpleNamespace(
++            project_dout_unified_fp4_nvfp4_v509_e5m2_metadata=(
++                lambda: dict(v509_metadata)
++            ),
++            project_dout_unified_fp4_nvfp4_v510_e5m2_metadata=(
++                lambda: dict(v510_metadata)
++            ),
++        ),
++    )
++
++    with pytest.raises(RuntimeError, match="v510 E5M2 dO route"):
++        interface.b300_require_v510_e5m2_dout_route(
++            dict(EXPECTED_V509_BACKWARD_METADATA)
++        )
++    with pytest.raises(RuntimeError, match="v509 E5M2 dO route"):
++        interface.b300_require_v509_e5m2_dout_route(
++            dict(EXPECTED_V510_BACKWARD_METADATA)
++        )
++
++
++def test_v510_raw_symbol_reuses_proven_e5_epilogue_with_separate_identity() -> None:
++    source = CUDA.read_text()
++
++    assert '"project_dout_unified_fp4_nvfp4_v509_e5m2"' in source
++    assert '"project_dout_unified_fp4_nvfp4_v510_e5m2"' in source
++    assert "&project_dout_unified_fp4_nvfp4_v509_e5m2," in source
++    assert "&project_dout_unified_fp4_nvfp4_v510_e5m2," in source
++    assert '"tkfa4.v510_e5m2_dout_publisher.v1"' in source
++    assert (
++        '"v510_fused_nvfp4_output_projection_e5m2_dout_b1_s4096_v1"'
++        in source
++    )
++    assert (
++        source.count(
++            'result["selected_epilogue"] =\n'
++            '        "kernel_v509_native_score_e5m2_dout";'
++        )
++        == 2
++    )
++
++
++def test_v510_python_api_exposes_only_real_e5m2_slot_seven() -> None:
++    source = Path(interface.__file__).read_text()
++    function = source.split(
++        "def b300_project_dout_unified_lowp_nvfp4_v510_e5m2(", 1
++    )[1].split("\ndef ", 1)[0]
++
++    assert (
++        "_C_b300_lowp_bwd.project_dout_unified_fp4_nvfp4_v510_e5m2("
++        in function
++    )
++    assert "dout_backward_e5m2=projected[7]" in function
++    assert "torch.float8_e5m2" in function
++    assert "stats_workspace.numel() != expected_stats_bytes" in function
++    assert "with exactly {expected_stats_bytes}" in function
++    assert "store_bf16" not in function
++    assert "publish_fp8_backward" not in function
++
++
++def test_v510_python_api_returns_its_own_typed_exact_publication(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    shape = (1, 4096, 32, 128)
++    stats_shape = (1, 32, 1, 4096)
++    attention_output = _FakeTensor(torch.bfloat16, shape, pointer=0xA0)
++    lse = object()
++    stats_workspace = _FakeTensor(torch.uint8, (2 * 32 * 4096 * 4,))
++    dq_clear = _FakeTensor(torch.bfloat16, shape)
++    dout_storage = _FakeTensor(torch.bfloat16, shape, pointer=0xA0)
++    empty = _FakeTensor(torch.uint8, (0,))
++    dpsum = _FakeTensor(torch.float32, stats_shape)
++    lse_log2 = _FakeTensor(torch.float32, stats_shape)
++    dout_e5m2 = _FakeTensor(torch.float8_e5m2, shape)
++    calls: list[tuple[object, ...]] = []
++
++    def project(*args: object) -> list[_FakeTensor]:
++        calls.append(args)
++        return [
++            dout_storage,
++            empty,
++            empty,
++            empty,
++            empty,
++            dpsum,
++            lse_log2,
++            dout_e5m2,
++        ]
++
++    monkeypatch.setattr(
++        interface,
++        "_C_b300_lowp_bwd",
++        SimpleNamespace(
++            project_dout_unified_fp4_nvfp4_v510_e5m2=project,
++        ),
++    )
++    input_operand = (object(), object(), object())
++    weight_operand = (object(), object(), object())
++
++    publication = interface.b300_project_dout_unified_lowp_nvfp4_v510_e5m2(
++        input_operand,
++        weight_operand,
++        attention_output,
++        lse,
++        stats_workspace=stats_workspace,
++        dq_clear=dq_clear,
++    )
++
++    assert type(publication) is interface.B300V510E5M2DoutPublication
++    assert publication.dout_storage is dout_storage
++    assert publication.backward_operands() == (dout_e5m2, dpsum, lse_log2)
++    assert calls == [
++        (
++            *input_operand,
++            *weight_operand,
++            attention_output,
++            lse,
++            stats_workspace,
++            dq_clear,
++        )
++    ]
++
++
++@pytest.mark.parametrize(
++    ("attention_shape", "stats_bytes", "dq_shape"),
++    (
++        ((2, 4096, 32, 128), 2 * 32 * 4096 * 4, (1, 4096, 32, 128)),
++        ((1, 4096, 32, 128), 2 * 32 * 4096 * 4 - 1, (1, 4096, 32, 128)),
++        ((1, 4096, 32, 128), 2 * 32 * 4096 * 4, (2, 4096, 32, 128)),
++    ),
++)
++def test_v510_python_api_fails_closed_before_raw_dispatch(
++    monkeypatch: pytest.MonkeyPatch,
++    attention_shape: tuple[int, ...],
++    stats_bytes: int,
++    dq_shape: tuple[int, ...],
++) -> None:
++    dispatched = False
++
++    def project(*args: object) -> list[_FakeTensor]:
++        nonlocal dispatched
++        dispatched = True
++        return []
++
++    monkeypatch.setattr(
++        interface,
++        "_C_b300_lowp_bwd",
++        SimpleNamespace(
++            project_dout_unified_fp4_nvfp4_v510_e5m2=project,
++        ),
++    )
++    attention_output = _FakeTensor(torch.bfloat16, attention_shape)
++    stats_workspace = _FakeTensor(torch.uint8, (stats_bytes,))
++    dq_clear = _FakeTensor(torch.bfloat16, dq_shape)
++
++    with pytest.raises(ValueError, match="v510 E5M2 dO publication"):
++        interface.b300_project_dout_unified_lowp_nvfp4_v510_e5m2(
++            (object(), object(), object()),
++            (object(), object(), object()),
++            attention_output,
++            object(),
++            stats_workspace=stats_workspace,
++            dq_clear=dq_clear,
++        )
++    assert not dispatched
+diff --git a/tk_fa4/__init__.py b/tk_fa4/__init__.py
+index ec8ff1a..b6fffea 100644
+--- a/tk_fa4/__init__.py
++++ b/tk_fa4/__init__.py
+@@ -8,6 +8,7 @@ from .interface import (
+     B300UnifiedLowpDout,
+     B300UnifiedLowpQKV,
+     B300V509E5M2DoutPublication,
++    B300V510E5M2DoutPublication,
+     MXFP4_V_SCALE_POLICY_ROWWISE_D32,
+     MXFP4_V_SCALE_POLICY_SHARED_D32XS32,
+     b300_adaptive_lowp_operands_from_projection,
+@@ -52,6 +53,7 @@ from .interface import (
+     b300_project_qk_adaptive_lowp_nvfp4,
+     b300_project_dout_unified_lowp_nvfp4,
+     b300_project_dout_unified_lowp_nvfp4_v509_e5m2,
++    b300_project_dout_unified_lowp_nvfp4_v510_e5m2,
+     b300_project_qkv_unified_lowp_nvfp4,
+     b300_project_qkv_gqa_d128_unified_lowp_nvfp4,
+     b300_bind_qkv_gqa_d64_paired_unified_lowp_e4m3_projection,
+@@ -65,6 +67,7 @@ from .interface import (
+     b300_require_qkv_gqa_d128_unified_lowp_e4m3_projection,
+     b300_require_qkv_gqa_d128_unified_lowp_nvfp4_projection,
+     b300_require_v509_e5m2_dout_route,
++    b300_require_v510_e5m2_dout_route,
+     b300_rope_pair_qk_,
+     b300_stack_qkv_projection_weights,
+     b300_stack_gqa_d128_qkv_projection_weights,
+@@ -83,6 +86,7 @@ __all__ = [
+     "B300UnifiedLowpDout",
+     "B300UnifiedLowpQKV",
+     "B300V509E5M2DoutPublication",
++    "B300V510E5M2DoutPublication",
+     "MXFP4_V_SCALE_POLICY_ROWWISE_D32",
+     "MXFP4_V_SCALE_POLICY_SHARED_D32XS32",
+     "b300_adaptive_lowp_operands_from_projection",
+@@ -127,6 +131,7 @@ __all__ = [
+     "b300_project_qk_adaptive_lowp_nvfp4",
+     "b300_project_dout_unified_lowp_nvfp4",
+     "b300_project_dout_unified_lowp_nvfp4_v509_e5m2",
++    "b300_project_dout_unified_lowp_nvfp4_v510_e5m2",
+     "b300_project_qkv_unified_lowp_nvfp4",
+     "b300_project_qkv_gqa_d128_unified_lowp_nvfp4",
+     "b300_bind_qkv_gqa_d64_paired_unified_lowp_e4m3_projection",
+@@ -140,6 +145,7 @@ __all__ = [
+     "b300_require_qkv_gqa_d128_unified_lowp_e4m3_projection",
+     "b300_require_qkv_gqa_d128_unified_lowp_nvfp4_projection",
+     "b300_require_v509_e5m2_dout_route",
++    "b300_require_v510_e5m2_dout_route",
+     "b300_rope_pair_qk_",
+     "b300_stack_qkv_projection_weights",
+     "b300_stack_gqa_d128_qkv_projection_weights",
+diff --git a/tk_fa4/interface.py b/tk_fa4/interface.py
+index 5b2200a..fdb4444 100644
+--- a/tk_fa4/interface.py
++++ b/tk_fa4/interface.py
+@@ -46,6 +46,37 @@ V509_E5M2_DOUT_PUBLISHER_METADATA = {
+     "e5m2_payload_slot": 7,
+ }
+ 
++V510_E5M2_DOUT_PUBLISHER_METADATA = {
++    "schema": "tkfa4.v510_e5m2_dout_publisher.v1",
++    "source_identity": (
++        "v510_fused_nvfp4_output_projection_e5m2_dout_b1_s4096_v1"
++    ),
++    "experimental": True,
++    "production_dispatch_connected": False,
++    "dispatch": "fail_closed_B1_S4096_H32_D128_dense_score_only",
++    # The payload/statistics implementation is intentionally the exact
++    # already-gated v509 epilogue; only the authenticated consumer differs.
++    "selected_epilogue": "kernel_v509_native_score_e5m2_dout",
++    "payload_dtype": "float8_e5m2",
++    "payload_layout": "BSHD_contiguous",
++    "encode": "(BF16.float()*4).to(float8_e5m2)",
++    "encode_scale": 4.0,
++    "logical_decode_scale": 0.25,
++    "dstat_physical_abi": "-4*sum(O*raw_E5M2_dO)",
++    "lstat_abi": "8-LSE*log2(e)",
++    "probability_log2_lift": 8.0,
++    "batch": 1,
++    "sequence": 4096,
++    "query_heads": 32,
++    "head_dim": 128,
++    "store_bf16_dout": False,
++    "publish_e4m3_dout": False,
++    "publish_stats": True,
++    "clear_dq": True,
++    "raw_output_slots": 8,
++    "e5m2_payload_slot": 7,
++}
++
+ 
+ def _extension_file_identity(path: Path) -> dict[str, int | str]:
+     """Hash one stable regular file image for a subsequent extension load."""
+@@ -562,6 +593,20 @@ class B300V509E5M2DoutPublication:
+         return self.dout_backward_e5m2, self.dpsum, self.lse_log2
+ 
+ 
++@dataclass(frozen=True)
++class B300V510E5M2DoutPublication:
++    """Exact fused dO publication consumed only by v510 dense score."""
++
++    # Descriptor plumbing reuses attention_output and never stores BF16 dO.
++    dout_storage: torch.Tensor
++    dpsum: torch.Tensor
++    lse_log2: torch.Tensor
++    dout_backward_e5m2: torch.Tensor
++
++    def backward_operands(self) -> tuple[torch.Tensor, ...]:
++        return self.dout_backward_e5m2, self.dpsum, self.lse_log2
++
++
+ def _b300_adaptive_producer_stream(device: torch.device) -> torch.cuda.Stream:
+     index = torch.cuda.current_device() if device.index is None else device.index
+     stream = _B300_ADAPTIVE_PRODUCER_STREAMS.get(index)
+@@ -5609,6 +5654,85 @@ def b300_require_v509_e5m2_dout_route(
+     }
+ 
+ 
++def b300_require_v510_e5m2_dout_route(
++    backward_metadata: dict[str, object],
++) -> dict[str, object]:
++    """Authenticate the fused publisher/dense-score v510 pair."""
++    _ensure_lowp_bwd_extension()
++    metadata_fn = getattr(
++        _C_b300_lowp_bwd,
++        "project_dout_unified_fp4_nvfp4_v510_e5m2_metadata",
++        None,
++    )
++    if not callable(metadata_fn):
++        raise RuntimeError(
++            "v510 E5M2 dO route lacks exact fused publisher metadata"
++        )
++    publisher_raw = dict(metadata_fn())
++    missing = {*V510_E5M2_DOUT_PUBLISHER_METADATA, "source_file"} - set(
++        publisher_raw
++    )
++    publisher_mismatches = {
++        field: {
++            "actual": publisher_raw.get(field),
++            "expected": expected,
++        }
++        for field, expected in V510_E5M2_DOUT_PUBLISHER_METADATA.items()
++        if publisher_raw.get(field) != expected
++        or type(publisher_raw.get(field)) is not type(expected)
++    }
++    source_file = publisher_raw.get("source_file")
++    normalized_source = (
++        source_file.replace("\\", "/")
++        if isinstance(source_file, str)
++        else ""
++    )
++    expected_suffix = "/tk_fa4/lowp_fa4_bwd/lowp_fa4_bwd.cu"
++    if not (
++        normalized_source == "lowp_fa4_bwd.cu"
++        or normalized_source == expected_suffix.removeprefix("/")
++        or normalized_source.endswith(expected_suffix)
++    ):
++        publisher_mismatches["source_file"] = {
++            "actual": source_file,
++            "expected_suffix": expected_suffix,
++        }
++    if missing:
++        publisher_mismatches["missing"] = sorted(missing)
++
++    from tk_fa4.lowp_fa4_bwd.native_tk_d128_dense_score_e5m2_dout_backward import (
++        EXPECTED_EXTENSION_METADATA as expected_backward,
++    )
++
++    if not isinstance(backward_metadata, dict):
++        raise RuntimeError(
++            "v510 E5M2 dO route requires exact backward metadata"
++        )
++    backward_mismatches = {
++        field: {
++            "actual": backward_metadata.get(field),
++            "expected": expected,
++        }
++        for field, expected in expected_backward.items()
++        if backward_metadata.get(field) != expected
++        or type(backward_metadata.get(field)) is not type(expected)
++    }
++    missing_backward = set(expected_backward) - set(backward_metadata)
++    if missing_backward:
++        backward_mismatches["missing"] = sorted(missing_backward)
++    if publisher_mismatches or backward_mismatches:
++        raise RuntimeError(
++            "v510 E5M2 dO route metadata mismatch: "
++            f"publisher={publisher_mismatches}, "
++            f"backward={backward_mismatches}"
++        )
++    return {
++        "route": "v510_only_fail_closed",
++        "publisher": dict(V510_E5M2_DOUT_PUBLISHER_METADATA),
++        "backward": dict(expected_backward),
++    }
++
++
+ def b300_project_dout_unified_lowp_nvfp4(
+     input_operand: tuple[torch.Tensor, torch.Tensor, torch.Tensor],
+     weight_operand: tuple[torch.Tensor, torch.Tensor, torch.Tensor],
+@@ -5912,6 +6036,124 @@ def b300_project_dout_unified_lowp_nvfp4_v509_e5m2(
+     )
+ 
+ 
++def b300_project_dout_unified_lowp_nvfp4_v510_e5m2(
++    input_operand: tuple[torch.Tensor, torch.Tensor, torch.Tensor],
++    weight_operand: tuple[torch.Tensor, torch.Tensor, torch.Tensor],
++    attention_output: torch.Tensor,
++    lse: torch.Tensor,
++    *,
++    stats_workspace: torch.Tensor,
++    dq_clear: torch.Tensor,
++) -> B300V510E5M2DoutPublication:
++    """Fuse exact B1/S4096/H32/D128 E5M2 dO for dense-score v510.
++
++    Route metadata pairing is deliberately authenticated by
++    :func:`b300_require_v510_e5m2_dout_route` when the runtime selects v510,
++    outside this low-level tensor API. This exact symbol has no format,
++    scaling, statistics, or BF16-storage switches to broaden its ABI.
++    """
++    _ensure_lowp_bwd_extension()
++    if len(input_operand) != 3 or len(weight_operand) != 3:
++        raise ValueError(
++            "v510 NVFP4 projection operands must contain packed data, block "
++            "scales, and one global scale"
++        )
++    expected_shape = (1, 4096, 32, 128)
++    if (
++        attention_output.dtype != torch.bfloat16
++        or not attention_output.is_cuda
++        or not attention_output.is_contiguous()
++        or tuple(attention_output.shape) != expected_shape
++    ):
++        raise ValueError(
++            "v510 E5M2 dO publication requires contiguous CUDA BF16 "
++            f"attention output {expected_shape}"
++        )
++    expected_stats_bytes = 2 * 1 * 32 * 4096 * torch.float32.itemsize
++    if (
++        stats_workspace.dtype != torch.uint8
++        or not stats_workspace.is_cuda
++        or not stats_workspace.is_contiguous()
++        or stats_workspace.ndim != 1
++        or stats_workspace.device != attention_output.device
++        or stats_workspace.numel() != expected_stats_bytes
++    ):
++        raise ValueError(
++            "v510 E5M2 dO publication requires the exact contiguous CUDA "
++            f"uint8 statistics workspace with exactly {expected_stats_bytes} "
++            "bytes"
++        )
++    if (
++        dq_clear.dtype != torch.bfloat16
++        or not dq_clear.is_cuda
++        or not dq_clear.is_contiguous()
++        or tuple(dq_clear.shape) != expected_shape
++        or dq_clear.device != attention_output.device
++    ):
++        raise ValueError(
++            "v510 E5M2 dO publication requires contiguous CUDA BF16 dQ "
++            f"clear storage {expected_shape}"
++        )
++    projected = (
++        _C_b300_lowp_bwd.project_dout_unified_fp4_nvfp4_v510_e5m2(
++            *input_operand,
++            *weight_operand,
++            attention_output,
++            lse,
++            stats_workspace,
++            dq_clear,
++        )
++    )
++    if len(projected) != 8:
++        raise RuntimeError(
++            "v510 E5M2 dO projection returned a noncanonical raw ABI"
++        )
++    dout_storage = projected[0]
++    for sentinel in projected[1:5]:
++        if sentinel.numel():
++            raise RuntimeError(
++                "v510 E5M2 dO projection unexpectedly published MXFP4 or "
++                "legacy E4M3 intermediates"
++            )
++    dpsum = projected[5]
++    lse_log2 = projected[6]
++    dout_backward_e5m2 = projected[7]
++    expected_stats_shape = (1, 32, 1, 4096)
++    for name, tensor in (("dpsum", dpsum), ("lse_log2", lse_log2)):
++        if (
++            tensor.dtype != torch.float32
++            or tuple(tensor.shape) != expected_stats_shape
++        ):
++            raise RuntimeError(
++                f"v510 E5M2 dO projection returned invalid {name}: "
++                f"{tensor.dtype} {tuple(tensor.shape)}"
++            )
++    if (
++        dout_backward_e5m2.dtype != torch.float8_e5m2
++        or tuple(dout_backward_e5m2.shape) != expected_shape
++        or not dout_backward_e5m2.is_contiguous()
++    ):
++        raise RuntimeError(
++            "v510 E5M2 dO projection slot 7 must be genuine contiguous "
++            f"float8_e5m2 {expected_shape}"
++        )
++    if (
++        dout_storage.dtype != torch.bfloat16
++        or tuple(dout_storage.shape) != expected_shape
++        or dout_storage.data_ptr() != attention_output.data_ptr()
++    ):
++        raise RuntimeError(
++            "v510 E5M2 dO projection must reuse attention output only as "
++            "descriptor storage and must not materialize BF16 dO"
++        )
++    return B300V510E5M2DoutPublication(
++        dout_storage=dout_storage,
++        dpsum=dpsum,
++        lse_log2=lse_log2,
++        dout_backward_e5m2=projected[7],
++    )
++
++
+ def b300_mha_fwd(
+     q: torch.Tensor,
+     k: torch.Tensor,
+diff --git a/tk_fa4/lowp_fa4_bwd/benchmark_llama12b_e2e.py b/tk_fa4/lowp_fa4_bwd/benchmark_llama12b_e2e.py
+index 34b055d..dbe56df 100644
+--- a/tk_fa4/lowp_fa4_bwd/benchmark_llama12b_e2e.py
++++ b/tk_fa4/lowp_fa4_bwd/benchmark_llama12b_e2e.py
+@@ -49,6 +49,8 @@ from tk_fa4 import (
+     b300_prepare_nvfp4_projection_weight_dual_out,
+     b300_prepare_nvfp4_projection_operand_scaled,
+     b300_project_dout_unified_lowp_nvfp4,
++    b300_project_dout_unified_lowp_nvfp4_v509_e5m2,
++    b300_project_dout_unified_lowp_nvfp4_v510_e5m2,
+     b300_project_e4m3,
+     b300_project_gqa_d128_hierarchical_qkv_gradient_nvfp4,
+     b300_project_gqa_d64_paired_qkv_gradient_nvfp4,
+@@ -58,6 +60,8 @@ from tk_fa4 import (
+     b300_stack_gqa_d128_qkv_projection_weights,
+     b300_stitch_gqa_d128_inverse_rope_gradient,
+     b300_stitch_gqa_d64_inverse_rope_gradient,
++    b300_require_v509_e5m2_dout_route,
++    b300_require_v510_e5m2_dout_route,
+ )
+ from tk_fa4.lowp_fa4_bwd.profile_gqa_d128_chain import (
+     CompiledGqaBackward,
+@@ -85,10 +89,18 @@ from tk_fa4.lowp_fa4_bwd.native_tk_d128_backward import (
+     BACKEND as NATIVE_TK_D128_BACKEND,
+     NativeTkD128E4M3Backward,
+ )
++from tk_fa4.lowp_fa4_bwd.native_tk_d128_dense_score_e5m2_dout_backward import (
++    BACKEND as NATIVE_TK_D128_V510_E5M2_DOUT_BACKEND,
++    NativeTkD128DenseE4M3ScoreQKVE5M2DoutBackward,
++)
+ from tk_fa4.lowp_fa4_bwd.native_tk_d128_nvfp4_score_backward import (
+     BACKEND as NATIVE_TK_D128_NVFP4_SCORE_BACKEND,
+     NativeTkD128NVFP4ScoreE4M3GradientBackward,
+ )
++from tk_fa4.lowp_fa4_bwd.native_tk_d128_nvfp4_score_e5m2_dout_backward import (
++    BACKEND as NATIVE_TK_D128_V509_E5M2_DOUT_BACKEND,
++    NativeTkD128NVFP4ScoreE4M3QKVE5M2DoutBackward,
++)
+ from tk_fa4.lowp_fa4_bwd.native_tk_d128_mxfp4_v_backward import (
+     BACKEND as NATIVE_TK_D128_MX_BACKEND,
+     SHARED_TILE_V503_BACKEND as NATIVE_TK_D128_SHARED_TILE_MX_BACKEND,
+@@ -1295,6 +1307,163 @@ def _require_native_tk_d128_runtime_contract(
+         )
+ 
+ 
++def _require_native_tk_d128_v509_e5m2_dout_runtime_contract(
++    config: Config,
++    forward_topology: dict[str, Any],
++    *,
++    qkv_projection_format: str,
++    output_projection_format: str,
++    experimental_native_nvfp4_projection_out: bool,
++    native_tk_d128_native_score_backward: bool,
++    backward_match_forward_operands: bool,
++    per_block_qk_scales: bool,
++    experimental_split_v_backward: bool,
++    experimental_output_shared_split_v: bool | None,
++    experimental_d128_mxfp4_v_backward: bool,
++    v_mxfp4_scale_2d: bool,
++    shared_runtime: LowpAttentionRuntime | None,
++) -> None:
++    """Fail closed around native-score v509 with fused E5M2 dO.
++
++    Both learned-projection families publish the same exact native-score
++    workspace and retained E4M3 Q/K/V gradient operands.  The score path is
++    therefore invariant across the two learned-projection formats and the two
++    authenticated forward PV formats.  No represented-forward-QK or MXFP4-V
++    backward ABI is admitted here.
++    """
++    shape = (
++        config.batch,
++        config.sequence,
++        config.hidden,
++        config.q_heads,
++        config.kv_heads,
++        config.head_dim,
++    )
++    violations = []
++    if shape != (1, 4096, 4096, 32, 8, 128):
++        violations.append("B1/S4096/H4096/Hq32/Hkv8/D128")
++    if forward_topology.get("pv_format") not in (
++        "e4m3_fp8",
++        "mxfp4_e8m0_block32",
++    ):
++        violations.append("FP8-PV or max-safe MXFP4-PV")
++    if (qkv_projection_format, output_projection_format) not in (
++        ("e4m3", "e4m3"),
++        ("nvfp4", "nvfp4"),
++    ):
++        violations.append("matched E4M3 or NVFP4 learned projections")
++    if qkv_projection_format == "nvfp4":
++        if not experimental_native_nvfp4_projection_out:
++            violations.append("native NVFP4 caller-owned QKV publication")
++    elif experimental_native_nvfp4_projection_out:
++        violations.append("dense E4M3 projection without the NVFP4 flag")
++    if not native_tk_d128_native_score_backward:
++        violations.append("native NVFP4 score workspace")
++    if backward_match_forward_operands:
++        violations.append("retained projection-accumulator E4M3 Q/K")
++    if not per_block_qk_scales:
++        violations.append("forward row-by-K16 Q/K scales")
++    if experimental_split_v_backward:
++        violations.append("retained projection-accumulator E4M3 V")
++    if experimental_output_shared_split_v is not False:
++        violations.append("explicit output-shared split-V disable")
++    if experimental_d128_mxfp4_v_backward:
++        violations.append("no MXFP4 backward V")
++    if v_mxfp4_scale_2d:
++        violations.append("no MXFP4 V scale ABI")
++    if shared_runtime is not None and (
++        getattr(
++            shared_runtime,
++            "native_tk_d128_v509_e5m2_dout_backward",
++            None,
++        )
++        is not True
++        or getattr(
++            shared_runtime,
++            "native_tk_d128_native_score_backward",
++            None,
++        )
++        is not True
++    ):
++        violations.append("one shared native-score v509 backward runtime")
++    if violations:
++        raise ValueError(
++            "native TK D128 v509 native-score E5M2-dO backward is "
++            "fail-closed; requires " + ", ".join(violations)
++        )
++
++
++def _require_native_tk_d128_v510_e5m2_dout_runtime_contract(
++    config: Config,
++    forward_topology: dict[str, Any],
++    *,
++    qkv_projection_format: str,
++    output_projection_format: str,
++    native_tk_d128_native_score_backward: bool,
++    backward_match_forward_operands: bool,
++    per_block_qk_scales: bool,
++    experimental_split_v_backward: bool,
++    experimental_output_shared_split_v: bool | None,
++    experimental_d128_mxfp4_v_backward: bool,
++    v_mxfp4_scale_2d: bool,
++    shared_runtime: LowpAttentionRuntime | None,
++) -> None:
++    """Fail closed around the dense-score v510 E5M2-dO experiment.
++
++    v510 changes only the represented output-gradient operand. Q, K, and V
++    remain the retained projection-accumulator E4M3 publications used by
++    v501. The selector deliberately admits both learned-projection formats
++    and both authenticated PV formats, but no represented-QK, native-score,
++    or MXFP4-V backward ABI.
++    """
++    shape = (
++        config.batch,
++        config.sequence,
++        config.hidden,
++        config.q_heads,
++        config.kv_heads,
++        config.head_dim,
++    )
++    violations = []
++    if shape != (1, 4096, 4096, 32, 8, 128):
++        violations.append("B1/S4096/H4096/Hq32/Hkv8/D128")
++    if forward_topology.get("pv_format") not in (
++        "e4m3_fp8",
++        "mxfp4_e8m0_block32",
++    ):
++        violations.append("FP8-PV or max-safe MXFP4-PV")
++    if (qkv_projection_format, output_projection_format) not in (
++        ("e4m3", "e4m3"),
++        ("nvfp4", "nvfp4"),
++    ):
++        violations.append("matched E4M3 or NVFP4 learned projections")
++    if native_tk_d128_native_score_backward:
++        violations.append("dense E4M3 score rather than native NVFP4 score")
++    if backward_match_forward_operands:
++        violations.append("projection-accumulator E4M3 Q/K")
++    if not per_block_qk_scales:
++        violations.append("forward row-by-K16 Q/K scales")
++    if experimental_split_v_backward:
++        violations.append("retained projection-accumulator E4M3 V")
++    if experimental_output_shared_split_v is not False:
++        violations.append("explicit output-shared split-V disable")
++    if experimental_d128_mxfp4_v_backward:
++        violations.append("no MXFP4 backward V")
++    if v_mxfp4_scale_2d:
++        violations.append("no MXFP4 V scale ABI")
++    if shared_runtime is not None and getattr(
++        shared_runtime,
++        "native_tk_d128_v510_e5m2_dout_backward",
++        None,
++    ) is not True:
++        violations.append("one shared v510 E5M2-dO backward runtime")
++    if violations:
++        raise ValueError(
++            "native TK D128 v510 E5M2-dO backward is fail-closed; requires "
++            + ", ".join(violations)
++        )
++
++
+ def _require_d128_e4m3_v501_runtime_contract(
+     config: Config,
+     forward_topology: dict[str, Any],
+@@ -1843,6 +2012,8 @@ class LowpAttentionRuntime:
+         native_tk_d64_backward_extension: Any | None = None,
+         native_tk_d128_backward_extension: Any | None = None,
+         native_tk_d128_native_score_backward: bool = False,
++        native_tk_d128_v509_e5m2_dout_backward: bool = False,
++        native_tk_d128_v510_e5m2_dout_backward: bool = False,
+         shared_backward_runtime: LowpAttentionRuntime | None = None,
+     ) -> None:
+         if (
+@@ -1861,6 +2032,30 @@ class LowpAttentionRuntime:
+             raise TypeError(
+                 "native_tk_d128_native_score_backward must be exactly bool"
+             )
++        if type(native_tk_d128_v509_e5m2_dout_backward) is not bool:
++            raise TypeError(
++                "native_tk_d128_v509_e5m2_dout_backward must be exactly bool"
++            )
++        if type(native_tk_d128_v510_e5m2_dout_backward) is not bool:
++            raise TypeError(
++                "native_tk_d128_v510_e5m2_dout_backward must be exactly bool"
++            )
++        if native_tk_d128_v509_e5m2_dout_backward and not (
++            native_tk_d128_native_score_backward
++        ):
++            raise ValueError(
++                "v509 E5M2-dO backward requires the native NVFP4-score "
++                "selector"
++            )
++        if native_tk_d128_v510_e5m2_dout_backward and (
++            native_tk_d128_native_score_backward
++            or native_tk_d128_v509_e5m2_dout_backward
++        ):
++            raise ValueError(
++                "v508 native-score and v510 dense-score backward selectors "
++                "are mutually exclusive; v509 native-score is likewise "
++                "incompatible with v510"
++            )
+         if (
+             native_tk_d128_native_score_backward
+             and native_tk_d128_backward_extension is None
+@@ -1938,6 +2133,22 @@ class LowpAttentionRuntime:
+             raise ValueError(
+                 "a native TK backward cannot share a non-native runner"
+             )
++        if (
++            native_tk_d128_v509_e5m2_dout_backward
++            and requested_native_kind != "d128"
++        ):
++            raise ValueError(
++                "v509 E5M2-dO backward requires its authenticated native "
++                "TK D128 extension"
++            )
++        if (
++            native_tk_d128_v510_e5m2_dout_backward
++            and requested_native_kind != "d128"
++        ):
++            raise ValueError(
++                "v510 E5M2-dO backward requires its authenticated native "
++                "TK D128 extension"
++            )
+         self.native_tk_d64_backward = (
+             native_tk_d64_backward_extension is not None
+         )
+@@ -1947,6 +2158,14 @@ class LowpAttentionRuntime:
+         self.native_tk_d128_native_score_backward = (
+             native_tk_d128_native_score_backward
+         )
++        self.native_tk_d128_v509_e5m2_dout_backward = (
++            native_tk_d128_v509_e5m2_dout_backward
++        )
++        self.native_tk_d128_v510_e5m2_dout_backward = (
++            native_tk_d128_v510_e5m2_dout_backward
++        )
++        self.v509_e5m2_dout_route: dict[str, Any] | None = None
++        self.v510_e5m2_dout_route: dict[str, Any] | None = None
+         self.native_tk_backward = bool(
+             self.native_tk_d64_backward or self.native_tk_d128_backward
+         )
+@@ -2085,7 +2304,63 @@ class LowpAttentionRuntime:
+                 adaptive_qk_weight_scales=adaptive_qk_weight_scales,
+                 shared_runtime=shared_backward_runtime,
+             )
+-            if self.native_tk_d128_native_score_backward:
++            if self.native_tk_d128_v510_e5m2_dout_backward:
++                _require_native_tk_d128_v510_e5m2_dout_runtime_contract(
++                    config,
++                    forward_topology,
++                    qkv_projection_format=qkv_projection_format,
++                    output_projection_format=output_projection_format,
++                    native_tk_d128_native_score_backward=(
++                        self.native_tk_d128_native_score_backward
++                    ),
++                    backward_match_forward_operands=(
++                        backward_match_forward_operands
++                    ),
++                    per_block_qk_scales=per_block_qk_scales,
++                    experimental_split_v_backward=(
++                        experimental_split_v_backward
++                    ),
++                    experimental_output_shared_split_v=(
++                        experimental_output_shared_split_v
++                    ),
++                    experimental_d128_mxfp4_v_backward=(
++                        experimental_d128_mxfp4_v_backward
++                    ),
++                    v_mxfp4_scale_2d=v_mxfp4_scale_2d,
++                    shared_runtime=shared_backward_runtime,
++                )
++            if self.native_tk_d128_v509_e5m2_dout_backward:
++                _require_native_tk_d128_v509_e5m2_dout_runtime_contract(
++                    config,
++                    forward_topology,
++                    qkv_projection_format=qkv_projection_format,
++                    output_projection_format=output_projection_format,
++                    experimental_native_nvfp4_projection_out=(
++                        experimental_native_nvfp4_projection_out
++                    ),
++                    native_tk_d128_native_score_backward=(
++                        self.native_tk_d128_native_score_backward
++                    ),
++                    backward_match_forward_operands=(
++                        backward_match_forward_operands
++                    ),
++                    per_block_qk_scales=per_block_qk_scales,
++                    experimental_split_v_backward=(
++                        experimental_split_v_backward
++                    ),
++                    experimental_output_shared_split_v=(
++                        experimental_output_shared_split_v
++                    ),
++                    experimental_d128_mxfp4_v_backward=(
++                        experimental_d128_mxfp4_v_backward
++                    ),
++                    v_mxfp4_scale_2d=v_mxfp4_scale_2d,
++                    shared_runtime=shared_backward_runtime,
++                )
++            if (
++                self.native_tk_d128_native_score_backward
++                and not self.native_tk_d128_v509_e5m2_dout_backward
++            ):
+                 native_score_violations = []
+                 if config.batch != 1:
+                     native_score_violations.append("B1")
+@@ -2276,6 +2551,21 @@ class LowpAttentionRuntime:
+         effective_native_backend = (
+             NATIVE_TK_D64_BACKEND
+             if self.native_tk_d64_backward
++            else NATIVE_TK_D128_V509_E5M2_DOUT_BACKEND
++            if (
++                self.native_tk_d128_backward
++                and self.native_tk_d128_v509_e5m2_dout_backward
++            )
++            else NATIVE_TK_D128_V510_E5M2_DOUT_BACKEND
++            if (
++                self.native_tk_d128_backward
++                and self.native_tk_d128_v510_e5m2_dout_backward
++            )
++            else NATIVE_TK_D128_NVFP4_SCORE_BACKEND
++            if (
++                self.native_tk_d128_backward
++                and self.native_tk_d128_native_score_backward
++            )
+             else NATIVE_TK_D128_SHARED_TILE_MX_BACKEND
+             if (
+                 self.native_tk_d128_backward
+@@ -2874,6 +3164,15 @@ class LowpAttentionRuntime:
+             v_backward_source = "represented_mxfp4_codes"
+         else:
+             v_backward_source = "projection_accumulator_e4m3"
++        e5m2_dout_backward = bool(
++            self.native_tk_d128_v509_e5m2_dout_backward
++            or self.native_tk_d128_v510_e5m2_dout_backward
++        )
++        e5m2_dout_publisher = (
++            "b300_project_dout_unified_lowp_nvfp4_v509_e5m2"
++            if self.native_tk_d128_v509_e5m2_dout_backward
++            else "b300_project_dout_unified_lowp_nvfp4_v510_e5m2"
++        )
+         self.output_projection_topology = {
+             "forward_format": self.output_projection_format,
+             "forward_activation_publication": (
+@@ -2903,7 +3202,20 @@ class LowpAttentionRuntime:
+             "unused_nvfp4_forward_weight_publication": False,
+             "backward_input_gradient_format": "nvfp4",
+             "backward_input_gradient_kernel": (
+-                "b300_project_dout_unified_lowp_nvfp4"
++                e5m2_dout_publisher
++                if e5m2_dout_backward
++                else "b300_project_dout_unified_lowp_nvfp4"
++            ),
++            **(
++                {
++                    "backward_attention_dout_format": "e5m2",
++                    "backward_attention_dout_source": (
++                        "projection_accumulator_e5m2_x4"
++                    ),
++                    "backward_attention_dout_encoding_scale": 4.0,
++                }
++                if e5m2_dout_backward
++                else {}
+             ),
+             "backward_weight_publication": (
+                 "functional_true_2d_nvfp4_transpose_prepared_in_forward"
+@@ -2927,6 +3239,28 @@ class LowpAttentionRuntime:
+             "native_tk_d128_native_score_backward": (
+                 self.native_tk_d128_native_score_backward
+             ),
++            "native_tk_d128_v509_e5m2_dout_backward": (
++                self.native_tk_d128_v509_e5m2_dout_backward
++            ),
++            "native_tk_d128_v510_e5m2_dout_backward": (
++                self.native_tk_d128_v510_e5m2_dout_backward
++            ),
++            **(
++                {
++                    "dout_backward_format": "e5m2",
++                    "dout_backward_source": (
++                        "projection_accumulator_e5m2_x4"
++                    ),
++                    "dout_backward_kernel": e5m2_dout_publisher,
++                    **(
++                        {"v509_e5m2_dout_route": None}
++                        if self.native_tk_d128_v509_e5m2_dout_backward
++                        else {"v510_e5m2_dout_route": None}
++                    ),
++                }
++                if e5m2_dout_backward
++                else {}
++            ),
+             "represented_backward": self.backward_match_forward_operands,
+             "per_block_qk_scales": self.per_block_qk_scales,
+             "qk_backward_source": qk_backward_source,
+@@ -3197,6 +3531,18 @@ class LowpAttentionRuntime:
+                         "a native TK backward can share only the same native "
+                         "shape specialization"
+                     )
++                if (
++                    self.native_tk_d128_v510_e5m2_dout_backward
++                    is not getattr(
++                        shared,
++                        "native_tk_d128_v510_e5m2_dout_backward",
++                        False,
++                    )
++                ):
++                    raise ValueError(
++                        "a native TK D128 backward can share only the same "
++                        "v510 E5M2-dO selector"
++                    )
+                 if (
+                     self.native_tk_d128_backward
+                     and self.experimental_d128_mxfp4_v_backward
+@@ -3240,6 +3586,24 @@ class LowpAttentionRuntime:
+                     shared.backward_head_fast_raster
+                 )
+                 self.backward_raster_policy = shared.backward_raster_policy
++                if self.native_tk_d128_v510_e5m2_dout_backward:
++                    shared_v510_route = getattr(
++                        shared,
++                        "v510_e5m2_dout_route",
++                        None,
++                    )
++                    if not isinstance(shared_v510_route, dict) or (
++                        shared_v510_route.get("route")
++                        != "v510_only_fail_closed"
++                    ):
++                        raise RuntimeError(
++                            "shared v510 runtime lacks its authenticated "
++                            "E5M2-dO route receipt"
++                        )
++                    self.v510_e5m2_dout_route = dict(shared_v510_route)
++                    self.projection_publication_topology[
++                        "v510_e5m2_dout_route"
++                    ] = dict(self.v510_e5m2_dout_route)
+                 self.backward_initialized_from_shared_runtime = True
+                 require_matching_backward_contracts(
+                     {
+@@ -3358,6 +3722,10 @@ class LowpAttentionRuntime:
+                 "backend": (
+                     NATIVE_TK_D64_BACKEND
+                     if self.native_tk_d64_backward
++                    else NATIVE_TK_D128_V509_E5M2_DOUT_BACKEND
++                    if self.native_tk_d128_v509_e5m2_dout_backward
++                    else NATIVE_TK_D128_V510_E5M2_DOUT_BACKEND
++                    if self.native_tk_d128_v510_e5m2_dout_backward
+                     else NATIVE_TK_D128_NVFP4_SCORE_BACKEND
+                     if self.native_tk_d128_native_score_backward
+                     else NATIVE_TK_D128_SHARED_TILE_MX_BACKEND
+@@ -3379,6 +3747,10 @@ class LowpAttentionRuntime:
+             backward_type = (
+                 NativeTkD64E4M3Backward
+                 if self.native_tk_d64_backward
++                else NativeTkD128NVFP4ScoreE4M3QKVE5M2DoutBackward
++                if self.native_tk_d128_v509_e5m2_dout_backward
++                else NativeTkD128DenseE4M3ScoreQKVE5M2DoutBackward
++                if self.native_tk_d128_v510_e5m2_dout_backward
+                 else NativeTkD128NVFP4ScoreE4M3GradientBackward
+                 if self.native_tk_d128_native_score_backward
+                 else NativeTkD128SharedTileProducerV503Backward
+@@ -3411,6 +3783,24 @@ class LowpAttentionRuntime:
+                 self.native_tk_backward_extension,
+                 **backward_kwargs,
+             )
++            if self.native_tk_d128_v509_e5m2_dout_backward:
++                self.v509_e5m2_dout_route = dict(
++                    b300_require_v509_e5m2_dout_route(
++                        self.backward.extension_metadata
++                    )
++                )
++                self.projection_publication_topology[
++                    "v509_e5m2_dout_route"
++                ] = dict(self.v509_e5m2_dout_route)
++            if self.native_tk_d128_v510_e5m2_dout_backward:
++                self.v510_e5m2_dout_route = dict(
++                    b300_require_v510_e5m2_dout_route(
++                        self.backward.extension_metadata
++                    )
++                )
++                self.projection_publication_topology[
++                    "v510_e5m2_dout_route"
++                ] = dict(self.v510_e5m2_dout_route)
+             # The shared-runtime physical-identity audit historically names
+             # the executable specialization ``kernel``.  Retain that identity
+             # surface without interpreting native scheduling through CuTe
+@@ -4341,7 +4731,44 @@ class LowpAttentionRuntime:
+                         "qk_backward_source"
+                     ],
+                     "v_backward_source": publication["v_backward_source"],
+-                    "dout_backward_source": "projection_accumulator_e4m3",
++                    "dout_backward_source": (
++                        "projection_accumulator_e5m2_x4"
++                        if (
++                            self.native_tk_d128_v509_e5m2_dout_backward
++                            or self.native_tk_d128_v510_e5m2_dout_backward
++                        )
++                        else "projection_accumulator_e4m3"
++                    ),
++                    **(
++                        {
++                            "dout_backward_format": "e5m2",
++                            "dout_backward_kernel": (
++                                "b300_project_dout_unified_lowp_nvfp4_"
++                                "v509_e5m2"
++                            ),
++                            "native_tk_d128_v509_e5m2_dout_backward": True,
++                            "v509_e5m2_dout_route": dict(
++                                self.v509_e5m2_dout_route or {}
++                            ),
++                        }
++                        if self.native_tk_d128_v509_e5m2_dout_backward
++                        else {}
++                    ),
++                    **(
++                        {
++                            "dout_backward_format": "e5m2",
++                            "dout_backward_kernel": (
++                                "b300_project_dout_unified_lowp_nvfp4_"
++                                "v510_e5m2"
++                            ),
++                            "native_tk_d128_v510_e5m2_dout_backward": True,
++                            "v510_e5m2_dout_route": dict(
++                                self.v510_e5m2_dout_route or {}
++                            ),
++                        }
++                        if self.native_tk_d128_v510_e5m2_dout_backward
++                        else {}
++                    ),
+                     "native_tk_d128_native_score_backward": (
+                         self.native_tk_d128_native_score_backward
+                     ),
+@@ -6029,32 +6456,58 @@ class _LowpAttentionFunction(torch.autograd.Function):
+                     prepare_weight(out_weight.T.contiguous())
+                 )
+         with _stage("lowp/bwd/dout_projection_publish"):
+-            dout_bundle = b300_project_dout_unified_lowp_nvfp4(
+-                dy_operand,
+-                out_weight_backward_operand,
+-                attention_output,
+-                lse,
+-                batch=c.batch,
+-                seqlen=c.sequence,
+-                heads=c.q_heads,
+-                store_bf16=False,
+-                publish_fp8_backward=True,
+-                publish_stats=True,
+-                stats_workspace=runtime.backward.workspace_torch,
+-                dq_clear=(
+-                    runtime.backward.dq if c.head_dim == 128 else None
+-                ),
+-                probability_log2_lift=(
+-                    8.0 if runtime.native_tk_d128_backward else 0.0
+-                ),
+-            )
+-        assert dout_bundle.dout_backward_fp8 is not None
++            if runtime.native_tk_d128_v509_e5m2_dout_backward:
++                dout_bundle = (
++                    b300_project_dout_unified_lowp_nvfp4_v509_e5m2(
++                        dy_operand,
++                        out_weight_backward_operand,
++                        attention_output,
++                        lse,
++                        stats_workspace=runtime.backward.workspace_torch,
++                        dq_clear=runtime.backward.dq,
++                    )
++                )
++                dout_backward = dout_bundle.dout_backward_e5m2
++            elif runtime.native_tk_d128_v510_e5m2_dout_backward:
++                dout_bundle = (
++                    b300_project_dout_unified_lowp_nvfp4_v510_e5m2(
++                        dy_operand,
++                        out_weight_backward_operand,
++                        attention_output,
++                        lse,
++                        stats_workspace=runtime.backward.workspace_torch,
++                        dq_clear=runtime.backward.dq,
++                    )
++                )
++                dout_backward = dout_bundle.dout_backward_e5m2
++            else:
++                dout_bundle = b300_project_dout_unified_lowp_nvfp4(
++                    dy_operand,
++                    out_weight_backward_operand,
++                    attention_output,
++                    lse,
++                    batch=c.batch,
++                    seqlen=c.sequence,
++                    heads=c.q_heads,
++                    store_bf16=False,
++                    publish_fp8_backward=True,
++                    publish_stats=True,
++                    stats_workspace=runtime.backward.workspace_torch,
++                    dq_clear=(
++                        runtime.backward.dq if c.head_dim == 128 else None
++                    ),
++                    probability_log2_lift=(
++                        8.0 if runtime.native_tk_d128_backward else 0.0
++                    ),
++                )
++                assert dout_bundle.dout_backward_fp8 is not None
++                dout_backward = dout_bundle.dout_backward_fp8
+         with _stage("lowp/bwd/attention"):
+             runtime.bind_backward_inputs(
+                 q_fp8,
+                 k_fp8,
+                 v_backward,
+-                dout_bundle.dout_backward_fp8,
++                dout_backward,
+                 ctx.forward_mx_probability_scales,
+                 v_mxfp4_scale_pages=v_mxfp4_scale_pages,
+                 producer_workspace=(
+@@ -7927,8 +8380,9 @@ def main() -> None:
+         action=argparse.BooleanOptionalAction,
+         default=False,
+         help=(
+-            "publish represented Q/K backward values with one scale per "
+-            "logical row and K16 block"
++            "publish the row-by-K16 Q/K scales required by exact forward "
++            "score reconstruction; represented-forward backward routes "
++            "also consume these scales"
+         ),
+     )
+     parser.add_argument(
+@@ -8010,9 +8464,29 @@ def main() -> None:
+         "--native-tk-d128-native-score-backward",
+         action="store_true",
+         help=(
+-            "select the fail-closed B1 v508 native-NVFP4 score / "
+-            "represented-E4M3 gradient backward; requires the exact v508 "
+-            "D128 extension and matching NVFP4 projection/FP8-PV flags"
++            "select fail-closed B1 native-NVFP4 score reconstruction; "
++            "alone this selects the v508 represented-Q/K diagnostic, while "
++            "--native-tk-d128-v509-e5m2-dout-backward composes the v509 "
++            "accumulator-E4 Q/K/V + E5M2-dO route"
++        ),
++    )
++    parser.add_argument(
++        "--native-tk-d128-v509-e5m2-dout-backward",
++        action="store_true",
++        help=(
++            "select the fail-closed B1 v509 native-NVFP4-score backward "
++            "with retained E4M3 Q/K/V and fused E5M2 dO publication; "
++            "requires --native-tk-d128-native-score-backward and the exact "
++            "v509 D128 extension"
++        ),
++    )
++    parser.add_argument(
++        "--native-tk-d128-v510-e5m2-dout-backward",
++        action="store_true",
++        help=(
++            "select the fail-closed B1 v510 dense-E4M3-score backward with "
++            "retained E4M3 Q/K/V and fused E5M2 dO publication; requires "
++            "the exact v510 D128 extension"
+         ),
+     )
+     parser.add_argument(
+@@ -8068,6 +8542,46 @@ def main() -> None:
+             "--native-tk-d128-native-score-backward requires a complete "
+             "native TK D128 extension identity"
+         )
++    if (
++        args.native_tk_d128_v509_e5m2_dout_backward
++        and not native_tk_d128_backward
++    ):
++        raise ValueError(
++            "--native-tk-d128-v509-e5m2-dout-backward requires a complete "
++            "native TK D128 extension identity"
++        )
++    if (
++        args.native_tk_d128_v509_e5m2_dout_backward
++        and not args.native_tk_d128_native_score_backward
++    ):
++        raise ValueError(
++            "--native-tk-d128-v509-e5m2-dout-backward requires "
++            "--native-tk-d128-native-score-backward"
++        )
++    if (
++        args.native_tk_d128_v510_e5m2_dout_backward
++        and not native_tk_d128_backward
++    ):
++        raise ValueError(
++            "--native-tk-d128-v510-e5m2-dout-backward requires a complete "
++            "native TK D128 extension identity"
++        )
++    if (
++        args.native_tk_d128_native_score_backward
++        and args.native_tk_d128_v510_e5m2_dout_backward
++    ):
++        raise ValueError(
++            "v508 native-score and v510 dense-score E5M2-dO backward "
++            "selectors are mutually exclusive"
++        )
++    if (
++        args.native_tk_d128_v509_e5m2_dout_backward
++        and args.native_tk_d128_v510_e5m2_dout_backward
++    ):
++        raise ValueError(
++            "v509 native-score and v510 dense-score backward selectors are "
++            "mutually exclusive"
++        )
+     if native_tk_d64_backward and native_tk_d128_backward:
+         raise ValueError(
+             "native TK D64 and D128 backward extensions are mutually exclusive"
+@@ -8249,6 +8763,12 @@ def main() -> None:
+         native_tk_d128_native_score_backward=(
+             args.native_tk_d128_native_score_backward
+         ),
++        native_tk_d128_v509_e5m2_dout_backward=(
++            args.native_tk_d128_v509_e5m2_dout_backward
++        ),
++        native_tk_d128_v510_e5m2_dout_backward=(
++            args.native_tk_d128_v510_e5m2_dout_backward
++        ),
+     )
+     lowp, _, _, forward_dispatch = _benchmark_route(
+         "fp4_fa4_fused_qkv_rope",
+@@ -8325,6 +8845,14 @@ def main() -> None:
+             "native_tk_d128_native_score_backward": (
+                 runtime.native_tk_d128_native_score_backward
+             ),
++            "native_tk_d128_v509_e5m2_dout_backward": (
++                runtime.native_tk_d128_v509_e5m2_dout_backward
++            ),
++            "v509_e5m2_dout_route": runtime.v509_e5m2_dout_route,
++            "native_tk_d128_v510_e5m2_dout_backward": (
++                runtime.native_tk_d128_v510_e5m2_dout_backward
++            ),
++            "v510_e5m2_dout_route": runtime.v510_e5m2_dout_route,
+             "per_block_qk_scales": args.per_block_qk_scales,
+             "projection_weight_scaling": args.projection_weight_scaling,
+             "v_mxfp4_scaling": args.v_mxfp4_scaling,
+diff --git a/tk_fa4/lowp_fa4_bwd/lowp_fa4_bwd.cu b/tk_fa4/lowp_fa4_bwd/lowp_fa4_bwd.cu
+index fdafb7e..33d8a6c 100644
+--- a/tk_fa4/lowp_fa4_bwd/lowp_fa4_bwd.cu
++++ b/tk_fa4/lowp_fa4_bwd/lowp_fa4_bwd.cu
+@@ -9594,6 +9594,79 @@ pybind11::dict project_dout_unified_fp4_nvfp4_v509_e5m2_metadata() {
+     return result;
+ }
+ 
++std::vector<at::Tensor> project_dout_unified_fp4_nvfp4_v510_e5m2(
++    at::Tensor input_fp4,
++    at::Tensor input_scales,
++    at::Tensor input_global_scale,
++    at::Tensor weight_fp4,
++    at::Tensor weight_scales,
++    at::Tensor weight_global_scale,
++    at::Tensor attention_output,
++    at::Tensor lse,
++    at::Tensor stats_workspace,
++    at::Tensor dq_clear
++) {
++    // v510 deliberately reuses the proven v509 fused E5M2 publication
++    // implementation.  It has a separate symbol and metadata identity so a
++    // dense-score backward can never be authenticated as the native-score
++    // v509 consumer (or vice versa).
++    constexpr int kBatch = 1;
++    constexpr int kSequence = 4096;
++    constexpr int kHeads = 32;
++    return project_dout_unified_fp4_nvfp4_impl<true>(
++        std::move(input_fp4),
++        std::move(input_scales),
++        std::move(input_global_scale),
++        std::move(weight_fp4),
++        std::move(weight_scales),
++        std::move(weight_global_scale),
++        std::move(attention_output),
++        std::move(lse),
++        kBatch,
++        kSequence,
++        kHeads,
++        false,
++        true,
++        true,
++        std::move(stats_workspace),
++        std::move(dq_clear),
++        8.0
++    );
++}
++
++pybind11::dict project_dout_unified_fp4_nvfp4_v510_e5m2_metadata() {
++    pybind11::dict result;
++    result["schema"] = "tkfa4.v510_e5m2_dout_publisher.v1";
++    result["source_identity"] =
++        "v510_fused_nvfp4_output_projection_e5m2_dout_b1_s4096_v1";
++    result["source_file"] = __FILE__;
++    result["experimental"] = true;
++    result["production_dispatch_connected"] = false;
++    result["dispatch"] =
++        "fail_closed_B1_S4096_H32_D128_dense_score_only";
++    result["selected_epilogue"] =
++        "kernel_v509_native_score_e5m2_dout";
++    result["payload_dtype"] = "float8_e5m2";
++    result["payload_layout"] = "BSHD_contiguous";
++    result["encode"] = "(BF16.float()*4).to(float8_e5m2)";
++    result["encode_scale"] = 4.0;
++    result["logical_decode_scale"] = 0.25;
++    result["dstat_physical_abi"] = "-4*sum(O*raw_E5M2_dO)";
++    result["lstat_abi"] = "8-LSE*log2(e)";
++    result["probability_log2_lift"] = 8.0;
++    result["batch"] = 1;
++    result["sequence"] = 4096;
++    result["query_heads"] = 32;
++    result["head_dim"] = 128;
++    result["store_bf16_dout"] = false;
++    result["publish_e4m3_dout"] = false;
++    result["publish_stats"] = true;
++    result["clear_dq"] = true;
++    result["raw_output_slots"] = 8;
++    result["e5m2_payload_slot"] = 7;
++    return result;
++}
++
+ at::Tensor project_bf16_dq_persistent(
+     at::Tensor dq,
+     at::Tensor weight_t
+@@ -13560,6 +13633,17 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
+         &project_dout_unified_fp4_nvfp4_v509_e5m2_metadata,
+         "Exact fused v509 E5M2 dO publisher metadata"
+     );
++    m.def(
++        "project_dout_unified_fp4_nvfp4_v510_e5m2",
++        &project_dout_unified_fp4_nvfp4_v510_e5m2,
++        "Fail-closed B1/S4096/H32/D128 v510 dense-score output-gradient "
++        "projection publishing genuine E5M2 dO and matched statistics"
++    );
++    m.def(
++        "project_dout_unified_fp4_nvfp4_v510_e5m2_metadata",
++        &project_dout_unified_fp4_nvfp4_v510_e5m2_metadata,
++        "Exact fused v510 E5M2 dO publisher metadata"
++    );
+     m.def(
+         "project_bf16_dq_persistent",
+         &project_bf16_dq_persistent,
+diff --git a/tk_fa4/lowp_fa4_bwd/native_tk_d128_dense_score_e5m2_dout_backward.py b/tk_fa4/lowp_fa4_bwd/native_tk_d128_dense_score_e5m2_dout_backward.py
+new file mode 100644
+index 0000000..6799efb
+--- /dev/null
++++ b/tk_fa4/lowp_fa4_bwd/native_tk_d128_dense_score_e5m2_dout_backward.py
+@@ -0,0 +1,389 @@
++"""Caller-owned runtime for the experimental v510 D128 GQA TK backward.
++
++Q, K, and V are contiguous BSHD E4M3 encodings of ``4 * x``. dO alone is a
++contiguous BSHD E5M2 encoding of ``4 * dO``. The caller supplies physically
++matched ``-4 * sum(O * raw_E5M2_dO)`` (logically ``-16 * sum(O * dO)``) and
++``8 - LSE * log2(e)`` statistic pages. The kernel returns additive contiguous
++BSHD BF16 encodings of ``4 * dX``.
++
++The wrapper owns its statistics workspace and outputs for its lifetime.
++Binding new operands changes only Python tensor references and never creates
++CuTe/DLPack wrappers or allocates inside the measured training loop.
++"""
++
++from __future__ import annotations
++
++from typing import Any
++
++import torch
++
++
++BATCH = 1
++SEQUENCE = 4096
++Q_HEADS = 32
++KV_HEADS = 8
++HEAD_DIM = 128
++SOFTMAX_SCALE = HEAD_DIM**-0.5
++BACKEND = "native_tk_d128_dense_e4m3_score_qkv_e5m2_dout"
++V510_SOURCE_IDENTITY = (
++    "v510_dense_e4m3_score_qkv_e5m2_dout_b1_s4096_experimental_v1"
++)
++OUT_ENTRYPOINT = (
++    "backward_e4m3_score_qkv_e5m2_dout_bshd_precomputed_out"
++)
++MAIN_ENTRYPOINT = "main_e4m3_score_qkv_e5m2_dout_bshd_precomputed"
++EXPECTED_EXTENSION_METADATA = {
++    "schema": "tkfa4.native_tk_d128_backward.v1",
++    "backend": "thunderkittens_sm100a",
++    "source_identity": V510_SOURCE_IDENTITY,
++    "experimental": True,
++    "production_dispatch_connected": False,
++    "dispatch": "fail_closed_B1_S4096_only_no_fallback",
++    "selected_kernel": (
++        "v510::b1_dense_e4m3_score_qkv_e5m2_dout_exact_s4096_kernel"
++    ),
++    "score_qk_dtype": "float8_e4m3fn_represented_x4",
++    "score_qk_layout": "BSHD_contiguous",
++    "score_mma": "dense_E4M3_A_times_E4M3_B_transpose",
++    "gradient_qkv_dtype": "float8_e4m3fn_represented_x4",
++    "dout_dtype": "float8_e5m2_represented_x4",
++    "dout_encode_scale": 4.0,
++    "dout_decode_scale": 0.25,
++    "mixed_mma_b_format_mask": 1024,
++    "score_internal_beta_divisor": 16.0,
++    "ds_internal_beta_divisor": 16.0,
++    "lstat_abi": "8-LSE*log2(e)",
++    "dstat_abi": "-16*sum(O*dO)",
++    "dstat_physical_abi": "-4*sum(O*raw_E5M2_dO)",
++    "output_dtype": "bfloat16_additive",
++    "batch": BATCH,
++    "sequence": SEQUENCE,
++    "query_heads": Q_HEADS,
++    "kv_heads": KV_HEADS,
++    "head_dim": HEAD_DIM,
++    "threads": 512,
++    "user_shared_storage_bytes": 162 * 1024,
++    "score_schedule": "dense_E4M3_score_then_mixed_E4M3_E5M2_dP_dV",
++    "caller_owned_output_api": True,
++    "main_requires_precleared_outputs": True,
++    "backward_out_clears_dq_dk_dv": True,
++}
++SOURCE_SUFFIX = "/v510_d128_gqa_e4m3_score_qkv_e5m2_dout_b1_exact_s4096_experimental_bshd.cu"
++
++
++def _require_extension_metadata(extension: Any) -> dict[str, Any]:
++    metadata_fn = getattr(extension, "native_tk_d128_backward_metadata", None)
++    if not callable(metadata_fn):
++        raise RuntimeError(
++            "native TK D128 extension lacks "
++            "native_tk_d128_backward_metadata"
++        )
++    metadata = dict(metadata_fn())
++    missing = {*EXPECTED_EXTENSION_METADATA, "source_file"} - set(metadata)
++    if missing:
++        raise RuntimeError(
++            "native TK D128 extension metadata is incomplete: "
++            f"missing {sorted(missing)}"
++        )
++    mismatches = {
++        field: {"actual": metadata[field], "expected": expected}
++        for field, expected in EXPECTED_EXTENSION_METADATA.items()
++        if metadata[field] != expected or type(metadata[field]) is not type(expected)
++    }
++    source_file = metadata["source_file"]
++    normalized_source = (
++        source_file.replace("\\", "/")
++        if isinstance(source_file, str)
++        else ""
++    )
++    if not (
++        normalized_source == SOURCE_SUFFIX.removeprefix("/")
++        or normalized_source.endswith(SOURCE_SUFFIX)
++    ):
++        mismatches["source_file"] = {
++            "actual": source_file,
++            "expected_suffix": SOURCE_SUFFIX,
++        }
++    if mismatches:
++        raise RuntimeError(
++            "native TK D128 v510 extension does not match the experimental "
++            f"ABI: {mismatches}"
++        )
++    return metadata
++
++
++def _require_e4m3_bshd(
++    tensor: torch.Tensor,
++    *,
++    name: str,
++    batch: int,
++    heads: int,
++    device: torch.device,
++) -> None:
++    expected_shape = (batch, SEQUENCE, heads, HEAD_DIM)
++    if (
++        tensor.dtype != torch.float8_e4m3fn
++        or not tensor.is_cuda
++        or not tensor.is_contiguous()
++        or tuple(tensor.shape) != expected_shape
++        or tensor.device != device
++    ):
++        raise ValueError(
++            f"{name} must be contiguous CUDA float8_e4m3fn "
++            f"{expected_shape} on {device}; got {tensor.dtype} "
++            f"{tuple(tensor.shape)} on {tensor.device}"
++        )
++
++
++def _require_e5m2_bshd(
++    tensor: torch.Tensor,
++    *,
++    name: str,
++    batch: int,
++    heads: int,
++    device: torch.device,
++) -> None:
++    expected_shape = (batch, SEQUENCE, heads, HEAD_DIM)
++    if (
++        tensor.dtype != torch.float8_e5m2
++        or not tensor.is_cuda
++        or not tensor.is_contiguous()
++        or tuple(tensor.shape) != expected_shape
++        or tensor.device != device
++    ):
++        raise ValueError(
++            f"{name} must be contiguous CUDA float8_e5m2 "
++            f"{expected_shape} on {device}; got {tensor.dtype} "
++            f"{tuple(tensor.shape)} on {tensor.device}"
++        )
++
++
++class NativeTkD128DenseE4M3ScoreQKVE5M2DoutBackward:
++    """Preallocated strict B1/S4096 adapter around the v510 extension."""
++
++    backend = BACKEND
++    detached_fp8_p_tmem = False
++    head_fast_raster = False
++    exp2_degree = 0
++    exp2_period = 0
++    exp2_policy = {
++        "backend": backend,
++        "implementation": "native_ex2",
++        "polynomial_degree": 0,
++        "selective_period": 0,
++    }
++
++    def __init__(
++        self,
++        extension: Any,
++        *,
++        batch: int,
++        device: torch.device | str,
++    ) -> None:
++        if type(batch) is not int or batch != BATCH:
++            raise ValueError("native TK D128 v510 backward requires batch 1")
++        self.extension = extension
++        self.extension_metadata = _require_extension_metadata(extension)
++        self.compiled_out = getattr(extension, OUT_ENTRYPOINT, None)
++        if not callable(self.compiled_out):
++            raise RuntimeError(
++                f"native TK D128 v510 extension lacks {OUT_ENTRYPOINT}"
++            )
++        self.compiled_main = getattr(extension, MAIN_ENTRYPOINT, None)
++        if not callable(self.compiled_main):
++            raise RuntimeError(
++                f"native TK D128 v510 extension lacks {MAIN_ENTRYPOINT}"
++            )
++        # Keep the shared backward physical-identity audit compatible while
++        # ensuring every public run enters through the clearing wrapper.
++        self.compiled = self.compiled_out
++        self.kernel = None
++        self.loaded_artifact_identity = dict(
++            getattr(extension, "_tk_fa4_loaded_artifact_identity", {})
++        )
++        self.batch = batch
++        self.device = torch.device(device)
++        if self.device.type != "cuda":
++            raise ValueError("native TK D128 v510 backward requires CUDA")
++        if self.device.index is None:
++            self.device = torch.device("cuda", torch.cuda.current_device())
++
++        q_shape = (batch, SEQUENCE, Q_HEADS, HEAD_DIM)
++        kv_shape = (batch, SEQUENCE, KV_HEADS, HEAD_DIM)
++        stats_numel = batch * Q_HEADS * SEQUENCE
++        self.workspace_torch = torch.empty(
++            2 * stats_numel * torch.float32.itemsize,
++            device=self.device,
++            dtype=torch.uint8,
++        )
++        stats = self.workspace_torch.view(torch.float32)
++        self.dstat = stats[:stats_numel].view(batch, Q_HEADS, 1, SEQUENCE)
++        self.lstat = stats[stats_numel:].view(batch, Q_HEADS, 1, SEQUENCE)
++        self.dq = torch.empty(q_shape, device=self.device, dtype=torch.bfloat16)
++        self.dk = torch.empty(kv_shape, device=self.device, dtype=torch.bfloat16)
++        self.dv = torch.empty_like(self.dk)
++        # The backend-neutral shared-runtime identity audit retains these
++        # historical CuTe partial-workspace names. Native D128 writes BF16
++        # outputs directly, so one zero-size sentinel authenticates their
++        # shared identity without allocating unused accumulator storage.
++        unused_partial_sentinel = torch.empty(
++            0,
++            device=self.device,
++            dtype=torch.float32,
++        )
++        self.dk_partials = unused_partial_sentinel
++        self.dv_partials = unused_partial_sentinel
++
++        # v510 retains v488's B1 additive direct TMA publication.
++        self.direct_tma_dkdv = True
++        self.raster_policy = {
++            "backend": self.backend,
++            "owner_order": "key_tile_major_head_owner",
++            "host_dispatch_per_launch": False,
++            "heads_per_owner": 2,
++        }
++        self._q: torch.Tensor | None = None
++        self._k: torch.Tensor | None = None
++        self._v: torch.Tensor | None = None
++        self._dout: torch.Tensor | None = None
++        self._bind_generation = 0
++        self._run_generation = 0
++
++    def bind_inputs(
++        self,
++        q: torch.Tensor,
++        k: torch.Tensor,
++        v: torch.Tensor,
++        dout: torch.Tensor,
++    ) -> None:
++        for tensor, name, heads in (
++            (q, "q", Q_HEADS),
++            (k, "k", KV_HEADS),
++            (v, "v", KV_HEADS),
++        ):
++            _require_e4m3_bshd(
++                tensor,
++                name=name,
++                batch=self.batch,
++                heads=heads,
++                device=self.device,
++            )
++        _require_e5m2_bshd(
++            dout,
++            name="dout",
++            batch=self.batch,
++            heads=Q_HEADS,
++            device=self.device,
++        )
++        self._q = q
++        self._k = k
++        self._v = v
++        self._dout = dout
++        self._bind_generation += 1
++
++    def reset(self) -> None:
++        """No-op: the authenticated direct-output entrypoint resets outputs."""
++
++    def d128_mxfp4_v_operand_cache_receipt(self) -> None:
++        return None
++
++    def d128_mxfp4_v_compilation_receipt(self) -> None:
++        return None
++
++    def run(self, *, reset: bool) -> None:
++        if type(reset) is not bool:
++            raise TypeError("reset must be exactly bool")
++        if any(
++            operand is None
++            for operand in (self._q, self._k, self._v, self._dout)
++        ):
++            raise RuntimeError(
++                "bind_inputs() must precede native TK D128 v510 backward"
++            )
++        assert self._q is not None
++        assert self._k is not None
++        assert self._v is not None
++        assert self._dout is not None
++        # v510 publishes additive B1 gradients. Accept ``reset`` for the
++        # shared runner protocol, but always call the authenticated clearing
++        # wrapper so caller state cannot silently violate that ABI.
++        self.compiled_out(
++            self._q,
++            self._k,
++            self._v,
++            self._dout,
++            self.lstat,
++            self.dstat,
++            self.dq,
++            self.dk,
++            self.dv,
++            SOFTMAX_SCALE,
++        )
++        self._run_generation += 1
++
++    def contract(self) -> dict[str, Any]:
++        return {
++            "backend": self.backend,
++            "extension": dict(self.loaded_artifact_identity),
++            "extension_metadata": dict(self.extension_metadata),
++            "shape": {
++                "batch": self.batch,
++                "sequence": SEQUENCE,
++                "q_heads": Q_HEADS,
++                "kv_heads": KV_HEADS,
++                "head_dim": HEAD_DIM,
++            },
++            "input": {
++                "score_and_gradient_qkv": {
++                    "dtype": "torch.float8_e4m3fn",
++                    "layout": "BSHD_contiguous",
++                    "encoding_scale": 4.0,
++                    "semantics": "represented_E4M3_STE_operands",
++                },
++                "dout": {
++                    "dtype": "torch.float8_e5m2",
++                    "layout": "BSHD_contiguous",
++                    "encoding_scale": 4.0,
++                    "decode_scale": 0.25,
++                    "semantics": "represented_E5M2_STE_gradient_operand",
++                    "matched_dout_dstat_authentication": (
++                        "external_caller_responsibility"
++                    ),
++                },
++            },
++            "statistics": {
++                "workspace_page_0": "-16_sum_O_dO",
++                "workspace_page_0_physical": "-4_sum_O_raw_E5M2_dO",
++                "workspace_page_1": "8_minus_LSE_log2e",
++                "producer_native": False,
++                "dstat_population": "external_producer_required",
++                "lstat_population": "external_forward_population_required",
++            },
++            "output": {
++                "dtype": "torch.bfloat16",
++                "layout": "BSHD_contiguous",
++                "encoding_scale": 4.0,
++                "logical_reset_per_run": True,
++                "kernel_store_semantics": "additive",
++                "entrypoint": OUT_ENTRYPOINT,
++                "storage_owner": "runner",
++            },
++            "schedule": {
++                "dispatch": self.extension_metadata["dispatch"],
++                "owner_order": "key_tile_major_head_owner",
++                "direct_dkdv_unique_writer": False,
++                "gradient_publisher": "owner_reducer",
++                "always_clearing_out_entrypoint": True,
++            },
++            "allocation": {
++                "scope": "native_backward_runner_only",
++                "caller_owned_runner_storage": True,
++                "extension_outputs_runner_owned": True,
++                "e5m2_dout_external_caller_owned": True,
++                "native_run_allocations": False,
++                "native_run_dlpack_wrappers": False,
++                "external_projection_publication": (
++                    "authenticated_e4m3_qkv_and_e5m2_dout_bshd"
++                ),
++            },
++        }
+diff --git a/tk_fa4/native_gqa_tk_bwd/Makefile.v510 b/tk_fa4/native_gqa_tk_bwd/Makefile.v510
+new file mode 100644
+index 0000000..183b04e
+--- /dev/null
++++ b/tk_fa4/native_gqa_tk_bwd/Makefile.v510
+@@ -0,0 +1,39 @@
++GPU := B200
++.DEFAULT_GOAL := all
++SRC := v510_d128_gqa_e4m3_score_qkv_e5m2_dout_b1_exact_s4096_experimental_bshd.cu
++BUILD_DIR ?= /tmp/tkfa4_v510_dense_e4m3_score_qkv_e5m2_dout_b1_s4096_build
++EXT_SUFFIX := $(shell python3 -c "import sysconfig; print(sysconfig.get_config_var('EXT_SUFFIX'))")
++MODULE := _C_sm100_gqa_tk_v510_d128_e4m3_score_qkv_e5m2_dout_b1_s4096
++OUT := $(BUILD_DIR)/$(MODULE)$(EXT_SUFFIX)
++CMD := python3 -c "import importlib.util; p='$(OUT)'; s=importlib.util.spec_from_file_location('$(MODULE)', p); m=importlib.util.module_from_spec(s); s.loader.exec_module(m); print(m.native_tk_d128_backward_metadata())"
++CONFIG := pytorch
++NVCCFLAGS += -DTORCH_COMPILE
++NVCCFLAGS += -I$(CURDIR)
++
++HEADERS := \
++	v510_d128_gqa_e4m3_score_qkv_e5m2_dout_b1_exact_s4096_experimental_bshd.cuh \
++	e5m2_dout_mixed_mma_microgate_20260831.cuh \
++	v438_d128_gqa_e4m3_b2_owner2_exact_s4096_production_bshd.cuh \
++	v436_d128_gqa_e4m3_exact_s4096_runtime_accumulate_production_bshd.cuh \
++	v437_d128_gqa_e4m3_b2_owner2_production_bshd.cuh \
++	v433_d128_gqa_e4m3_head_fast_raster_production_bshd.cuh \
++	v431_d128_gqa_e4m3_bf16_dq_evacuation_production_bshd.cuh \
++	v429_d128_gqa_e4m3_owner_x32_gradient_publication_production_bshd.cuh \
++	v421_d128_gqa_e4m3_async_production_bshd.cuh \
++	v420_d128_gqa_e4m3_shared_p_production_bshd.cuh \
++	v416_d64_gqa_e4m3_production_bshd_dq_first_vec2_ds.cuh \
++	v387_d64_gqa_e4m3_async_pipeline.cuh \
++	v386_d64_gqa_e4m3_k128q128_halfcols.cuh \
++	v385_d64_gqa_e4m3_k128q128.cuh \
++	native_gqa_tk_bwd_pipelined.cuh \
++	../deprecated/fa4_common.cuh
++
++$(BUILD_DIR):
++	mkdir -p $(BUILD_DIR)
++
++$(OUT): $(HEADERS) | $(BUILD_DIR)
++
++include ../../ThunderKittens/kernels/common.mk
++
++NVCCFLAGS += -UTORCH_EXTENSION_NAME
++NVCCFLAGS += -DTORCH_EXTENSION_NAME=$(MODULE)
+diff --git a/tk_fa4/native_gqa_tk_bwd/v510_d128_gqa_e4m3_score_qkv_e5m2_dout_b1_exact_s4096_experimental_bshd.cu b/tk_fa4/native_gqa_tk_bwd/v510_d128_gqa_e4m3_score_qkv_e5m2_dout_b1_exact_s4096_experimental_bshd.cu
+new file mode 100644
+index 0000000..153b2c6
+--- /dev/null
++++ b/tk_fa4/native_gqa_tk_bwd/v510_d128_gqa_e4m3_score_qkv_e5m2_dout_b1_exact_s4096_experimental_bshd.cu
+@@ -0,0 +1,256 @@
++#include "v510_d128_gqa_e4m3_score_qkv_e5m2_dout_b1_exact_s4096_experimental_bshd.cuh"
++
++#include <array>
++#include <cmath>
++#include <cstdint>
++
++namespace {
++
++namespace candidate =
++    tkfa4::native_gqa_tk_bwd::v510_d128_gqa_e4m3_score_qkv_e5m2_dout_b1_exact_s4096_experimental_bshd;
++
++constexpr int kBatch = 1;
++constexpr int kSequence = 4096;
++constexpr int kDepth = candidate::core::kDepth;
++
++void check_bshd(
++    const at::Tensor &tensor,
++    const char *name,
++    at::ScalarType dtype,
++    int heads
++) {
++    CHECK_INPUT(tensor);
++    TORCH_CHECK(
++        tensor.scalar_type() == dtype && tensor.dim() == 4 &&
++            tensor.size(0) == kBatch && tensor.size(1) == kSequence &&
++            tensor.size(2) == heads && tensor.size(3) == kDepth,
++        name,
++        " must be contiguous CUDA [1,4096,",
++        heads,
++        ",128]"
++    );
++}
++
++void check_stats(
++    const at::Tensor &tensor,
++    const char *name,
++    const at::Tensor &q
++) {
++    CHECK_INPUT(tensor);
++    TORCH_CHECK(
++        tensor.scalar_type() == at::kFloat && tensor.dim() == 4 &&
++            tensor.size(0) == q.size(0) &&
++            tensor.size(1) == q.size(2) && tensor.size(2) == 1 &&
++            tensor.size(3) == q.size(1),
++        name,
++        " must be contiguous CUDA FP32 [B,Hq,1,S]"
++    );
++}
++
++bool byte_ranges_overlap(
++    const at::Tensor &left,
++    const at::Tensor &right
++) {
++    const auto left_begin =
++        reinterpret_cast<std::uintptr_t>(left.data_ptr());
++    const auto right_begin =
++        reinterpret_cast<std::uintptr_t>(right.data_ptr());
++    return left_begin < right_begin + right.nbytes() &&
++        right_begin < left_begin + left.nbytes();
++}
++
++void check_arguments(
++    const at::Tensor &q,
++    const at::Tensor &k,
++    const at::Tensor &v,
++    const at::Tensor &dout,
++    const at::Tensor &lstat,
++    const at::Tensor &dstat,
++    const at::Tensor &dq,
++    const at::Tensor &dk,
++    const at::Tensor &dv,
++    double softmax_scale
++) {
++    constexpr auto kE4m3 = at::ScalarType::Float8_e4m3fn;
++    check_bshd(q, "q", kE4m3, candidate::kQueryHeads);
++    check_bshd(k, "k", kE4m3, candidate::kKvHeads);
++    check_bshd(v, "v", kE4m3, candidate::kKvHeads);
++    check_bshd(
++        dout,
++        "dout_e5m2",
++        at::ScalarType::Float8_e5m2,
++        candidate::kQueryHeads
++    );
++    check_stats(lstat, "lstat", q);
++    check_stats(dstat, "dstat", q);
++    check_bshd(dq, "dq", at::kBFloat16, candidate::kQueryHeads);
++    check_bshd(dk, "dk", at::kBFloat16, candidate::kKvHeads);
++    check_bshd(dv, "dv", at::kBFloat16, candidate::kKvHeads);
++    TORCH_CHECK(
++        q.size(0) == k.size(0) && q.size(0) == v.size(0) &&
++            q.size(1) == k.size(1) && q.size(1) == v.size(1) &&
++            q.sizes() == dout.sizes() && q.sizes() == dq.sizes() &&
++            k.sizes() == dk.sizes() && k.sizes() == dv.sizes(),
++        "v510 tensors must share exact batch/sequence and gradient shapes"
++    );
++    kittens::py::device_check(q, k, v, dout, lstat, dstat, dq, dk, dv);
++    const float scale = static_cast<float>(softmax_scale);
++    const float beta = scale / 16.0f;
++    TORCH_CHECK(
++        std::isfinite(softmax_scale) && softmax_scale > 0.0 &&
++            std::isfinite(scale) && std::isfinite(beta) && beta > 0.0f,
++        "softmax_scale must be finite, positive, and representable in FP32"
++    );
++
++    using named_tensor = std::pair<const at::Tensor *, const char *>;
++    const std::array<named_tensor, 9> tensors{{
++        {&q, "q"}, {&k, "k"}, {&v, "v"}, {&dout, "dout"},
++        {&lstat, "lstat"}, {&dstat, "dstat"}, {&dq, "dq"},
++        {&dk, "dk"}, {&dv, "dv"},
++    }};
++    for (int output = 6; output < 9; ++output) {
++        for (int earlier = 0; earlier < output; ++earlier) {
++            TORCH_CHECK(
++                !byte_ranges_overlap(
++                    *tensors[output].first,
++                    *tensors[earlier].first
++                ),
++                tensors[output].second,
++                " must not overlap ",
++                tensors[earlier].second
++            );
++        }
++    }
++}
++
++void launch_checked(
++    at::Tensor q,
++    at::Tensor k,
++    at::Tensor v,
++    at::Tensor dout,
++    at::Tensor lstat,
++    at::Tensor dstat,
++    at::Tensor dq,
++    at::Tensor dk,
++    at::Tensor dv,
++    double softmax_scale,
++    bool clear_outputs
++) {
++    check_arguments(
++        q, k, v, dout, lstat, dstat, dq, dk, dv, softmax_scale
++    );
++    const c10::cuda::CUDAGuard device_guard(q.device());
++    TORCH_CHECK(
++        tkfa4::is_sm100_device(),
++        "v510 dense-score E5M2-dO experiment requires SM100"
++    );
++    const cudaStream_t stream = at::cuda::getCurrentCUDAStream().stream();
++    if (clear_outputs) {
++        CUDACHECK(cudaMemsetAsync(dq.data_ptr(), 0, dq.nbytes(), stream));
++        CUDACHECK(cudaMemsetAsync(dk.data_ptr(), 0, dk.nbytes(), stream));
++        CUDACHECK(cudaMemsetAsync(dv.data_ptr(), 0, dv.nbytes(), stream));
++    }
++    candidate::launch(
++        q,
++        k,
++        v,
++        dout,
++        lstat,
++        dstat,
++        dq,
++        dk,
++        dv,
++        static_cast<float>(softmax_scale),
++        stream
++    );
++}
++
++void main_e4m3_score_qkv_e5m2_dout_bshd_precomputed(
++    at::Tensor q,
++    at::Tensor k,
++    at::Tensor v,
++    at::Tensor dout,
++    at::Tensor lstat,
++    at::Tensor dstat,
++    at::Tensor dq,
++    at::Tensor dk,
++    at::Tensor dv,
++    double softmax_scale
++) {
++    launch_checked(
++        q, k, v, dout, lstat, dstat, dq, dk, dv, softmax_scale, false
++    );
++}
++
++void backward_e4m3_score_qkv_e5m2_dout_bshd_precomputed_out(
++    at::Tensor q,
++    at::Tensor k,
++    at::Tensor v,
++    at::Tensor dout,
++    at::Tensor lstat,
++    at::Tensor dstat,
++    at::Tensor dq,
++    at::Tensor dk,
++    at::Tensor dv,
++    double softmax_scale
++) {
++    launch_checked(
++        q, k, v, dout, lstat, dstat, dq, dk, dv, softmax_scale, true
++    );
++}
++
++pybind11::dict metadata() {
++    pybind11::dict result;
++    result["schema"] = "tkfa4.native_tk_d128_backward.v1";
++    result["backend"] = "thunderkittens_sm100a";
++    result["source_identity"] =
++        "v510_dense_e4m3_score_qkv_e5m2_dout_b1_s4096_experimental_v1";
++    result["source_file"] = __FILE__;
++    result["experimental"] = true;
++    result["production_dispatch_connected"] = false;
++    result["dispatch"] = "fail_closed_B1_S4096_only_no_fallback";
++    result["selected_kernel"] =
++        "v510::b1_dense_e4m3_score_qkv_e5m2_dout_exact_s4096_kernel";
++    result["score_qk_dtype"] = "float8_e4m3fn_represented_x4";
++    result["score_qk_layout"] = "BSHD_contiguous";
++    result["score_mma"] = "dense_E4M3_A_times_E4M3_B_transpose";
++    result["gradient_qkv_dtype"] = "float8_e4m3fn_represented_x4";
++    result["dout_dtype"] = "float8_e5m2_represented_x4";
++    result["dout_encode_scale"] = 4.0;
++    result["dout_decode_scale"] = 0.25;
++    result["mixed_mma_b_format_mask"] = 1024;
++    result["score_internal_beta_divisor"] = 16.0;
++    result["ds_internal_beta_divisor"] = 16.0;
++    result["lstat_abi"] = "8-LSE*log2(e)";
++    result["dstat_abi"] = "-16*sum(O*dO)";
++    result["dstat_physical_abi"] = "-4*sum(O*raw_E5M2_dO)";
++    result["output_dtype"] = "bfloat16_additive";
++    result["batch"] = kBatch;
++    result["sequence"] = kSequence;
++    result["query_heads"] = candidate::kQueryHeads;
++    result["kv_heads"] = candidate::kKvHeads;
++    result["head_dim"] = kDepth;
++    result["threads"] = candidate::kThreads;
++    result["user_shared_storage_bytes"] =
++        static_cast<int>(sizeof(candidate::shared_storage));
++    result["score_schedule"] =
++        "dense_E4M3_score_then_mixed_E4M3_E5M2_dP_dV";
++    result["caller_owned_output_api"] = true;
++    result["main_requires_precleared_outputs"] = true;
++    result["backward_out_clears_dq_dk_dv"] = true;
++    return result;
++}
++
++}  // namespace
++
++PYBIND11_MODULE(TORCH_EXTENSION_NAME, module) {
++    module.def(
++        "main_e4m3_score_qkv_e5m2_dout_bshd_precomputed",
++        &main_e4m3_score_qkv_e5m2_dout_bshd_precomputed
++    );
++    module.def(
++        "backward_e4m3_score_qkv_e5m2_dout_bshd_precomputed_out",
++        &backward_e4m3_score_qkv_e5m2_dout_bshd_precomputed_out
++    );
++    module.def("native_tk_d128_backward_metadata", &metadata);
++}
+diff --git a/tk_fa4/native_gqa_tk_bwd/v510_d128_gqa_e4m3_score_qkv_e5m2_dout_b1_exact_s4096_experimental_bshd.cuh b/tk_fa4/native_gqa_tk_bwd/v510_d128_gqa_e4m3_score_qkv_e5m2_dout_b1_exact_s4096_experimental_bshd.cuh
+new file mode 100644
+index 0000000..d577f5a
+--- /dev/null
++++ b/tk_fa4/native_gqa_tk_bwd/v510_d128_gqa_e4m3_score_qkv_e5m2_dout_b1_exact_s4096_experimental_bshd.cuh
+@@ -0,0 +1,1264 @@
++#pragma once
++
++#include "v438_d128_gqa_e4m3_b2_owner2_exact_s4096_production_bshd.cuh"
++#include "e5m2_dout_mixed_mma_microgate_20260831.cuh"
++
++// Fail-closed B1/S4096 successor to the authenticated v488 dense-score
++// schedule. Q/K/V retain their represented-E4M3 x4 ABI and score remains
++// dense E4M3 K @ Q^T. dO alone changes to represented E5M2 x4; only the
++// dO-dependent dP and dV products use the separately authenticated mixed
++// E4M3-A x E5M2-B descriptor. No production dispatcher includes this file.
++//
++// Reuse v439's retained K/V,
++// FP32 dK/dV ownership, exact sequence schedule, runtime first E4M3
++// gradient-MMA accumulate predicate, and additive dQ/dK/dV publication.
++// Preserve v445's exact rounded-E4M3 compact P words in registers from dV
++// publication through dS.  Split dQ's aliased TMEM lifetime from its shared
++// publication lifetime: capture the complete exact BF16 payload in registers,
++// release TMEM for the next dP, then publish the shared tile. All other shapes
++// are rejected by the standalone wrapper.
++namespace tkfa4::native_gqa_tk_bwd::v510_d128_gqa_e4m3_score_qkv_e5m2_dout_b1_exact_s4096_experimental_bshd {
++
++namespace exact =
++    tkfa4::native_gqa_tk_bwd::v436_d128_gqa_e4m3_exact_s4096_runtime_accumulate_production_bshd;
++namespace prior =
++    tkfa4::native_gqa_tk_bwd::v433_d128_gqa_e4m3_head_fast_raster_production_bshd;
++namespace x32 =
++    tkfa4::native_gqa_tk_bwd::v429_d128_gqa_e4m3_owner_x32_gradient_publication_production_bshd;
++namespace core =
++    tkfa4::native_gqa_tk_bwd::v420_d128_gqa_e4m3_shared_p_production_bshd;
++namespace d64 =
++    tkfa4::native_gqa_tk_bwd::v416_d64_gqa_e4m3_production_bshd_dq_first_vec2_ds;
++namespace mixed =
++    tkfa4::native_gqa_tk_bwd::e5m2_dout_mixed_mma_microgate_20260831;
++
++using prior::attention_tile;
++using prior::attention_tmem_tile;
++using prior::gradient_tmem_tile;
++using prior::gradient_full_tile;
++using prior::kComputeWarps;
++using prior::kColumnHalf;
++using prior::kDkTmemOffset;
++using prior::kDpDqTmemOffset;
++using prior::kDvTmemOffset;
++using prior::kHeadRatio;
++using prior::kInputStages;
++using prior::kKeyTile;
++using prior::kKvHeads;
++using prior::kLoaderWarp;
++using prior::kQueryHeads;
++using prior::kQueryTile;
++using prior::kReduceWarpBase;
++using prior::kReduceWarps;
++using prior::kScoreTmemOffset;
++using prior::kTensorIssueWarp;
++using prior::kThreads;
++using prior::operand_tile;
++using prior::stats_tile;
++
++constexpr int kHeadsPerOwner = 2;
++constexpr int kHeadPairs = kQueryHeads / kHeadsPerOwner;
++constexpr int kPairOwnersPerKvHead = kHeadRatio / kHeadsPerOwner;
++constexpr int kExactSequence = exact::kExactSequence;
++constexpr int kExactQueryTiles = exact::kExactQueryTiles;
++static_assert(kQueryHeads == 32 && kKvHeads == 8);
++static_assert(kHeadsPerOwner == 2 && kHeadPairs == 16);
++static_assert(kPairOwnersPerKvHead == 2);
++static_assert(kExactSequence == 4096 && kExactQueryTiles == 32);
++
++using dout_tile = st_fp8e5m2<kKeyTile, core::kDepth>;
++static_assert(sizeof(dout_tile) == sizeof(operand_tile));
++
++struct globals {
++    using operand_gl = prior::globals::operand_gl;
++    using dout_gl = gl<
++        fp8e5m2,
++        -1,
++        -1,
++        -1,
++        -1,
++        tma::descriptor<dout_tile, dim::DEPTH>
++    >;
++    using gradient_gl = prior::globals::gradient_gl;
++    using stats_gl = prior::globals::stats_gl;
++
++    operand_gl q;
++    operand_gl k;
++    operand_gl v;
++    dout_gl dout;
++    gradient_gl dq;
++    gradient_gl dk;
++    gradient_gl dv;
++    stats_gl lstat;
++    stats_gl dstat;
++    float beta;
++    float beta_log2e;
++    int sequence;
++};
++
++// E4M3 and E5M2 are both one byte. Changing only dO's element type therefore
++// preserves v488's shared-memory footprint, TMA geometry, and occupancy.
++struct shared_storage {
++    operand_tile k;
++    operand_tile v;
++    operand_tile q[kInputStages];
++    dout_tile dout[kInputStages];
++    attention_tile probability;
++    attention_tile ds;
++    gradient_full_tile gradient;
++    stats_tile lstat[kInputStages];
++    stats_tile dstat[kInputStages];
++};
++
++static_assert(sizeof(shared_storage) == sizeof(prior::shared_storage));
++static_assert(sizeof(shared_storage) == 162 * 1024);
++
++// Each compute lane owns 32 probability elements for one 16x64 half tile.
++// Preserve those elements in the exact E4M3 words published for dV, rather
++// than retaining the pre-rounding FP32 probability or loading the rounded
++// payload back from shared memory before dS.  Two halves therefore cost only
++// sixteen 32-bit registers per lane across the dP MMA.
++constexpr int kCompactProbabilityWords = kColumnHalf / 8;
++struct compact_probability_half {
++    uint32_t words[kCompactProbabilityWords];
++};
++static_assert(kCompactProbabilityWords == 8);
++static_assert(sizeof(compact_probability_half) == 8 * sizeof(uint32_t));
++
++template <typename SharedTile>
++__device__ __forceinline__ void publish_compact_probability_half(
++    compact_probability_half &compact,
++    SharedTile &destination,
++    const d64::owner_aligned_fp32_half &source
++) {
++    static_assert(SharedTile::rows == 16);
++    static_assert(SharedTile::cols == kColumnHalf);
++    static_assert(sizeof(typename SharedTile::dtype) == 1);
++    static_assert(SharedTile::swizzle);
++    static_assert(SharedTile::swizzle_bytes == 128);
++
++    const int lane_row = laneid() & 15;
++    const int lane_column_base = 32 * (laneid() >> 4);
++    const uint32_t shared_address = static_cast<uint32_t>(
++        __cvta_generic_to_shared(&destination.data[0])
++    );
++#pragma unroll
++    for (int word_pair = 0; word_pair < kCompactProbabilityWords / 2;
++         ++word_pair) {
++        const int first_word = 2 * word_pair;
++        const int second_word = first_word + 1;
++        const uint32_t packed_first = d64::pack_owner_e4m3_word(
++            source.pairs[2 * first_word],
++            source.pairs[2 * first_word + 1]
++        );
++        const uint32_t packed_second = d64::pack_owner_e4m3_word(
++            source.pairs[2 * second_word],
++            source.pairs[2 * second_word + 1]
++        );
++        compact.words[first_word] = packed_first;
++        compact.words[second_word] = packed_second;
++        const int column = lane_column_base + 4 * first_word;
++        const uint32_t destination_address = destination.idx(
++            shared_address,
++            {lane_row, column}
++        );
++        asm volatile(
++            "st.shared.v2.b32 [%0], {%1, %2};\n"
++            :
++            : "r"(destination_address),
++              "r"(packed_first),
++              "r"(packed_second)
++            : "memory"
++        );
++    }
++}
++
++__device__ __forceinline__ void make_probability_half_compact(
++    compact_probability_half &compact,
++    const attention_tmem_tile &score_tmem,
++    shared_storage &storage,
++    int output_subtile,
++    int column_half,
++    int input_stage,
++    bool diagonal,
++    float beta_log2e,
++    semaphore *score_consumed
++) {
++    d64::owner_aligned_fp32_half probability;
++    d64::load_owner_aligned_fp32_half(
++        probability,
++        score_tmem,
++        output_subtile,
++        column_half
++    );
++    tensor_load_wait();
++
++    if (score_consumed != nullptr) {
++        tensor_before_thread_sync();
++        __syncwarp();
++        if (laneid() == 0) {
++            arrive(*score_consumed);
++        }
++    }
++
++    constexpr float kNegInf =
++        kittens::base_types::constants<float>::neg_infty();
++    const int lane_row = laneid() & 15;
++    const int lane_column_base = 32 * (laneid() >> 4);
++    const int key_row = output_subtile * 16 + lane_row;
++    const int query_column_base =
++        column_half * kColumnHalf + lane_column_base;
++
++#pragma unroll
++    for (int pair = 0; pair < kColumnHalf / 4; ++pair) {
++        const int local_column = 2 * pair;
++        const float2 statistic = *reinterpret_cast<const float2 *>(
++            &storage.lstat[input_stage][
++                query_column_base + local_column
++            ]
++        );
++        float2 value = probability.pairs[pair];
++        value.x = value.x * beta_log2e + statistic.x;
++        value.y = value.y * beta_log2e + statistic.y;
++        if (diagonal) {
++            if (key_row > query_column_base + local_column) {
++                value.x = kNegInf;
++            }
++            if (key_row > query_column_base + local_column + 1) {
++                value.y = kNegInf;
++            }
++        }
++        value = d64::clamp_probability_log2(value);
++        probability.pairs[pair] = d64::exp2_native_f32x2(value);
++    }
++
++    auto destination =
++        storage.probability.template subtile<16, kColumnHalf>(
++            {output_subtile, column_half}
++        );
++    publish_compact_probability_half(compact, destination, probability);
++}
++
++__device__ __forceinline__ float4 expand_compact_e4m3_word(
++    uint32_t packed
++) {
++    const fp8e4m3_4 probability = std::bit_cast<fp8e4m3_4>(packed);
++    return kittens::base_types::convertor<float4, fp8e4m3_4>::convert(
++        probability
++    );
++}
++
++__device__ __forceinline__ uint32_t make_ds_compact_word(
++    uint32_t probability_word,
++    d64::owner_aligned_fp32_half &dp,
++    const stats_tile &dstat,
++    int query_column_base,
++    int word,
++    float beta
++) {
++    const int first_pair = 2 * word;
++    const int first_column = 2 * first_pair;
++    const float4 probability = expand_compact_e4m3_word(
++        probability_word
++    );
++    const float2 statistic_first = *reinterpret_cast<const float2 *>(
++        &dstat[query_column_base + first_column]
++    );
++    const float2 statistic_second = *reinterpret_cast<const float2 *>(
++        &dstat[query_column_base + first_column + 2]
++    );
++    float2 first = dp.pairs[first_pair];
++    float2 second = dp.pairs[first_pair + 1];
++    first.x = (first.x + statistic_first.x) * probability.x;
++    first.y = (first.y + statistic_first.y) * probability.y;
++    second.x = (second.x + statistic_second.x) * probability.z;
++    second.y = (second.y + statistic_second.y) * probability.w;
++    first.x *= beta;
++    first.y *= beta;
++    second.x *= beta;
++    second.y *= beta;
++    return d64::pack_owner_e4m3_word(first, second);
++}
++
++__device__ __forceinline__ void make_ds_half_compact(
++    const attention_tmem_tile &dp_tmem,
++    const compact_probability_half &compact,
++    shared_storage &storage,
++    int output_subtile,
++    int column_half,
++    int input_stage,
++    float beta
++) {
++    d64::owner_aligned_fp32_half dp;
++    d64::load_owner_aligned_fp32_half(
++        dp,
++        dp_tmem,
++        output_subtile,
++        column_half
++    );
++    tensor_load_wait();
++
++    auto destination = storage.ds.template subtile<16, kColumnHalf>(
++        {output_subtile, column_half}
++    );
++    const int lane_row = laneid() & 15;
++    const int lane_column_base = 32 * (laneid() >> 4);
++    const int query_column_base =
++        column_half * kColumnHalf + lane_column_base;
++    const uint32_t shared_address = static_cast<uint32_t>(
++        __cvta_generic_to_shared(&destination.data[0])
++    );
++#pragma unroll
++    for (int word_pair = 0; word_pair < kCompactProbabilityWords / 2;
++         ++word_pair) {
++        const int first_word = 2 * word_pair;
++        const int second_word = first_word + 1;
++        const uint32_t ds_first = make_ds_compact_word(
++            compact.words[first_word],
++            dp,
++            storage.dstat[input_stage],
++            query_column_base,
++            first_word,
++            beta
++        );
++        const uint32_t ds_second = make_ds_compact_word(
++            compact.words[second_word],
++            dp,
++            storage.dstat[input_stage],
++            query_column_base,
++            second_word,
++            beta
++        );
++        const int column = lane_column_base + 4 * first_word;
++        const uint32_t destination_address = destination.idx(
++            shared_address,
++            {lane_row, column}
++        );
++        asm volatile(
++            "st.shared.v2.b32 [%0], {%1, %2};\n"
++            :
++            : "r"(destination_address), "r"(ds_first), "r"(ds_second)
++            : "memory"
++        );
++    }
++}
++
++// Separate the TMEM source lifetime from the shared publication lifetime.
++// D0 and D1 keep the exact scale/round operation but retain their thirty-two
++// packed BF16 words in registers.  The paired D2/D3 loads then advertise
++// complete TMEM capture before ordered D0/D1/D2/D3 shared stores execute.
++__device__ __forceinline__ void drain_dq_full_owner_x32_split_release(
++    const gradient_tmem_tile &source,
++    gradient_full_tile &destination,
++    semaphore &tmem_drained,
++    semaphore &shared_ready,
++    int logical_warp,
++    int lane
++) {
++    constexpr float kOutputScale = 1.0f / 256.0f;
++    const float2 output_scale = make_float2(kOutputScale, kOutputScale);
++    const int physical_row = logical_warp * 32 + lane;
++    const uint32_t source_row =
++        source.addr +
++        (static_cast<uint32_t>(logical_warp * 32) << 16);
++    const uint32_t destination_base = static_cast<uint32_t>(
++        __cvta_generic_to_shared(destination.data)
++    );
++    static_assert(prior::kDepthChunks == 4);
++    constexpr int kFirstDeferredPackedDepthChunk = 0;
++    constexpr int kDeferredPackedDepthChunk =
++        prior::kDepthChunks - 3;
++    constexpr int kPairedDepthChunk = prior::kDepthChunks - 2;
++    constexpr int kFinalDepthChunk = prior::kDepthChunks - 1;
++    uint32_t values[prior::kDepthChunk];
++    uint32_t deferred_packed_d0_values[prior::kDepthChunk / 2];
++
++#pragma unroll 1
++    for (
++        int depth_chunk = 0;
++        depth_chunk < kDeferredPackedDepthChunk;
++        ++depth_chunk
++    ) {
++        x32::load_tmem_owner_x32(
++            values,
++            source_row + depth_chunk * prior::kDepthChunk
++        );
++        tensor_load_wait();
++
++#pragma unroll
++        for (
++            int column = 0;
++            column < prior::kDepthChunk;
++            column += 8
++        ) {
++            const float2 value0 = make_float2(
++                __uint_as_float(values[column + 0]),
++                __uint_as_float(values[column + 1])
++            );
++            const float2 value1 = make_float2(
++                __uint_as_float(values[column + 2]),
++                __uint_as_float(values[column + 3])
++            );
++            const float2 value2 = make_float2(
++                __uint_as_float(values[column + 4]),
++                __uint_as_float(values[column + 5])
++            );
++            const float2 value3 = make_float2(
++                __uint_as_float(values[column + 6]),
++                __uint_as_float(values[column + 7])
++            );
++            const bf16_2 packed0 = __float22bfloat162_rn(
++                __fmul2_rn(value0, output_scale)
++            );
++            const bf16_2 packed1 = __float22bfloat162_rn(
++                __fmul2_rn(value1, output_scale)
++            );
++            const bf16_2 packed2 = __float22bfloat162_rn(
++                __fmul2_rn(value2, output_scale)
++            );
++            const bf16_2 packed3 = __float22bfloat162_rn(
++                __fmul2_rn(value3, output_scale)
++            );
++            deferred_packed_d0_values[column / 2 + 0] =
++                *reinterpret_cast<const uint32_t *>(&packed0);
++            deferred_packed_d0_values[column / 2 + 1] =
++                *reinterpret_cast<const uint32_t *>(&packed1);
++            deferred_packed_d0_values[column / 2 + 2] =
++                *reinterpret_cast<const uint32_t *>(&packed2);
++            deferred_packed_d0_values[column / 2 + 3] =
++                *reinterpret_cast<const uint32_t *>(&packed3);
++        }
++    }
++
++    uint32_t deferred_packed_d1_values[prior::kDepthChunk / 2];
++    x32::load_tmem_owner_x32(
++        values,
++        source_row +
++            kDeferredPackedDepthChunk * prior::kDepthChunk
++    );
++    tensor_load_wait();
++
++#pragma unroll
++    for (
++        int column = 0;
++        column < prior::kDepthChunk;
++        column += 8
++    ) {
++        const float2 value0 = make_float2(
++            __uint_as_float(values[column + 0]),
++            __uint_as_float(values[column + 1])
++        );
++        const float2 value1 = make_float2(
++            __uint_as_float(values[column + 2]),
++            __uint_as_float(values[column + 3])
++        );
++        const float2 value2 = make_float2(
++            __uint_as_float(values[column + 4]),
++            __uint_as_float(values[column + 5])
++        );
++        const float2 value3 = make_float2(
++            __uint_as_float(values[column + 6]),
++            __uint_as_float(values[column + 7])
++        );
++        const bf16_2 packed0 = __float22bfloat162_rn(
++            __fmul2_rn(value0, output_scale)
++        );
++        const bf16_2 packed1 = __float22bfloat162_rn(
++            __fmul2_rn(value1, output_scale)
++        );
++        const bf16_2 packed2 = __float22bfloat162_rn(
++            __fmul2_rn(value2, output_scale)
++        );
++        const bf16_2 packed3 = __float22bfloat162_rn(
++            __fmul2_rn(value3, output_scale)
++        );
++        deferred_packed_d1_values[column / 2 + 0] =
++            *reinterpret_cast<const uint32_t *>(&packed0);
++        deferred_packed_d1_values[column / 2 + 1] =
++            *reinterpret_cast<const uint32_t *>(&packed1);
++        deferred_packed_d1_values[column / 2 + 2] =
++            *reinterpret_cast<const uint32_t *>(&packed2);
++        deferred_packed_d1_values[column / 2 + 3] =
++            *reinterpret_cast<const uint32_t *>(&packed3);
++    }
++
++    uint32_t final_values[prior::kDepthChunk];
++    x32::load_tmem_owner_x32(
++        values,
++        source_row + kPairedDepthChunk * prior::kDepthChunk
++    );
++    x32::load_tmem_owner_x32(
++        final_values,
++        source_row + kFinalDepthChunk * prior::kDepthChunk
++    );
++    tensor_load_wait();
++
++    tensor_before_thread_sync();
++    __syncwarp();
++    if (lane == 0) {
++        arrive(tmem_drained);
++    }
++
++#pragma unroll
++    for (
++        int packed_column = 0;
++        packed_column < prior::kDepthChunk / 2;
++        packed_column += 4
++    ) {
++        asm volatile(
++            "st.shared.v4.b32 [%4], {%0, %1, %2, %3};\n"
++            :
++            : "r"(deferred_packed_d0_values[packed_column + 0]),
++              "r"(deferred_packed_d0_values[packed_column + 1]),
++              "r"(deferred_packed_d0_values[packed_column + 2]),
++              "r"(deferred_packed_d0_values[packed_column + 3]),
++              "r"(gradient_full_tile::idx(
++                  destination_base,
++                  {
++                      physical_row,
++                      kFirstDeferredPackedDepthChunk *
++                              prior::kDepthChunk +
++                          2 * packed_column,
++                  }
++              ))
++            : "memory"
++        );
++    }
++
++#pragma unroll
++    for (
++        int packed_column = 0;
++        packed_column < prior::kDepthChunk / 2;
++        packed_column += 4
++    ) {
++        asm volatile(
++            "st.shared.v4.b32 [%4], {%0, %1, %2, %3};\n"
++            :
++            : "r"(deferred_packed_d1_values[packed_column + 0]),
++              "r"(deferred_packed_d1_values[packed_column + 1]),
++              "r"(deferred_packed_d1_values[packed_column + 2]),
++              "r"(deferred_packed_d1_values[packed_column + 3]),
++              "r"(gradient_full_tile::idx(
++                  destination_base,
++                  {
++                      physical_row,
++                      kDeferredPackedDepthChunk *
++                              prior::kDepthChunk +
++                          2 * packed_column,
++                  }
++              ))
++            : "memory"
++        );
++    }
++
++#pragma unroll
++    for (
++        int column = 0;
++        column < prior::kDepthChunk;
++        column += 8
++    ) {
++        const float2 value0 = make_float2(
++            __uint_as_float(values[column + 0]),
++            __uint_as_float(values[column + 1])
++        );
++        const float2 value1 = make_float2(
++            __uint_as_float(values[column + 2]),
++            __uint_as_float(values[column + 3])
++        );
++        const float2 value2 = make_float2(
++            __uint_as_float(values[column + 4]),
++            __uint_as_float(values[column + 5])
++        );
++        const float2 value3 = make_float2(
++            __uint_as_float(values[column + 6]),
++            __uint_as_float(values[column + 7])
++        );
++        const bf16_2 packed0 = __float22bfloat162_rn(
++            __fmul2_rn(value0, output_scale)
++        );
++        const bf16_2 packed1 = __float22bfloat162_rn(
++            __fmul2_rn(value1, output_scale)
++        );
++        const bf16_2 packed2 = __float22bfloat162_rn(
++            __fmul2_rn(value2, output_scale)
++        );
++        const bf16_2 packed3 = __float22bfloat162_rn(
++            __fmul2_rn(value3, output_scale)
++        );
++        x32::store_bf16_x8(
++            gradient_full_tile::idx(
++                destination_base,
++                {
++                    physical_row,
++                    kPairedDepthChunk * prior::kDepthChunk + column,
++                }
++            ),
++            packed0,
++            packed1,
++            packed2,
++            packed3
++        );
++    }
++
++#pragma unroll
++    for (
++        int column = 0;
++        column < prior::kDepthChunk;
++        column += 8
++    ) {
++        const float2 value0 = make_float2(
++            __uint_as_float(final_values[column + 0]),
++            __uint_as_float(final_values[column + 1])
++        );
++        const float2 value1 = make_float2(
++            __uint_as_float(final_values[column + 2]),
++            __uint_as_float(final_values[column + 3])
++        );
++        const float2 value2 = make_float2(
++            __uint_as_float(final_values[column + 4]),
++            __uint_as_float(final_values[column + 5])
++        );
++        const float2 value3 = make_float2(
++            __uint_as_float(final_values[column + 6]),
++            __uint_as_float(final_values[column + 7])
++        );
++        const bf16_2 packed0 = __float22bfloat162_rn(
++            __fmul2_rn(value0, output_scale)
++        );
++        const bf16_2 packed1 = __float22bfloat162_rn(
++            __fmul2_rn(value1, output_scale)
++        );
++        const bf16_2 packed2 = __float22bfloat162_rn(
++            __fmul2_rn(value2, output_scale)
++        );
++        const bf16_2 packed3 = __float22bfloat162_rn(
++            __fmul2_rn(value3, output_scale)
++        );
++        x32::store_bf16_x8(
++            gradient_full_tile::idx(
++                destination_base,
++                {
++                    physical_row,
++                    kFinalDepthChunk * prior::kDepthChunk + column,
++                }
++            ),
++            packed0,
++            packed1,
++            packed2,
++            packed3
++        );
++    }
++
++    asm volatile("fence.proxy.async.shared::cta;" ::: "memory");
++    tensor_before_thread_sync();
++    __syncwarp();
++    if (lane == 0) {
++        arrive(shared_ready);
++    }
++}
++
++// The authenticated microgate proves this descriptor is the dense E4M3
++// descriptor with exactly the B-operand E5M2 format bit (0x400) added. The
++// helper emits the four K32 MMA commands; keep the semaphore commit local.
++__device__ __forceinline__ void issue_dp_e4m3_e5m2(
++    attention_tmem_tile &destination,
++    const operand_tile &v,
++    const dout_tile &dout,
++    semaphore &completion
++) {
++    mixed::issue_mixed_product<mixed::operation::dp_abt, 0>(
++        destination,
++        v,
++        dout
++    );
++    tensor_commit<1>(completion);
++}
++
++__device__ __forceinline__ void issue_dv_e4m3_e5m2_runtime_accumulate(
++    gradient_tmem_tile &destination,
++    const attention_tile &probability,
++    const dout_tile &dout,
++    semaphore &completion,
++    bool accumulate
++) {
++    if (accumulate) {
++        mixed::issue_mixed_product<mixed::operation::dv_ab, 1>(
++            destination,
++            probability,
++            dout
++        );
++    } else {
++        mixed::issue_mixed_product<mixed::operation::dv_ab, 0>(
++            destination,
++            probability,
++            dout
++        );
++    }
++    tensor_commit<1>(completion);
++}
++
++__global__ __launch_bounds__(kThreads, 1)
++void b1_dense_e4m3_score_qkv_e5m2_dout_exact_s4096_kernel(const __grid_constant__ globals g) {
++    __shared__ alignas(1024) shared_storage storage;
++    __shared__ alignas(16) semaphore persistent_ready;
++    __shared__ alignas(16) semaphore query_ready[kInputStages];
++    __shared__ alignas(16) semaphore stats_ready[kInputStages];
++    __shared__ alignas(16) semaphore operand_consumed[kInputStages];
++    __shared__ alignas(16) semaphore stats_consumed[kInputStages];
++    __shared__ alignas(16) semaphore score_ready;
++    __shared__ alignas(16) semaphore score_consumed;
++    __shared__ alignas(16) semaphore probability_ready;
++    __shared__ alignas(16) semaphore probability_consumed;
++    __shared__ alignas(16) semaphore dp_ready;
++    __shared__ alignas(16) semaphore dv_ready;
++    __shared__ alignas(16) semaphore ds_ready;
++    __shared__ alignas(16) semaphore dq_ready;
++    __shared__ alignas(16) semaphore dk_ready;
++    __shared__ alignas(16) semaphore dq_tmem_drained;
++    __shared__ alignas(16) semaphore dq_drained;
++    __shared__ alignas(16) semaphore full_gradient_ready;
++    __shared__ alignas(16) semaphore full_gradient_reusable;
++    __shared__ alignas(16) semaphore kernel_complete;
++
++    const int physical_warp = warpid();
++    const int lane = laneid();
++    const int linear_owner = static_cast<int>(blockIdx.x);
++    const int batch = linear_owner / kHeadPairs;
++    const int head_pair = linear_owner - batch * kHeadPairs;
++    const int key_tile = static_cast<int>(blockIdx.y);
++    const int kv_head = head_pair / kPairOwnersPerKvHead;
++    const int iterations_per_head = kExactQueryTiles - key_tile;
++    const int total_work = kHeadsPerOwner * iterations_per_head;
++
++    if (physical_warp < kComputeWarps) {
++        asm volatile("setmaxnreg.inc.sync.aligned.u32 136;" ::: "memory");
++    } else if (physical_warp < kTensorIssueWarp) {
++        asm volatile("setmaxnreg.inc.sync.aligned.u32 128;" ::: "memory");
++    } else {
++        asm volatile("setmaxnreg.dec.sync.aligned.u32 96;" ::: "memory");
++    }
++
++    if (threadIdx.x == 0) {
++        init_semaphore(persistent_ready, 0, 1);
++        for (int stage = 0; stage < kInputStages; ++stage) {
++            init_semaphore(query_ready[stage], 0, 1);
++            init_semaphore(stats_ready[stage], 0, 1);
++            init_semaphore(operand_consumed[stage], 0, 1);
++            init_semaphore(stats_consumed[stage], 0, kComputeWarps);
++        }
++        init_semaphore(score_ready, 0, 1);
++        init_semaphore(score_consumed, 0, kComputeWarps);
++        init_semaphore(probability_ready, 0, kComputeWarps);
++        init_semaphore(probability_consumed, 0, kComputeWarps);
++        init_semaphore(dp_ready, 0, 1);
++        init_semaphore(dv_ready, 0, 1);
++        init_semaphore(ds_ready, 0, kComputeWarps);
++        init_semaphore(dq_ready, 0, 1);
++        init_semaphore(dk_ready, 0, 1);
++        init_semaphore(dq_tmem_drained, 0, kReduceWarps);
++        init_semaphore(dq_drained, 0, kReduceWarps);
++        init_semaphore(full_gradient_ready, 0, kReduceWarps);
++        init_semaphore(full_gradient_reusable, 0, 1);
++        init_semaphore(kernel_complete, 0, 1);
++    }
++    __syncthreads();
++
++    tensor_allocator<1, 1> tmem_allocator{};
++    attention_tmem_tile dp_tmem =
++        tmem_allocator.template allocate<attention_tmem_tile>(
++            kDpDqTmemOffset
++        );
++    gradient_tmem_tile dq_tmem =
++        tmem_allocator.template allocate<gradient_tmem_tile>(
++            kDpDqTmemOffset
++        );
++    gradient_tmem_tile dk_tmem =
++        tmem_allocator.template allocate<gradient_tmem_tile>(
++            kDkTmemOffset
++        );
++    gradient_tmem_tile dv_tmem =
++        tmem_allocator.template allocate<gradient_tmem_tile>(
++            kDvTmemOffset
++        );
++    attention_tmem_tile score_tmem =
++        tmem_allocator.template allocate<attention_tmem_tile>(
++            kScoreTmemOffset
++        );
++
++    if (physical_warp == kLoaderWarp && lane == 0) {
++        tma::expect_bytes(
++            persistent_ready,
++            sizeof(storage.k) + sizeof(storage.v)
++        );
++        tma::load_async<dim::DEPTH, cache_policy::NORMAL>(
++            storage.k,
++            g.k,
++            coord<operand_tile>{batch, key_tile, kv_head, 0},
++            persistent_ready
++        );
++        tma::load_async<dim::DEPTH, cache_policy::NORMAL>(
++            storage.v,
++            g.v,
++            coord<operand_tile>{batch, key_tile, kv_head, 0},
++            persistent_ready
++        );
++
++        int work = 0;
++#pragma unroll 1
++        for (int local_head = 0; local_head < kHeadsPerOwner; ++local_head) {
++            const int query_head =
++                kHeadsPerOwner * head_pair + local_head;
++            for (
++                int iteration = 0;
++                iteration < iterations_per_head;
++                ++iteration, ++work
++            ) {
++                const int stage = work & (kInputStages - 1);
++                if (work >= kInputStages) {
++                    const int old_phase =
++                        x32::previous_input_epoch_phase(work);
++                    wait(operand_consumed[stage], old_phase);
++                    wait(stats_consumed[stage], old_phase);
++                    tensor_after_thread_sync();
++                }
++                const int query_tile = key_tile + iteration;
++                const coord<operand_tile> operand_coordinate{
++                    batch,
++                    query_tile,
++                    query_head,
++                    0,
++                };
++                tma::expect_bytes(
++                    query_ready[stage],
++                    sizeof(storage.q[stage]) +
++                        sizeof(storage.dout[stage])
++                );
++                tma::load_async<dim::DEPTH, cache_policy::NORMAL>(
++                    storage.q[stage],
++                    g.q,
++                    operand_coordinate,
++                    query_ready[stage]
++                );
++                tma::load_async<dim::DEPTH, cache_policy::NORMAL>(
++                    storage.dout[stage],
++                    g.dout,
++                    operand_coordinate,
++                    query_ready[stage]
++                );
++
++                const coord<stats_tile> stats_coordinate{
++                    batch,
++                    query_head,
++                    0,
++                    query_tile,
++                };
++                tma::expect_bytes(
++                    stats_ready[stage],
++                    sizeof(storage.lstat[stage]) +
++                        sizeof(storage.dstat[stage])
++                );
++                tma::load_async(
++                    storage.lstat[stage],
++                    g.lstat,
++                    stats_coordinate,
++                    stats_ready[stage]
++                );
++                tma::load_async(
++                    storage.dstat[stage],
++                    g.dstat,
++                    stats_coordinate,
++                    stats_ready[stage]
++                );
++            }
++        }
++    } else if (physical_warp < kComputeWarps) {
++        const int output_subtile =
++            x32::output_subtile_for_warp(physical_warp);
++        int work = 0;
++#pragma unroll 1
++        for (int local_head = 0; local_head < kHeadsPerOwner; ++local_head) {
++            for (
++                int iteration = 0;
++                iteration < iterations_per_head;
++                ++iteration, ++work
++            ) {
++                const int stage = work & (kInputStages - 1);
++                const int phase = x32::iteration_phase(work);
++                const int input_phase =
++                    x32::input_stage_epoch_phase(work);
++                if (work > 0) {
++                    const int old_phase =
++                        x32::iteration_phase(work - 1);
++                    wait(dv_ready, old_phase);
++                    wait(probability_consumed, old_phase);
++                }
++                wait(score_ready, phase);
++                wait(stats_ready[stage], input_phase);
++                tensor_after_thread_sync();
++                compact_probability_half probability_compact[2];
++                make_probability_half_compact(
++                    probability_compact[0],
++                    score_tmem,
++                    storage,
++                    output_subtile,
++                    0,
++                    stage,
++                    iteration == 0,
++                    g.beta_log2e,
++                    nullptr
++                );
++                make_probability_half_compact(
++                    probability_compact[1],
++                    score_tmem,
++                    storage,
++                    output_subtile,
++                    1,
++                    stage,
++                    iteration == 0,
++                    g.beta_log2e,
++                    &score_consumed
++                );
++                tensor_before_thread_sync();
++                __syncwarp();
++                asm volatile(
++                    "fence.proxy.async.shared::cta;" ::: "memory"
++                );
++                if (lane == 0) {
++                    arrive(probability_ready);
++                }
++
++                wait(dp_ready, phase);
++                if (work > 0) {
++                    const int old_phase =
++                        x32::iteration_phase(work - 1);
++                    wait(dq_ready, old_phase);
++                    wait(dk_ready, old_phase);
++                }
++                tensor_after_thread_sync();
++                make_ds_half_compact(
++                    dp_tmem,
++                    probability_compact[0],
++                    storage,
++                    output_subtile,
++                    0,
++                    stage,
++                    g.beta
++                );
++                make_ds_half_compact(
++                    dp_tmem,
++                    probability_compact[1],
++                    storage,
++                    output_subtile,
++                    1,
++                    stage,
++                    g.beta
++                );
++                tensor_before_thread_sync();
++                __syncwarp();
++                asm volatile(
++                    "fence.proxy.async.shared::cta;" ::: "memory"
++                );
++                if (lane == 0) {
++                    arrive(probability_consumed);
++                    arrive(stats_consumed[stage]);
++                    arrive(ds_ready);
++                }
++            }
++        }
++        if (physical_warp == 0) {
++            wait(kernel_complete, 0);
++            tensor_after_thread_sync();
++        }
++    } else if (physical_warp == kTensorIssueWarp && lane == 0) {
++        wait(persistent_ready, 0);
++
++        int work = 0;
++#pragma unroll 1
++        for (int local_head = 0; local_head < kHeadsPerOwner; ++local_head) {
++            if (local_head > 0) {
++                const int previous_phase =
++                    x32::iteration_phase(work - 1);
++                wait(score_consumed, previous_phase);
++                wait(dq_tmem_drained, previous_phase);
++            }
++            const int first_stage = work & (kInputStages - 1);
++            wait(
++                query_ready[first_stage],
++                x32::input_stage_epoch_phase(work)
++            );
++            tensor_after_thread_sync();
++            core::issue_score_or_dp(
++                score_tmem,
++                storage.k,
++                storage.q[first_stage],
++                score_ready
++            );
++            issue_dp_e4m3_e5m2(
++                dp_tmem,
++                storage.v,
++                storage.dout[first_stage],
++                dp_ready
++            );
++
++            for (
++                int iteration = 0;
++                iteration < iterations_per_head;
++                ++iteration, ++work
++            ) {
++                const int stage = work & (kInputStages - 1);
++                const int phase = x32::iteration_phase(work);
++                const bool has_next =
++                    iteration + 1 < iterations_per_head;
++                const int next_work = work + 1;
++                const int next_stage =
++                    next_work & (kInputStages - 1);
++
++                if (has_next) {
++                    wait(score_consumed, phase);
++                    wait(
++                        query_ready[next_stage],
++                        x32::input_stage_epoch_phase(next_work)
++                    );
++                    tensor_after_thread_sync();
++                    core::issue_score_or_dp(
++                        score_tmem,
++                        storage.k,
++                        storage.q[next_stage],
++                        score_ready
++                    );
++                }
++
++                wait(probability_ready, phase);
++                tensor_after_thread_sync();
++                issue_dv_e4m3_e5m2_runtime_accumulate(
++                    dv_tmem,
++                    storage.probability,
++                    storage.dout[stage],
++                    dv_ready,
++                    work != 0
++                );
++
++                wait(ds_ready, phase);
++                tensor_after_thread_sync();
++                core::issue_gradient_atb(
++                    dq_tmem,
++                    storage.ds,
++                    storage.k,
++                    dq_ready
++                );
++                exact::issue_gradient_ab_runtime_accumulate(
++                    dk_tmem,
++                    storage.ds,
++                    storage.q[stage],
++                    dk_ready,
++                    work != 0
++                );
++
++                if (has_next) {
++                    wait(dq_tmem_drained, phase);
++                    tensor_after_thread_sync();
++                    issue_dp_e4m3_e5m2(
++                        dp_tmem,
++                        storage.v,
++                        storage.dout[next_stage],
++                        dp_ready
++                    );
++                }
++
++                wait(dk_ready, phase);
++                wait(dv_ready, phase);
++                tensor_after_thread_sync();
++                arrive(operand_consumed[stage]);
++            }
++        }
++    } else if (
++        physical_warp >= kReduceWarpBase &&
++        physical_warp < kReduceWarpBase + kReduceWarps
++    ) {
++        const int logical_warp = physical_warp - kReduceWarpBase;
++        int work = 0;
++#pragma unroll 1
++        for (int local_head = 0; local_head < kHeadsPerOwner; ++local_head) {
++            const int query_head =
++                kHeadsPerOwner * head_pair + local_head;
++            for (
++                int iteration = 0;
++                iteration < iterations_per_head;
++                ++iteration, ++work
++            ) {
++                const int phase = x32::iteration_phase(work);
++                wait(dq_ready, phase);
++                tensor_after_thread_sync();
++                if (work > 0) {
++                    prior::wait_full_gradient_reuse(
++                        full_gradient_reusable,
++                        x32::iteration_phase(work - 1),
++                        logical_warp,
++                        lane
++                    );
++                }
++                drain_dq_full_owner_x32_split_release(
++                    dq_tmem,
++                    storage.gradient,
++                    dq_tmem_drained,
++                    dq_drained,
++                    logical_warp,
++                    lane
++                );
++                prior::publish_gradient_full(
++                    g.dq,
++                    storage.gradient,
++                    dq_drained,
++                    phase,
++                    batch,
++                    key_tile + iteration,
++                    query_head,
++                    logical_warp,
++                    lane
++                );
++            }
++        }
++
++        const int last_phase =
++            x32::iteration_phase(total_work - 1);
++        wait(dk_ready, last_phase);
++        tensor_after_thread_sync();
++        prior::wait_full_gradient_reuse(
++            full_gradient_reusable,
++            x32::iteration_phase(total_work - 1),
++            logical_warp,
++            lane
++        );
++        prior::drain_gradient_full_owner_x32(
++            dk_tmem,
++            storage.gradient,
++            full_gradient_ready,
++            logical_warp,
++            lane
++        );
++        prior::publish_gradient_full(
++            g.dk,
++            storage.gradient,
++            full_gradient_ready,
++            0,
++            batch,
++            key_tile,
++            kv_head,
++            logical_warp,
++            lane
++        );
++
++        wait(dv_ready, last_phase);
++        tensor_after_thread_sync();
++        prior::wait_full_gradient_reuse(
++            full_gradient_reusable,
++            x32::iteration_phase(total_work),
++            logical_warp,
++            lane
++        );
++        prior::drain_gradient_full_owner_x32(
++            dv_tmem,
++            storage.gradient,
++            full_gradient_ready,
++            logical_warp,
++            lane
++        );
++        prior::publish_gradient_full(
++            g.dv,
++            storage.gradient,
++            full_gradient_ready,
++            1,
++            batch,
++            key_tile,
++            kv_head,
++            logical_warp,
++            lane
++        );
++        if (logical_warp == 0 && lane == 0) {
++            warp::tma::store_async_wait<0>();
++            arrive(kernel_complete);
++        }
++    }
++}
++
++inline globals make_globals(
++    at::Tensor &q,
++    at::Tensor &k,
++    at::Tensor &v,
++    at::Tensor &dout,
++    at::Tensor &lstat,
++    at::Tensor &dstat,
++    at::Tensor &dq,
++    at::Tensor &dk,
++    at::Tensor &dv,
++    float softmax_scale
++) {
++    const float beta = softmax_scale / 16.0f;
++    return globals{
++        kittens::py::tensor_to_gl<globals::operand_gl>(q),
++        kittens::py::tensor_to_gl<globals::operand_gl>(k),
++        kittens::py::tensor_to_gl<globals::operand_gl>(v),
++        kittens::py::tensor_to_gl<globals::dout_gl>(dout),
++        kittens::py::tensor_to_gl<globals::gradient_gl>(dq),
++        kittens::py::tensor_to_gl<globals::gradient_gl>(dk),
++        kittens::py::tensor_to_gl<globals::gradient_gl>(dv),
++        kittens::py::tensor_to_gl<globals::stats_gl>(
++            lstat,
++            q.size(0),
++            q.size(2),
++            1,
++            q.size(1)
++        ),
++        kittens::py::tensor_to_gl<globals::stats_gl>(
++            dstat,
++            q.size(0),
++            q.size(2),
++            1,
++            q.size(1)
++        ),
++        beta,
++        beta * kLog2E,
++        static_cast<int>(q.size(1)),
++    };
++}
++
++inline void launch(
++    at::Tensor &q,
++    at::Tensor &k,
++    at::Tensor &v,
++    at::Tensor &dout,
++    at::Tensor &lstat,
++    at::Tensor &dstat,
++    at::Tensor &dq,
++    at::Tensor &dk,
++    at::Tensor &dv,
++    float softmax_scale,
++    cudaStream_t stream
++) {
++    TORCH_CHECK(
++        q.size(0) == 1 && q.size(1) == kExactSequence,
++        "v510 is fail-closed to B1/S4096"
++    );
++
++    const globals g = make_globals(
++        q,
++        k,
++        v,
++        dout,
++        lstat,
++        dstat,
++        dq,
++        dk,
++        dv,
++        softmax_scale
++    );
++    const dim3 grid(
++        static_cast<unsigned int>(kHeadPairs * q.size(0)),
++        static_cast<unsigned int>(q.size(1) / kKeyTile),
++        1
++    );
++    b1_dense_e4m3_score_qkv_e5m2_dout_exact_s4096_kernel<<<grid, kThreads, 0, stream>>>(g);
++    CHECK_CUDA_ERROR(cudaGetLastError());
++}
++
++}  // namespace tkfa4::native_gqa_tk_bwd::v510_d128_gqa_e4m3_score_qkv_e5m2_dout_b1_exact_s4096_experimental_bshd
+diff --git a/tk_fa4/native_gqa_tk_bwd/validate_v510_dense_score_e5m2_dout.py b/tk_fa4/native_gqa_tk_bwd/validate_v510_dense_score_e5m2_dout.py
+new file mode 100644
+index 0000000..225dad6
+--- /dev/null
++++ b/tk_fa4/native_gqa_tk_bwd/validate_v510_dense_score_e5m2_dout.py
+@@ -0,0 +1,312 @@
++#!/usr/bin/env python3
++"""Authenticated natural-capture gate for experimental dense-score v510.
++
++This script is deliberately fail-closed to B1/S4096/Hq32/Hkv8/D128. It does
++not quantize operands or synthesize statistics: the capture must contain the
++exact represented E4M3 Q/K/V, represented E5M2 dO, and matched lstat/dstat
++pages consumed by the candidate. Reference gradients are logical (unscaled)
++BF16/FP32 tensors; v510's represented-x4 BF16 outputs are decoded by 0.25
++before comparison.
++
++The gate is read-only apart from an explicitly requested JSON receipt. It
++does not update models, optimizers, checkpoints, jobs, or extension artifacts.
++No GPU work happens at import time or for ``--help``.
++"""
++
++from __future__ import annotations
++
++import argparse
++import hashlib
++import importlib.util
++import json
++import math
++import pathlib
++import re
++import stat
++import sys
++from typing import Any
++
++import torch
++
++
++THIS_FILE = pathlib.Path(__file__).resolve()
++REPO_ROOT = THIS_FILE.parents[2]
++MODULE_NAME = (
++    "_C_sm100_gqa_tk_v510_d128_e4m3_score_qkv_e5m2_dout_b1_s4096"
++)
++CAPTURE_FIELDS = (
++    "q_fp8",
++    "k_fp8",
++    "v_fp8",
++    "dout_e5m2",
++    "lstat",
++    "dstat",
++    "dq_reference",
++    "dk_reference",
++    "dv_reference",
++)
++
++
++def _sha256(path: pathlib.Path) -> str:
++    digest = hashlib.sha256()
++    with path.open("rb") as stream:
++        for chunk in iter(lambda: stream.read(8 * 1024 * 1024), b""):
++            digest.update(chunk)
++    return digest.hexdigest()
++
++
++def _sha256_argument(value: str) -> str:
++    normalized = value.lower()
++    if re.fullmatch(r"[0-9a-f]{64}", normalized) is None:
++        raise argparse.ArgumentTypeError(
++            "expected exactly 64 hexadecimal digits"
++        )
++    return normalized
++
++
++def _positive_int(value: str) -> int:
++    result = int(value)
++    if result <= 0:
++        raise argparse.ArgumentTypeError("expected a positive integer")
++    return result
++
++
++def _unit_interval(value: str) -> float:
++    result = float(value)
++    if not math.isfinite(result) or not 0.0 <= result <= 1.0:
++        raise argparse.ArgumentTypeError("expected a finite value in [0,1]")
++    return result
++
++
++def _nonnegative_float(value: str) -> float:
++    result = float(value)
++    if not math.isfinite(result) or result < 0.0:
++        raise argparse.ArgumentTypeError("expected a finite nonnegative value")
++    return result
++
++
++def _stable_regular_file_identity(path: pathlib.Path) -> dict[str, int | str]:
++    requested = path.expanduser()
++    if not requested.is_absolute():
++        raise RuntimeError(f"artifact path must be absolute: {requested}")
++    before = requested.lstat()
++    if not stat.S_ISREG(before.st_mode):
++        raise RuntimeError(
++            f"artifact must be a regular non-symlink file: {requested}"
++        )
++    resolved = requested.resolve(strict=True)
++    digest = _sha256(resolved)
++    after = resolved.stat()
++    fields = ("st_dev", "st_ino", "st_size", "st_mtime_ns")
++    if any(getattr(before, field) != getattr(after, field) for field in fields):
++        raise RuntimeError(f"artifact changed while hashing: {resolved}")
++    return {
++        "path": str(resolved),
++        "sha256": digest,
++        "bytes": after.st_size,
++        "device": after.st_dev,
++        "inode": after.st_ino,
++        "mtime_ns": after.st_mtime_ns,
++    }
++
++
++def _authenticate_file(
++    path: pathlib.Path,
++    expected_sha256: str,
++    expected_bytes: int,
++    *,
++    label: str,
++) -> dict[str, int | str]:
++    identity = _stable_regular_file_identity(path)
++    mismatches: dict[str, object] = {}
++    if identity["sha256"] != expected_sha256:
++        mismatches["sha256"] = {
++            "actual": identity["sha256"],
++            "expected": expected_sha256,
++        }
++    if identity["bytes"] != expected_bytes:
++        mismatches["bytes"] = {
++            "actual": identity["bytes"],
++            "expected": expected_bytes,
++        }
++    if mismatches:
++        raise RuntimeError(f"fail-closed {label} identity mismatch: {mismatches}")
++    return identity
++
++
++def _load_extension(identity: dict[str, int | str]) -> Any:
++    path = pathlib.Path(str(identity["path"]))
++    if _stable_regular_file_identity(path) != identity:
++        raise RuntimeError(f"extension changed before import: {path}")
++    spec = importlib.util.spec_from_file_location(MODULE_NAME, path)
++    if spec is None or spec.loader is None:
++        raise RuntimeError(f"cannot construct import spec for {path}")
++    module = importlib.util.module_from_spec(spec)
++    sys.modules[MODULE_NAME] = module
++    try:
++        spec.loader.exec_module(module)
++    except BaseException:
++        sys.modules.pop(MODULE_NAME, None)
++        raise
++    if _stable_regular_file_identity(path) != identity:
++        sys.modules.pop(MODULE_NAME, None)
++        raise RuntimeError(f"extension changed while importing: {path}")
++    module._tk_fa4_loaded_artifact_identity = dict(identity)
++    return module
++
++
++def _load_capture(identity: dict[str, int | str]) -> dict[str, torch.Tensor]:
++    path = pathlib.Path(str(identity["path"]))
++    payload = torch.load(path, map_location="cpu", weights_only=True, mmap=True)
++    if not isinstance(payload, dict):
++        raise RuntimeError("capture must contain a tensor dictionary")
++    missing = set(CAPTURE_FIELDS) - set(payload)
++    if missing:
++        raise RuntimeError(f"capture is missing fields: {sorted(missing)}")
++    if any(not isinstance(payload[field], torch.Tensor) for field in CAPTURE_FIELDS):
++        raise RuntimeError("every required capture field must be a tensor")
++    if _stable_regular_file_identity(path) != identity:
++        raise RuntimeError(f"capture changed while loading: {path}")
++    return {field: payload[field] for field in CAPTURE_FIELDS}
++
++
++def _metrics(actual: torch.Tensor, reference: torch.Tensor) -> dict[str, float]:
++    actual64 = actual.double().reshape(-1)
++    reference64 = reference.double().reshape(-1)
++    difference = actual64 - reference64
++    denominator = actual64.norm() * reference64.norm()
++    cosine = (
++        float(torch.dot(actual64, reference64) / denominator)
++        if float(denominator) > 0.0
++        else float(actual64.equal(reference64))
++    )
++    return {
++        "max_abs": float(difference.abs().max()),
++        "mean_abs": float(difference.abs().mean()),
++        "cosine": cosine,
++    }
++
++
++def _parser() -> argparse.ArgumentParser:
++    parser = argparse.ArgumentParser(description=__doc__)
++    parser.add_argument("--extension", type=pathlib.Path, required=True)
++    parser.add_argument(
++        "--extension-sha256", type=_sha256_argument, required=True
++    )
++    parser.add_argument("--extension-bytes", type=_positive_int, required=True)
++    parser.add_argument("--capture", type=pathlib.Path, required=True)
++    parser.add_argument("--capture-sha256", type=_sha256_argument, required=True)
++    parser.add_argument("--capture-bytes", type=_positive_int, required=True)
++    parser.add_argument("--device", default="cuda:0")
++    parser.add_argument(
++        "--max-abs-tolerance", type=_nonnegative_float, required=True
++    )
++    parser.add_argument("--min-cosine", type=_unit_interval, required=True)
++    parser.add_argument("--json-out", type=pathlib.Path)
++    return parser
++
++
++def main(argv: list[str] | None = None) -> int:
++    args = _parser().parse_args(argv)
++    sys.path.insert(0, str(REPO_ROOT))
++    from tk_fa4.lowp_fa4_bwd.native_tk_d128_dense_score_e5m2_dout_backward import (
++        BATCH,
++        NativeTkD128DenseE4M3ScoreQKVE5M2DoutBackward,
++        _require_extension_metadata,
++    )
++
++    extension_identity = _authenticate_file(
++        args.extension,
++        args.extension_sha256,
++        args.extension_bytes,
++        label="v510 extension",
++    )
++    capture_identity = _authenticate_file(
++        args.capture,
++        args.capture_sha256,
++        args.capture_bytes,
++        label="natural capture",
++    )
++    extension = _load_extension(extension_identity)
++    extension_metadata = _require_extension_metadata(extension)
++    capture = _load_capture(capture_identity)
++
++    device = torch.device(args.device)
++    if device.type != "cuda" or not torch.cuda.is_available():
++        raise RuntimeError("v510 validation requires an available CUDA device")
++    if device.index is None:
++        device = torch.device("cuda", torch.cuda.current_device())
++    if torch.cuda.get_device_capability(device)[0] != 10:
++        raise RuntimeError("v510 validation requires an SM100 device")
++
++    runner = NativeTkD128DenseE4M3ScoreQKVE5M2DoutBackward(
++        extension, batch=BATCH, device=device
++    )
++    q = capture["q_fp8"].to(device=device)
++    k = capture["k_fp8"].to(device=device)
++    v = capture["v_fp8"].to(device=device)
++    dout = capture["dout_e5m2"].to(device=device)
++    runner.bind_inputs(q, k, v, dout)
++    runner.lstat.copy_(capture["lstat"].to(device=device, dtype=torch.float32))
++    runner.dstat.copy_(capture["dstat"].to(device=device, dtype=torch.float32))
++    runner.run(reset=True)
++    torch.cuda.synchronize(device)
++
++    results: dict[str, dict[str, float]] = {}
++    for name, actual, reference_name in (
++        ("dq", runner.dq, "dq_reference"),
++        ("dk", runner.dk, "dk_reference"),
++        ("dv", runner.dv, "dv_reference"),
++    ):
++        decoded = actual.float().mul(0.25).cpu()
++        reference = capture[reference_name].float()
++        if tuple(decoded.shape) != tuple(reference.shape):
++            raise RuntimeError(
++                f"{name} reference shape mismatch: "
++                f"{tuple(decoded.shape)} versus {tuple(reference.shape)}"
++            )
++        if not torch.isfinite(decoded).all():
++            raise RuntimeError(f"v510 emitted nonfinite {name}")
++        metric = _metrics(decoded, reference)
++        if (
++            metric["max_abs"] > args.max_abs_tolerance
++            or metric["cosine"] < args.min_cosine
++        ):
++            raise RuntimeError(f"v510 {name} tolerance failure: {metric}")
++        results[name] = metric
++
++    zero_dout = torch.zeros_like(dout)
++    runner.bind_inputs(q, k, v, zero_dout)
++    runner.dstat.zero_()
++    runner.run(reset=True)
++    torch.cuda.synchronize(device)
++    zero_gate = {
++        name: bool(torch.count_nonzero(tensor).item() == 0)
++        for name, tensor in (("dq", runner.dq), ("dk", runner.dk), ("dv", runner.dv))
++    }
++    if not all(zero_gate.values()):
++        raise RuntimeError(f"v510 exact-zero-dO gate failed: {zero_gate}")
++
++    receipt: dict[str, object] = {
++        "schema": "tkfa4.validate_v510_dense_score_e5m2_dout.v1",
++        "validator": str(THIS_FILE),
++        "extension": extension_identity,
++        "capture": capture_identity,
++        "extension_metadata": extension_metadata,
++        "thresholds": {
++            "max_abs_tolerance": args.max_abs_tolerance,
++            "min_cosine": args.min_cosine,
++        },
++        "metrics": results,
++        "exact_zero_dout": zero_gate,
++        "passed": True,
++    }
++    rendered = json.dumps(receipt, indent=2, sort_keys=True)
++    print(rendered)
++    if args.json_out is not None:
++        args.json_out.write_text(rendered + "\n", encoding="utf-8")
++    return 0
++
++
++if __name__ == "__main__":
++    raise SystemExit(main())

@@ -1,0 +1,35 @@
+--- a/fmha_bwd.py
++++ b/fmha_bwd.py
+@@ -591,18 +591,19 @@
+                     "owner dQ quantization requires compact private BF16 dQ, "
+                     "split heads, fixed B/S, and D128 128x128 tiles"
+                 )
++            owner_gradient_heads = h_r * h_k + 2 * h_k
+             owner_dq_fp4 = cute.make_tensor(
+                 owner_dq_fp4_iter,
+                 cute.make_layout(
+-                    (q_seq_max, h_r * h_k * 64),
+-                    stride=(h_r * h_k * 64, 1),
++                    (q_seq_max, owner_gradient_heads * 64),
++                    stride=(owner_gradient_heads * 64, 1),
+                 ),
+             )
+             owner_dq_scales = cute.make_tensor(
+                 owner_dq_scale_iter,
+                 cute.make_layout(
+-                    (q_seq_max // 128, h_r * h_k * 2, 512),
+-                    stride=(h_r * h_k * 1024, 512, 1),
++                    (q_seq_max // 128, owner_gradient_heads * 2, 512),
++                    stride=(owner_gradient_heads * 1024, 512, 1),
+                 ),
+             )
+         # (s, d, h_r, h_k, b) -> (s, d, ((h_r, h_k), b))
+@@ -1067,7 +1068,7 @@
+                 owner_dq_scales.iterator,
+                 cute.make_layout(
+                     (512, h_r * h_k * 2, q_seq_max // self.tile_shape_Q),
+-                    stride=(1, 512, h_r * h_k * 1024),
++                    stride=(1, 512, (h_r * h_k + 2 * h_k) * 1024),
+                 ),
+             )
+             owner_scale_smem_layout = cute.make_layout(512)

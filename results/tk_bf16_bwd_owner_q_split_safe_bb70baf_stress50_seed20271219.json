@@ -1,0 +1,739 @@
+{
+  "calls_completed": 50,
+  "calls_requested": 50,
+  "campaign_harness": {
+    "path": "/workspace/codebases/pv/fp4_matmul/results/tk_bf16_bwd_split2_bf16_cached_acc_u19_tmem_operand_release_harness.py",
+    "sha256": "0839ed281249c8d92e44ca6fde3831677e6ad9fa1a61016c430496c314ba41e4"
+  },
+  "command": [
+    "results/tk_bf16_bwd_owner_q_split_safe_bb70baf_harness.py",
+    "stress",
+    "--matrix-cell-id",
+    "U11",
+    "--seed",
+    "20271219",
+    "--calls",
+    "50",
+    "--output",
+    "results/tk_bf16_bwd_owner_q_split_safe_bb70baf_stress50_seed20271219.json"
+  ],
+  "complete": true,
+  "correctness_pass": true,
+  "created_at_utc": "2026-07-17T23:13:03.918284+00:00",
+  "cuda_visible_devices": "1",
+  "derived_harness": {
+    "path": "/workspace/codebases/pv/fp4_matmul/results/tk_bf16_bwd_s8192h16_persistent_v_branchless_harness.py",
+    "sha256": "d2d0e37f84c300df381f61dcc96908809171830b76df015ee0a8ec2f4e338bf5"
+  },
+  "drift_limits_dq_dk_dv": [
+    2e-07,
+    0.0,
+    0.0
+  ],
+  "evaluation": {
+    "correctness_pass": true,
+    "gate_checks": {
+      "input_immutability": true,
+      "input_reference_contract": true,
+      "non_alias": true,
+      "persistent_v_branchless_contract": true,
+      "reference_error_pass": true,
+      "split_control_contract": true
+    },
+    "input_immutability_contract": {
+      "pass": true,
+      "rows": [
+        {
+          "contiguous": true,
+          "device": "cuda:0",
+          "dtype": "torch.bfloat16",
+          "dtype_match": true,
+          "name": "q",
+          "pass": true,
+          "shape": [
+            1,
+            2048,
+            8,
+            192
+          ],
+          "shape_match": true,
+          "unchanged": true
+        },
+        {
+          "contiguous": true,
+          "device": "cuda:0",
+          "dtype": "torch.bfloat16",
+          "dtype_match": true,
+          "name": "k",
+          "pass": true,
+          "shape": [
+            1,
+            2048,
+            8,
+            192
+          ],
+          "shape_match": true,
+          "unchanged": true
+        },
+        {
+          "contiguous": true,
+          "device": "cuda:0",
+          "dtype": "torch.bfloat16",
+          "dtype_match": true,
+          "name": "v",
+          "pass": true,
+          "shape": [
+            1,
+            2048,
+            8,
+            128
+          ],
+          "shape_match": true,
+          "unchanged": true
+        },
+        {
+          "contiguous": true,
+          "device": "cuda:0",
+          "dtype": "torch.bfloat16",
+          "dtype_match": true,
+          "name": "dout",
+          "pass": true,
+          "shape": [
+            1,
+            2048,
+            8,
+            128
+          ],
+          "shape_match": true,
+          "unchanged": true
+        },
+        {
+          "contiguous": true,
+          "device": "cuda:0",
+          "dtype": "torch.bfloat16",
+          "dtype_match": true,
+          "name": "out",
+          "pass": true,
+          "shape": [
+            1,
+            2048,
+            8,
+            128
+          ],
+          "shape_match": true,
+          "unchanged": true
+        },
+        {
+          "contiguous": true,
+          "device": "cuda:0",
+          "dtype": "torch.float32",
+          "dtype_match": true,
+          "name": "lse_raw",
+          "pass": true,
+          "shape": [
+            1,
+            8,
+            2048
+          ],
+          "shape_match": true,
+          "unchanged": true
+        },
+        {
+          "contiguous": true,
+          "device": "cuda:0",
+          "dtype": "torch.float32",
+          "dtype_match": true,
+          "name": "lse_tk",
+          "pass": true,
+          "shape": [
+            1,
+            2048,
+            8
+          ],
+          "shape_match": true,
+          "unchanged": true
+        }
+      ]
+    },
+    "input_reference_contract": {
+      "cute_exact_arity_three": true,
+      "cute_outputs": {
+        "dk": {
+          "contiguous": true,
+          "device": "cuda:0",
+          "dtype": "torch.bfloat16",
+          "finite": true,
+          "pass": true,
+          "shape": [
+            1,
+            2048,
+            8,
+            192
+          ]
+        },
+        "dq": {
+          "contiguous": true,
+          "device": "cuda:0",
+          "dtype": "torch.bfloat16",
+          "finite": true,
+          "pass": true,
+          "shape": [
+            1,
+            2048,
+            8,
+            192
+          ]
+        },
+        "dv": {
+          "contiguous": true,
+          "device": "cuda:0",
+          "dtype": "torch.bfloat16",
+          "finite": true,
+          "pass": true,
+          "shape": [
+            1,
+            2048,
+            8,
+            128
+          ]
+        }
+      },
+      "inputs": {
+        "dout": {
+          "contiguous": true,
+          "device": "cuda:0",
+          "dtype": "torch.bfloat16",
+          "finite": true,
+          "pass": true,
+          "shape": [
+            1,
+            2048,
+            8,
+            128
+          ]
+        },
+        "k": {
+          "contiguous": true,
+          "device": "cuda:0",
+          "dtype": "torch.bfloat16",
+          "finite": true,
+          "pass": true,
+          "shape": [
+            1,
+            2048,
+            8,
+            192
+          ]
+        },
+        "lse_raw": {
+          "contiguous": true,
+          "device": "cuda:0",
+          "dtype": "torch.float32",
+          "finite": true,
+          "pass": true,
+          "shape": [
+            1,
+            8,
+            2048
+          ]
+        },
+        "lse_tk": {
+          "contiguous": true,
+          "device": "cuda:0",
+          "dtype": "torch.float32",
+          "finite": true,
+          "pass": true,
+          "shape": [
+            1,
+            2048,
+            8
+          ]
+        },
+        "out": {
+          "contiguous": true,
+          "device": "cuda:0",
+          "dtype": "torch.bfloat16",
+          "finite": true,
+          "pass": true,
+          "shape": [
+            1,
+            2048,
+            8,
+            128
+          ]
+        },
+        "q": {
+          "contiguous": true,
+          "device": "cuda:0",
+          "dtype": "torch.bfloat16",
+          "finite": true,
+          "pass": true,
+          "shape": [
+            1,
+            2048,
+            8,
+            192
+          ]
+        },
+        "v": {
+          "contiguous": true,
+          "device": "cuda:0",
+          "dtype": "torch.bfloat16",
+          "finite": true,
+          "pass": true,
+          "shape": [
+            1,
+            2048,
+            8,
+            128
+          ]
+        }
+      },
+      "pass": true
+    },
+    "metrics_vs_cute": {
+      "persistent_v_branchless_child": [
+        {
+          "finite": true,
+          "max_abs": 0.009564399719238281,
+          "name": "dq",
+          "rel_l2": 0.003273662878200412
+        },
+        {
+          "finite": true,
+          "max_abs": 0.0078125,
+          "name": "dk",
+          "rel_l2": 0.003529236651957035
+        },
+        {
+          "finite": true,
+          "max_abs": 0.00390625,
+          "name": "dv",
+          "rel_l2": 8.156767580658197e-05
+        }
+      ],
+      "split_full_overlap_control": [
+        {
+          "finite": true,
+          "max_abs": 0.009564399719238281,
+          "name": "dq",
+          "rel_l2": 0.003273662878200412
+        },
+        {
+          "finite": true,
+          "max_abs": 0.0078125,
+          "name": "dk",
+          "rel_l2": 0.003529240610077977
+        },
+        {
+          "finite": true,
+          "max_abs": 0.001953125,
+          "name": "dv",
+          "rel_l2": 3.6868357710773125e-05
+        }
+      ]
+    },
+    "non_alias_contract": {
+      "conflicts": [],
+      "output_storages": {
+        "cute_reference.dk": {
+          "data_ptr": 13717471232,
+          "device": "cuda:0",
+          "nbytes": 6291456,
+          "tensor_dtype": "torch.bfloat16",
+          "tensor_shape": [
+            1,
+            2048,
+            8,
+            192
+          ],
+          "tensor_storage_offset": 0
+        },
+        "cute_reference.dq": {
+          "data_ptr": 13711179776,
+          "device": "cuda:0",
+          "nbytes": 6291456,
+          "tensor_dtype": "torch.bfloat16",
+          "tensor_shape": [
+            1,
+            2048,
+            8,
+            192
+          ],
+          "tensor_storage_offset": 0
+        },
+        "cute_reference.dv": {
+          "data_ptr": 13723762688,
+          "device": "cuda:0",
+          "nbytes": 4194304,
+          "tensor_dtype": "torch.bfloat16",
+          "tensor_shape": [
+            1,
+            2048,
+            8,
+            128
+          ],
+          "tensor_storage_offset": 0
+        },
+        "persistent_v_branchless_child.dk": {
+          "data_ptr": 281454114242560,
+          "device": "cuda:0",
+          "nbytes": 6291456,
+          "tensor_dtype": "torch.bfloat16",
+          "tensor_shape": [
+            1,
+            2048,
+            8,
+            192
+          ],
+          "tensor_storage_offset": 0
+        },
+        "persistent_v_branchless_child.dq": {
+          "data_ptr": 281454101659648,
+          "device": "cuda:0",
+          "nbytes": 12582912,
+          "tensor_dtype": "torch.float32",
+          "tensor_shape": [
+            1,
+            2048,
+            8,
+            192
+          ],
+          "tensor_storage_offset": 0
+        },
+        "persistent_v_branchless_child.dv": {
+          "data_ptr": 281454120534016,
+          "device": "cuda:0",
+          "nbytes": 4194304,
+          "tensor_dtype": "torch.bfloat16",
+          "tensor_shape": [
+            1,
+            2048,
+            8,
+            128
+          ],
+          "tensor_storage_offset": 0
+        },
+        "split_full_overlap_control.dk": {
+          "data_ptr": 281454248460288,
+          "device": "cuda:0",
+          "nbytes": 6291456,
+          "tensor_dtype": "torch.bfloat16",
+          "tensor_shape": [
+            1,
+            2048,
+            8,
+            192
+          ],
+          "tensor_storage_offset": 0
+        },
+        "split_full_overlap_control.dq": {
+          "data_ptr": 281454235877376,
+          "device": "cuda:0",
+          "nbytes": 12582912,
+          "tensor_dtype": "torch.float32",
+          "tensor_shape": [
+            1,
+            2048,
+            8,
+            192
+          ],
+          "tensor_storage_offset": 0
+        },
+        "split_full_overlap_control.dv": {
+          "data_ptr": 281454254751744,
+          "device": "cuda:0",
+          "nbytes": 4194304,
+          "tensor_dtype": "torch.bfloat16",
+          "tensor_shape": [
+            1,
+            2048,
+            8,
+            128
+          ],
+          "tensor_storage_offset": 0
+        }
+      },
+      "output_tensor_count": 9,
+      "pass": true,
+      "protected_storages": {
+        "inputs.dout": {
+          "data_ptr": 281456702128128,
+          "device": "cuda:0",
+          "nbytes": 4194304,
+          "tensor_dtype": "torch.bfloat16",
+          "tensor_shape": [
+            1,
+            2048,
+            8,
+            128
+          ],
+          "tensor_storage_offset": 0
+        },
+        "inputs.k": {
+          "data_ptr": 281456691642368,
+          "device": "cuda:0",
+          "nbytes": 6291456,
+          "tensor_dtype": "torch.bfloat16",
+          "tensor_shape": [
+            1,
+            2048,
+            8,
+            192
+          ],
+          "tensor_storage_offset": 0
+        },
+        "inputs.lse_raw": {
+          "data_ptr": 281456708419584,
+          "device": "cuda:0",
+          "nbytes": 65536,
+          "tensor_dtype": "torch.float32",
+          "tensor_shape": [
+            1,
+            8,
+            2048
+          ],
+          "tensor_storage_offset": 0
+        },
+        "inputs.lse_tk": {
+          "data_ptr": 281456708485120,
+          "device": "cuda:0",
+          "nbytes": 65536,
+          "tensor_dtype": "torch.float32",
+          "tensor_shape": [
+            1,
+            2048,
+            8
+          ],
+          "tensor_storage_offset": 0
+        },
+        "inputs.out": {
+          "data_ptr": 13706985472,
+          "device": "cuda:0",
+          "nbytes": 4194304,
+          "tensor_dtype": "torch.bfloat16",
+          "tensor_shape": [
+            1,
+            2048,
+            8,
+            128
+          ],
+          "tensor_storage_offset": 0
+        },
+        "inputs.q": {
+          "data_ptr": 281456685350912,
+          "device": "cuda:0",
+          "nbytes": 6291456,
+          "tensor_dtype": "torch.bfloat16",
+          "tensor_shape": [
+            1,
+            2048,
+            8,
+            192
+          ],
+          "tensor_storage_offset": 0
+        },
+        "inputs.v": {
+          "data_ptr": 281456697933824,
+          "device": "cuda:0",
+          "nbytes": 4194304,
+          "tensor_dtype": "torch.bfloat16",
+          "tensor_shape": [
+            1,
+            2048,
+            8,
+            128
+          ],
+          "tensor_storage_offset": 0
+        }
+      },
+      "protected_tensor_count": 7
+    },
+    "persistent_v_branchless_contract": {
+      "exact_arity_three": true,
+      "pass": true,
+      "rows": [
+        {
+          "contiguous": true,
+          "device": "cuda:0",
+          "dtype": "torch.float32",
+          "finite": true,
+          "name": "dq",
+          "pass": true,
+          "shape": [
+            1,
+            2048,
+            8,
+            192
+          ]
+        },
+        {
+          "contiguous": true,
+          "device": "cuda:0",
+          "dtype": "torch.bfloat16",
+          "finite": true,
+          "name": "dk",
+          "pass": true,
+          "shape": [
+            1,
+            2048,
+            8,
+            192
+          ]
+        },
+        {
+          "contiguous": true,
+          "device": "cuda:0",
+          "dtype": "torch.bfloat16",
+          "finite": true,
+          "name": "dv",
+          "pass": true,
+          "shape": [
+            1,
+            2048,
+            8,
+            128
+          ]
+        }
+      ]
+    },
+    "split_control_contract": {
+      "exact_arity_three": true,
+      "pass": true,
+      "rows": [
+        {
+          "contiguous": true,
+          "device": "cuda:0",
+          "dtype": "torch.float32",
+          "finite": true,
+          "name": "dq",
+          "pass": true,
+          "shape": [
+            1,
+            2048,
+            8,
+            192
+          ]
+        },
+        {
+          "contiguous": true,
+          "device": "cuda:0",
+          "dtype": "torch.bfloat16",
+          "finite": true,
+          "name": "dk",
+          "pass": true,
+          "shape": [
+            1,
+            2048,
+            8,
+            192
+          ]
+        },
+        {
+          "contiguous": true,
+          "device": "cuda:0",
+          "dtype": "torch.bfloat16",
+          "finite": true,
+          "name": "dv",
+          "pass": true,
+          "shape": [
+            1,
+            2048,
+            8,
+            128
+          ]
+        }
+      ]
+    }
+  },
+  "extension": {
+    "path": "/workspace/codebases/pv/fp4_matmul/results/.artifacts/tk_bf16_bwd_owner_q_split_safe_bb70baf_20260717/_C.cpython-312-aarch64-linux-gnu.so",
+    "sha256": "f2531ef668b2cdc9d58542543dd05335e04e3fd0242641cc00af68a7ce7fc373",
+    "size_bytes": 10736808
+  },
+  "finite_dq_dk_dv": [
+    true,
+    true,
+    true
+  ],
+  "first_drift_dq_dk_dv": [
+    {
+      "call_index": 1,
+      "max_abs": 2.2351741790771484e-08
+    },
+    null,
+    null
+  ],
+  "gate_pass": true,
+  "harness": {
+    "path": "/workspace/codebases/pv/fp4_matmul/results/tk_bf16_bwd_owner_q_split_safe_bb70baf_harness.py",
+    "sha256": "53b72ecec8bb1aada894396cd49289de1b86cf63ea8bc022a356ee08fe928646"
+  },
+  "matrix_cell_id": "U11",
+  "max_repeat_drift_dq_dk_dv": [
+    2.9802322387695312e-08,
+    0.0,
+    0.0
+  ],
+  "mode": "stress",
+  "output_path": "/workspace/codebases/pv/fp4_matmul/results/tk_bf16_bwd_owner_q_split_safe_bb70baf_stress50_seed20271219.json",
+  "repeat_stability_pass": true,
+  "resolved_shape": {
+    "batch": 1,
+    "dqk": 192,
+    "dv": 128,
+    "heads": 8,
+    "seqlen": 2048
+  },
+  "routes": {
+    "owner_q_split_child": "b300_mha_bwd_hot_cute16_candidate_s2048h8_owner_q_split_internal",
+    "persistent_v_branchless_bitwise_parent": "b300_mha_bwd_hot_cute16_candidate_s2048h8_persistent_v_branchless_internal",
+    "reference": "CuTe DSL BF16 FA4 backward"
+  },
+  "seed": 20271219,
+  "state": "finished",
+  "static_gate": {
+    "extracted_sass_sha256": {
+      "parent": "1643528ad0ba7f07d5effe0b6c67d9bab51c1508b4bbe4a36ad74bdee80320ae",
+      "split_0": "79bd456180bfff9b7f32f1d6a4ee246c41d5f8849f9e8e7ff9932d3665fc5f1f",
+      "split_1": "fc5a88da45d8b880976539b69eea7ec0b0eae4f2f701af070741a4b8154d3179"
+    },
+    "parent_machine_words_match_frozen": true,
+    "parent_machine_words_sha256": "ca521ad75b4983ddbee6e2289e75b69eae5eec8e9eb98b3955da5851aebdd697",
+    "pass": true,
+    "public_dispatch_unchanged": true,
+    "resources": {
+      "parent": {
+        "local_bytes": 0,
+        "registers": 128,
+        "shared_bytes": 231276,
+        "spill_loads": 0,
+        "spill_stores": 0,
+        "stack_bytes": 0
+      },
+      "split_0": {
+        "local_bytes": 0,
+        "registers": 128,
+        "shared_bytes": 231276,
+        "spill_loads": 0,
+        "spill_stores": 0,
+        "stack_bytes": 0
+      },
+      "split_1": {
+        "local_bytes": 0,
+        "registers": 128,
+        "shared_bytes": 231276,
+        "spill_loads": 0,
+        "spill_stores": 0,
+        "stack_bytes": 0
+      }
+    },
+    "runtime_scope": "exact B1 S2048 H8 even/odd fused-Q-work owner split",
+    "same_method_instruction_counts": {
+      "parent": 4688,
+      "split_0": 3544,
+      "split_1": 3536
+    },
+    "utchmma_2cta_per_body": 52
+  }
+}

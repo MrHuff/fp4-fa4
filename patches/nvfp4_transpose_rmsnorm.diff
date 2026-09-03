@@ -1,0 +1,132 @@
+11,12c11,12
+< #ifndef TRANSFORMER_ENGINE_NVFP4_TRANSPOSE_CUH_
+< #define TRANSFORMER_ENGINE_NVFP4_TRANSPOSE_CUH_
+---
+> #ifndef FP4_MATMUL_NVFP4_TRANSPOSE_FUSED_CUH_
+> #define FP4_MATMUL_NVFP4_TRANSPOSE_FUSED_CUH_
+353c353,354
+<           typename IType, bool USE_STOCHASTIC_ROUNDING, bool RETURN_TRANSPOSE, bool ENCODE_CENTRIC>
+---
+>           typename IType, bool USE_STOCHASTIC_ROUNDING, bool RETURN_TRANSPOSE, bool ENCODE_CENTRIC,
+>           bool COMPUTE_RMSNORM = false>
+362c363,365
+<                            const size_t scale_stride_t, const size_t *rng_state) {
+---
+>                            const size_t scale_stride_t, const size_t *rng_state,
+>                            const float *inv_rms_ptr = nullptr,
+>                            const IType *norm_weight_ptr = nullptr) {
+553a557,566
+>             // Apply RMSNorm: elt = elt * inv_rms[row] * norm_weight[col]
+>             if constexpr (COMPUTE_RMSNORM) {
+>               const size_t global_row = row_base_colwise + stage_offset_Y + i;
+>               const size_t global_col = col_base_colwise;
+>               if (global_row < rows && global_col < cols) {
+>                 float inv_rms_val = inv_rms_ptr[global_row];
+>                 float w = static_cast<float>(norm_weight_ptr[global_col]);
+>                 elt = elt * inv_rms_val * w;
+>               }
+>             }
+565c578
+<             if constexpr (COMPUTE_ACTIVATIONS) {
+---
+>             if constexpr (COMPUTE_ACTIVATIONS || COMPUTE_RMSNORM) {
+744a758,767
+>               // Apply RMSNorm: elt = elt * inv_rms[row] * norm_weight[col]
+>               if constexpr (COMPUTE_RMSNORM) {
+>                 const size_t global_row = row_base_rowwise + it_offset_Y;
+>                 const size_t global_col = block_offset_X + swizzled_thread_idx + e;
+>                 if (global_row < rows && global_col < cols) {
+>                   float inv_rms_val = inv_rms_ptr[global_row];
+>                   float w_val = static_cast<float>(norm_weight_ptr[global_col]);
+>                   elt = elt * inv_rms_val * w_val;
+>                 }
+>               }
+752c775
+<               if constexpr (COMPUTE_ACTIVATIONS) {
+---
+>               if constexpr (COMPUTE_ACTIVATIONS || COMPUTE_RMSNORM) {
+900c923,924
+<           typename IType, bool USE_STOCHASTIC_ROUNDING, bool RETURN_TRANSPOSE, bool ENCODE_CENTRIC>
+---
+>           typename IType, bool USE_STOCHASTIC_ROUNDING, bool RETURN_TRANSPOSE, bool ENCODE_CENTRIC,
+>           bool COMPUTE_RMSNORM = false>
+909c933,935
+<                               const size_t scale_stride_t, const size_t *rng_state) {
+---
+>                               const size_t scale_stride_t, const size_t *rng_state,
+>                               const float *inv_rms_ptr = nullptr,
+>                               const IType *norm_weight_ptr = nullptr) {
+1117a1144,1151
+>             // Apply RMSNorm: elt = elt * inv_rms[row] * norm_weight[col]
+>             if constexpr (COMPUTE_RMSNORM) {
+>               const size_t global_row = block_offset_Y + stage_offset_Y + elem_row;
+>               const size_t global_col = block_offset_X + elem_col;
+>               float inv_rms_val = inv_rms_ptr[global_row];
+>               float w = static_cast<float>(norm_weight_ptr[global_col]);
+>               elt = elt * inv_rms_val * w;
+>             }
+1177a1212,1221
+>             // Apply RMSNorm before activation
+>             if constexpr (COMPUTE_RMSNORM) {
+>               const size_t global_row = block_offset_Y + stage_offset_Y + it * SCALE_DIM + i;
+>               const size_t global_col = block_offset_X + thread_offset_X_colwise;
+>               if (global_row < rows && global_col < cols) {
+>                 float inv_rms_val = inv_rms_ptr[global_row];
+>                 float w = static_cast<float>(norm_weight_ptr[global_col]);
+>                 elt = elt * inv_rms_val * w;
+>               }
+>             }
+1323a1368,1378
+>               // Apply RMSNorm: elt = elt * inv_rms[row] * norm_weight[col]
+>               if constexpr (COMPUTE_RMSNORM) {
+>                 const size_t it_offset_Y = it * THREADS_Y_ROWWISE;
+>                 const size_t global_row = block_offset_Y + stage_offset_Y + it_offset_Y + tid_Y_rowwise;
+>                 const size_t global_col = block_offset_X + swizzled_thread_idx + e;
+>                 if (global_row < rows && global_col < cols) {
+>                   float inv_rms_val = inv_rms_ptr[global_row];
+>                   float w_val = static_cast<float>(norm_weight_ptr[global_col]);
+>                   elt = elt * inv_rms_val * w_val;
+>                 }
+>               }
+1467c1522
+<           bool use_2d_quantization>
+---
+>           bool use_2d_quantization, bool COMPUTE_RMSNORM = false>
+1469c1524,1526
+<                               const QuantizationConfig *quant_config, cudaStream_t stream) {
+---
+>                               const QuantizationConfig *quant_config, cudaStream_t stream,
+>                               const float *inv_rms_ptr = nullptr,
+>                               const void *norm_weight_ptr = nullptr) {
+1476d1532
+<   // TODO(Frank): Is there a better way to do this?
+1498a1555,1560
+>   // Validate RMSNorm args when enabled
+>   if constexpr (COMPUTE_RMSNORM) {
+>     NVTE_CHECK(inv_rms_ptr != nullptr, "inv_rms_ptr must be provided when COMPUTE_RMSNORM is true");
+>     NVTE_CHECK(norm_weight_ptr != nullptr, "norm_weight_ptr must be provided when COMPUTE_RMSNORM is true");
+>   }
+> 
+1536a1599
+>   const IType *norm_weight_typed = reinterpret_cast<const IType *>(norm_weight_ptr);
+1576c1639,1640
+<                                              USE_STOCHASTIC_ROUNDING, RETURN_TRANSPOSE, ENCODE_CENTRIC>;
+---
+>                                              USE_STOCHASTIC_ROUNDING, RETURN_TRANSPOSE, ENCODE_CENTRIC,
+>                                              COMPUTE_RMSNORM>;
+1580c1644,1645
+<                                              USE_STOCHASTIC_ROUNDING, RETURN_TRANSPOSE, ENCODE_CENTRIC>;
+---
+>                                              USE_STOCHASTIC_ROUNDING, RETURN_TRANSPOSE, ENCODE_CENTRIC,
+>                                              COMPUTE_RMSNORM>;
+1587c1652,1653
+<             scale_stride, scale_stride_transpose, rng_state);
+---
+>             scale_stride, scale_stride_transpose, rng_state,
+>             inv_rms_ptr, norm_weight_typed);
+1594c1660
+< #endif  // TRANSFORMER_ENGINE_NVFP4_TRANSPOSE_CUH_
+\ No newline at end of file
+---
+> #endif  // FP4_MATMUL_NVFP4_TRANSPOSE_FUSED_CUH_
+\ No newline at end of file

@@ -1,0 +1,159 @@
+\section{Reproduction and Compile-Time Contract}
+\label{app:reproduction}
+
+\subsection{Canonical command graph}
+
+The release verifier authenticates the committed source and historical
+snapshot bytes. Fresh measurements can be generated from the repository root with
+\path{tools/plan_fa4_measurements.py}. The planner selects the historical
+snapshot under \path{reproduction/snapshots/forward_cfc06dad} for the
+noncausal study and the root causal source for the training study. It checks
+supplied causal artifacts and external assets, then emits a fresh build and run
+graph; it does not download data, run CUDA, or submit a job. Newly built
+extensions are checked against generated bundle manifests or recorded by
+content digest when the generated command executes.
+
+List the complete graph with:
+\begin{lstlisting}[language=bash]
+python3 tools/plan_fa4_measurements.py list
+\end{lstlisting}
+For example, this validates and prints the noncausal forward graph:
+\begin{lstlisting}[language=bash]
+python3 tools/plan_fa4_measurements.py print \
+  --family noncausal-forward \
+  --python /absolute/path/python3 \
+  --output-root /absolute/path/new-results \
+  --noncausal-build-root /absolute/path/new-build \
+  --cuda-home /absolute/path/cuda-13.0 \
+  --cutlass-dsl-root /absolute/path/cutlass-dsl
+\end{lstlisting}
+The output and build roots must be new or empty. A blocked node is printed as a
+comment and makes the planner exit with status 2; missing evidence is never
+replaced by a guessed command. The generated noncausal suite preallocates
+outputs, cycles provider order, and records every timing window.
+
+\subsection{Fixed-input model evaluations}
+
+ViT, BERT masked-language-model, and SST-2 replacement measurements use the
+\code{downstream} family. Each generated process runs exactly one task with an
+explicit extension root and one authenticated model/dataset pair:
+\begin{lstlisting}[language=bash]
+python3 tools/plan_fa4_measurements.py print \
+  --family downstream \
+  --python /absolute/path/python3 \
+  --output-root /absolute/path/new-results \
+  --noncausal-build-root /absolute/path/new-build \
+  --cuda-home /absolute/path/cuda-13.0 \
+  --cutlass-dsl-root /absolute/path/cutlass-dsl \
+  --external-assets-manifest /absolute/path/assets.json
+\end{lstlisting}
+The asset manifest binds immutable revisions and every local file by byte count
+and SHA256. These commands produce new, fully pinned measurements. The
+historical paper rows remain receipt-backed because their original external
+asset revisions were not recorded.
+
+The \code{vit-mae} and \code{wan} families use the same asset contract. The
+ViT-MAE manifest must identify the recorded 100 COCO validation images. Wan
+keeps the logical model identifier separate from the authenticated local model
+snapshot and builds the fast and accurate policy bundles before evaluation. The
+paired HAO-BF16/TK comparison is available; HAO low-precision Wan controls remain
+blocked because their exact extension build identity was not preserved.
+
+The committed Wan table is a historical artifact. Some calibration and
+provider JSON inputs needed to regenerate it are absent, so the release does
+not advertise \path{build_tables.py} as a complete rebuild. The retained
+receipts support the reported values, while a fresh \code{wan} run produces
+replacement evidence under the current authenticated protocol.
+
+\subsection{Offline artifacts and external inputs}
+
+Tables, figures, and manuscript outputs supported by committed inputs are
+rebuilt without network access using:
+\begin{lstlisting}[language=bash]
+python3 tools/reproduce_fa4_paper.py --run --offline all
+\end{lstlisting}
+\path{docs/fa4_measurement_reproduction.md} defines the external-asset and
+artifact-manifest schemas. It also records which historical measurements are
+receipt-only and which can be replaced by a fully authenticated fresh run.
+
+\subsection{B300 aggregate reconstruction}
+
+The source release contains the committed aggregate B300 summary used by the
+paper, but not the larger raw cluster-capture archive. Regenerate the LaTeX
+tables from that committed summary with:
+\begin{lstlisting}[language=bash]
+python3 results/fp4_fa4_b300_tuning_20260802/\
+build_summary.py --from-summary
+\end{lstlisting}
+This route performs no network access and validates the summary schema before
+rendering. Recomputing the aggregate from raw captures remains blocked until a
+checksummed raw-capture bundle is published separately. Once available,
+restore it beneath the B300 result directory and run
+\code{build\_summary.py} without \code{--from-summary}. Cluster submission
+files, scheduler identifiers, private storage locations, and secret wiring are
+operational metadata rather than scientific inputs and are excluded from the
+public reproduction path.
+
+\subsection{Required operand contract}
+
+Both retained policies require folded K64 Q/K scales selected by the MSE
+policy:
+\begin{lstlisting}[language=bash]
+--nv-qk-fold-k64-scales both \
+--nv-qk-fold-scale-select mse
+\end{lstlisting}
+\code{Accurate} also requires the same fixed 32-row permutation for K and V.
+Pairing a folded-scale binary with ordinary block-16 Q/K scales can produce
+plausible timing and invalid accuracy; the suite couples the binary and
+operand arguments.
+
+\subsection{Retained compile-time policy}
+
+\code{Fast} uses a 12-stage K/V ring, all-affine mode 23, four-word
+represented denominators, paired scale reuse, wide three-input maxima,
+Q-scale preloading, early asynchronous P-scale handoff, and a 200/208/56
+register split. \code{Accurate} uses 13 K/V stages, native EX2 samples, a
+32-row anchor, and correction-warpgroup normalization.
+
+Historical NV/NV, intermediate NV/MX, sparse, sampled-denominator,
+direct-code, quadratic, two-CTA, alternate-owner, and interleaving probes
+remain compile-gated and default-off.
+
+\section{Terminology}
+
+\begin{description}
+  \item[Direct-P] The retained forward-inference method: NVFP4 Q/K,
+  MXFP4 P/V, direct log-score-to-E2M1 probability conversion, and
+  normalization from the represented probability consumed by PV.
+  \item[Quantized causal backward] The retained training method: reconstruct
+  P from the saved quantized Q/K payload, scales, and LSE, then use
+  range-appropriate, matrix-oriented FP8 operands for gradient products.
+  \item[BF16 / FP8 / FP4] Bfloat16 and 8-/4-bit floating-point families.
+  E$x$M$y$ denotes $x$ exponent bits and $y$ explicit fraction bits.
+  \item[SM / CTA] A streaming multiprocessor is one GPU compute unit; a
+  cooperative thread array is a CUDA thread block scheduled on an SM.
+  \item[TMEM / TMA] Tensor memory is Blackwell's on-chip matrix-accumulator
+  scratchpad.  The Tensor Memory Accelerator moves tiles between GPU memory
+  spaces.
+  \item[MMA] A tensor-core matrix multiply--accumulate operation.
+  \item[FMA / SFU / EX2] Fused multiply--add; special-function unit; and the
+  hardware base-two exponential instruction.
+  \item[GQA / RoPE / LSE] Grouped-query attention; rotary positional
+  embedding; and the per-row log-sum-exp softmax normalizer.
+  \item[Quarter] One N32 fragment read from an N128 score tile. Four producer
+  quarters feed two K64 scaled-FP4 PV commands.
+  \item[Score bank] A 128-column FP32 TMEM region receiving QK and later
+  hosting transient P/scale overlays.
+  \item[Output bank] A permanent 128-column FP32 PV accumulator for one query
+  stage.
+  \item[Represented denominator] A normalizer summed from the E2M1 payload
+  and decoded block scale actually consumed by PV.
+  \item[Early publication] Signaling a legal first K64 payload and scale pair
+  before tail P construction completes.
+  \item[Speed-of-light diagnostic] An intentionally incorrect or
+  semantically altered kernel that removes work to bound latency.
+  \item[Full FP4 attention] Q, K, P, and V inside the attention kernel use
+  E2M1 payloads with block scales. NVFP4 QK plus FP8 PV is a control, not full
+  FP4 attention.  The term makes no claim about learned QKV/O projections or
+  an end-to-end training recipe.
+\end{description}

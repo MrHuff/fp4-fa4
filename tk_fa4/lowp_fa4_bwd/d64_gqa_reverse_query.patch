@@ -1,0 +1,135 @@
+--- a/fmha_bwd.py
++++ b/fmha_bwd.py
+@@ -405,6 +405,7 @@
+         self.signal_dq_tiles = False
+         self.owner_quantize_dq = False
+         self.owner_quantize_kv = False
++        self.reverse_query_tiles = False
+         self.use_precomputed_stats = False
+         self.skip_stats_preprocess = False
+         # The reference GQA topology serializes every query head that shares a
+@@ -2201,6 +2202,8 @@
+         seq_Q, seq_K, D, HB = problem_shape
+         H, B = HB
+         iter_index = iter_start
++        if cutlass.const_expr(self.reverse_query_tiles):
++            iter_index = iter_end - 1
+         (
+             load_mma_Q_pipeline,
+             load_compute_LSE_pipeline,
+@@ -2413,14 +2416,24 @@
+         load_compute_sum_OdO_producer_state.advance()
+
+         iter_count -= 1
+-        iter_index += 1
++        if cutlass.const_expr(self.reverse_query_tiles):
++            iter_index -= 1
++        else:
++            iter_index += 1
+
+         while iter_count > 0:
+-            if iter_index == iter_end:
+-                iter_index = iter_start
+-                if cutlass.const_expr(not self.split_gqa_heads):
+-                    blk_coord_h_r += 1
+-                    blk_coord_h = (blk_coord_h_r, blk_coord_h_k)
++            if cutlass.const_expr(self.reverse_query_tiles):
++                if iter_index < iter_start:
++                    iter_index = iter_end - 1
++                    if cutlass.const_expr(not self.split_gqa_heads):
++                        blk_coord_h_r += 1
++                        blk_coord_h = (blk_coord_h_r, blk_coord_h_k)
++            else:
++                if iter_index == iter_end:
++                    iter_index = iter_start
++                    if cutlass.const_expr(not self.split_gqa_heads):
++                        blk_coord_h_r += 1
++                        blk_coord_h = (blk_coord_h_r, blk_coord_h_k)
+
+             load_mma_Q_pipeline.producer_acquire(load_mma_Q_producer_state)
+             tma_barrier = load_mma_Q_pipeline.producer_get_barrier(
+@@ -2517,7 +2530,10 @@
+             load_compute_sum_OdO_producer_state.advance()
+
+             iter_count -= 1
+-            iter_index += 1
++            if cutlass.const_expr(self.reverse_query_tiles):
++                iter_index -= 1
++            else:
++                iter_index += 1
+
+     @cute.jit
+     def mma(
+@@ -2845,6 +2861,8 @@
+         Q, K, D, HB = problem_shape
+         blk_coord_q, blk_coord_k, blk_coord_d, blk_coord_batch = blk_coord
+         iter_index = iter_start
++        if cutlass.const_expr(self.reverse_query_tiles):
++            iter_index = iter_end - 1
+         (
+             mma_compute_S_pipeline,
+             compute_mma_P_pipeline,
+@@ -3119,9 +3137,14 @@
+             load_compute_sum_OdO_consumer_state.advance()
+
+             iter_count -= 1
+-            iter_index += 1
+-            if iter_index == iter_end:
+-                iter_index = iter_start
++            if cutlass.const_expr(self.reverse_query_tiles):
++                iter_index -= 1
++                if iter_index < iter_start:
++                    iter_index = iter_end - 1
++            else:
++                iter_index += 1
++                if iter_index == iter_end:
++                    iter_index = iter_start
+
+         # Epilogue
+         self.epilogue(
+@@ -3186,6 +3209,8 @@
+             )
+
+         iter_index = iter_start
++        if cutlass.const_expr(self.reverse_query_tiles):
++            iter_index = iter_end - 1
+
+         mma_reduce_dQ_pipeline, reduce_tma_store_pipeline = pipeline_args
+
+@@ -3391,15 +3416,28 @@
+                     reduce_tma_store_producer_state.advance()
+
+             iter_count -= 1
+-            iter_index += 1
+-            if iter_index == iter_end:
+-                iter_index = iter_start
+-                if cutlass.const_expr(not self.split_gqa_heads):
+-                    blk_coord_h_r += 1
+-                    blk_coord_batch = (
+-                        (blk_coord_h_r, blk_coord_h_k),
+-                        blk_coord_b,
+-                    )
++            if cutlass.const_expr(self.reverse_query_tiles):
++                iter_index -= 1
++            else:
++                iter_index += 1
++            if cutlass.const_expr(self.reverse_query_tiles):
++                if iter_index < iter_start:
++                    iter_index = iter_end - 1
++                    if cutlass.const_expr(not self.split_gqa_heads):
++                        blk_coord_h_r += 1
++                        blk_coord_batch = (
++                            (blk_coord_h_r, blk_coord_h_k),
++                            blk_coord_b,
++                        )
++            else:
++                if iter_index == iter_end:
++                    iter_index = iter_start
++                    if cutlass.const_expr(not self.split_gqa_heads):
++                        blk_coord_h_r += 1
++                        blk_coord_batch = (
++                            (blk_coord_h_r, blk_coord_h_k),
++                            blk_coord_b,
++                        )
+
+         reduce_tma_store_pipeline.producer_tail()

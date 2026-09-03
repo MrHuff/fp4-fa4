@@ -1,0 +1,188 @@
+--- a/fmha_bwd.py
++++ b/fmha_bwd.py
+@@ -749,13 +749,23 @@
+         )
+         # compute dV
+-        PdO_tiled_mma = sm100_utils.make_trivial_tiled_mma(
+-            self.element_dtype,
+-            tcgen05.OperandMajorMode.K,
+-            tcgen05.OperandMajorMode.MN,
+-            self.acc_dtype,
+-            cta_group,
+-            self.PdO_mma_tiler[:2],
+-            tcgen05.OperandSource.TMEM,
+-        )
++        if cutlass.const_expr(self.element_dtype == Float8E4M3FN):
++            PdO_tiled_mma = sm100_utils.make_trivial_tiled_mma(
++                self.element_dtype,
++                tcgen05.OperandMajorMode.K,
++                tcgen05.OperandMajorMode.MN,
++                self.acc_dtype,
++                cta_group,
++                self.PdO_mma_tiler[:2],
++            )
++        else:
++            PdO_tiled_mma = sm100_utils.make_trivial_tiled_mma(
++                self.element_dtype,
++                tcgen05.OperandMajorMode.K,
++                tcgen05.OperandMajorMode.MN,
++                self.acc_dtype,
++                cta_group,
++                self.PdO_mma_tiler[:2],
++                tcgen05.OperandSource.TMEM,
++            )
+         # compute dK
+         dSQ_tiled_mma = sm100_utils.make_trivial_tiled_mma(
+@@ -915,4 +925,5 @@
+         owner_packed_smem_elements = 0
+         owner_scale_smem_elements = 0
++        p_smem_elements = 0
+         owner_smem_alignment = 1
+         if cutlass.const_expr(self.owner_quantize_dq):
+@@ -926,4 +937,6 @@
+             owner_packed_smem_elements = self.tile_shape_Q * 64
+             owner_scale_smem_elements = 2 * 512
++        if cutlass.const_expr(self.element_dtype == Float8E4M3FN):
++            p_smem_elements = cute.cosize(P_tmem_layout_staged)
+
+         @cute.struct
+@@ -986,4 +999,8 @@
+                 self.buffer_align_bytes,
+             ]
++            sP: cute.struct.Align[
++                cute.struct.MemRange[self.element_dtype, p_smem_elements],
++                self.buffer_align_bytes,
++            ]
+             sdS: cute.struct.Align[
+                 cute.struct.MemRange[
+@@ -1556,4 +1573,10 @@
+         tP_fake_ptr = cute.make_ptr(self.element_dtype, 0, cute.AddressSpace.tmem)
+         tP = cute.make_tensor(tP_fake_ptr, P_tmem_layout_staged.outer)
++        sP = sdO
++        if cutlass.const_expr(self.element_dtype == Float8E4M3FN):
++            sP = storage.sP.get_tensor(
++                P_tmem_layout_staged.outer,
++                swizzle=P_tmem_layout_staged.inner,
++            )
+         sdOT_ptr = cute.recast_ptr(sdO.iterator, dOT_smem_layout_staged.inner)
+         sdOT = cute.make_tensor(sdOT_ptr, dOT_smem_layout_staged.outer)
+@@ -1587,8 +1610,12 @@
+
+         # (MMA, MMA_M, MMA_K, STAGE)
+-        tdVrP = PdO_tiled_mma.make_fragment_A(tP)
++        if cutlass.const_expr(self.element_dtype == Float8E4M3FN):
++            tdVrP = PdO_tiled_mma.make_fragment_A(sP)
++        else:
++            tdVrP = PdO_tiled_mma.make_fragment_A(tP)
+         tdVrP = tdVrP[None, None, None, 0]
+-        tdVrP_iter = cute.recast_ptr(tSTtST.iterator, dtype=self.element_dtype)
+-        tdVrP = cute.make_tensor(tdVrP_iter, tdVrP.layout)
++        if cutlass.const_expr(self.element_dtype != Float8E4M3FN):
++            tdVrP_iter = cute.recast_ptr(tSTtST.iterator, dtype=self.element_dtype)
++            tdVrP = cute.make_tensor(tdVrP_iter, tdVrP.layout)
+         # (MMA, MMA_N, MMA_K, STAGE)
+         tdVrdOT = PdO_tiled_mma.make_fragment_B(sdOT)
+@@ -1772,4 +1799,5 @@
+                     tdPTtdPT,
+                     tdVrP,
++                    sP,
+                     sLSE,
+                     sdS,
+@@ -2835,4 +2863,5 @@
+         tdPTtdPT: cute.Tensor,
+         tdVrP: cute.Tensor,
++        sP: cute.Tensor,
+         sLSE: cute.Tensor,
+         sdS: cute.Tensor,
+@@ -2900,11 +2929,20 @@
+             self.acc_dtype,
+         )
+-        tmem_store_atom = cute.make_copy_atom(
+-            tcgen05.copy.St32x32bOp(tcgen05.copy.Repetition(8)),
+-            self.element_dtype,
+-        )
++        if cutlass.const_expr(self.element_dtype != Float8E4M3FN):
++            tmem_store_atom = cute.make_copy_atom(
++                tcgen05.copy.St32x32bOp(tcgen05.copy.Repetition(8)),
++                self.element_dtype,
++            )
+
+         tSTtST = tSTtST[(None, None), 0, 0]
+         tdPTtdPT = tdPTtdPT[(None, None), 0, 0]
++        sP_logical = None
++        if cutlass.const_expr(self.element_dtype == Float8E4M3FN):
++            sP_logical = cute.composition(
++                sP[None, None, None, 0],
++                cute.make_ordered_layout(
++                    (self.tile_shape_K, self.tile_shape_Q), (0, 1)
++                ),
++            )
+
+         cST = cute.make_identity_tensor(cute.select(self.KQ_mma_tiler, mode=[0, 1]))
+@@ -2923,4 +2961,13 @@
+         tTR_tST = thr_t2r.partition_S(tSTtST)
+         tTR_tST = self.split_wg(tTR_tST, num_warp_groups, wg_idx)
++        if cutlass.const_expr(self.element_dtype == Float8E4M3FN):
++            r2s_atom = cute.make_copy_atom(
++                cute.nvgpu.CopyUniversalOp(),
++                self.element_dtype,
++                num_bits_per_copy=128,
++            )
++            tiled_r2s = cute.make_tiled_copy_D(r2s_atom, tiled_t2r)
++            tRT_sP = thr_t2r.partition_D(sP_logical)
++            tRT_sP = self.split_wg(tRT_sP, num_warp_groups, wg_idx)
+
+         tTR_cdPT_p = thr_t2r.partition_D(cdPT)
+@@ -2931,14 +2978,12 @@
+         tTR_tdPT = self.split_wg(tTR_tdPT, num_warp_groups, wg_idx)
+
+-        tdVcST = PdO_tiled_mma.get_slice(0).partition_A(cST)
+-
+-        tiled_r2t = tcgen05.make_tmem_copy(tmem_store_atom, tdVrP)
+-        thr_r2t = tiled_r2t.get_slice(dp_idx)
+-
+-        tRT_tP = thr_r2t.partition_D(tdVrP)
+-        tRT_tP = self.split_wg(tRT_tP, num_warp_groups, wg_idx)
+-
+-        tRT_cST = thr_r2t.partition_S(tdVcST)
+-        tRT_cST = self.split_wg(tRT_cST, num_warp_groups, wg_idx)
++        if cutlass.const_expr(self.element_dtype != Float8E4M3FN):
++            tdVcST = PdO_tiled_mma.get_slice(0).partition_A(cST)
++            tiled_r2t = tcgen05.make_tmem_copy(tmem_store_atom, tdVrP)
++            thr_r2t = tiled_r2t.get_slice(dp_idx)
++            tRT_tP = thr_r2t.partition_D(tdVrP)
++            tRT_tP = self.split_wg(tRT_tP, num_warp_groups, wg_idx)
++            tRT_cST = thr_r2t.partition_S(tdVcST)
++            tRT_cST = self.split_wg(tRT_cST, num_warp_groups, wg_idx)
+
+         while iter_count > 0:
+@@ -3020,15 +3065,19 @@
+             tRT_rST = self.quantize(tTR_rST, 4, p_dv_lift)
+
+-            tRT_rST_reshaped = cute.make_tensor(
+-                tRT_rST.iterator, cute.make_layout(tRT_cST.shape)
+-            )
+-
+             cute.arch.fence_view_async_tmem_load()
+-            self.compute_sync_barrier.arrive_and_wait()
+-            cute.arch.fence_view_async_tmem_load()
+-
+-            cute.copy(tiled_r2t, tRT_rST_reshaped, tRT_tP)
+-
+-            cute.arch.fence_view_async_tmem_store()
++            if cutlass.const_expr(self.element_dtype == Float8E4M3FN):
++                # Reuse the score TMEM-load thread/value mapping for a
++                # coordinate-preserving vector R2S publication.
++                cute.copy(tiled_r2s, tRT_rST, tRT_sP)
++                cute.arch.fence_view_async_shared()
++                self.compute_sync_barrier.arrive_and_wait()
++            else:
++                tRT_rST_reshaped = cute.make_tensor(
++                    tRT_rST.iterator, cute.make_layout(tRT_cST.shape)
++                )
++                self.compute_sync_barrier.arrive_and_wait()
++                cute.arch.fence_view_async_tmem_load()
++                cute.copy(tiled_r2t, tRT_rST_reshaped, tRT_tP)
++                cute.arch.fence_view_async_tmem_store()
+
+             # Notify for P

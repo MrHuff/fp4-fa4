@@ -1,0 +1,58 @@
+{
+  "device": "GB200",
+  "shape": {
+    "batch": 1,
+    "seqlen": 4096,
+    "q_heads": 32,
+    "kv_heads": 8
+  },
+  "protocol": {
+    "seeds": [0, 1, 2, 3],
+    "warmup_ms": 100,
+    "rep_ms": 500,
+    "causal": true,
+    "denominator_words": 4,
+    "denominator_sample_stride": 1
+  },
+  "d64": {
+    "control": {
+      "time_ms": 0.148176,
+      "cosine": 0.956097,
+      "relative_l2": 0.295628
+    },
+    "stage1_reuse": {
+      "time_ms": 0.141304,
+      "speedup_percent": 4.86,
+      "cosine": 0.950634,
+      "relative_l2": 0.312981
+    },
+    "both_stage_reuse": {
+      "time_ms": 0.139280,
+      "speedup_percent": 6.36,
+      "cosine": 0.933661,
+      "relative_l2": 0.361469
+    }
+  },
+  "d128": {
+    "control": {
+      "time_ms": 0.145488,
+      "cosine": 0.950153,
+      "relative_l2": 0.316660
+    },
+    "stage1_reuse": {
+      "time_ms": 0.144040,
+      "speedup_percent": 1.01,
+      "cosine": 0.945655,
+      "relative_l2": 0.330119
+    },
+    "both_stage_reuse": {
+      "time_ms": 0.142000,
+      "speedup_percent": 2.45,
+      "cosine": 0.941634,
+      "relative_l2": 0.341717
+    }
+  },
+  "retained_policy": "causal-scale-reuse",
+  "default_policy": "fast",
+  "d192": "unsupported by the current D64/D128 forward kernel"
+}

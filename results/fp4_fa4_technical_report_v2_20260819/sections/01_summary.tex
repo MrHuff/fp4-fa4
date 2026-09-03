@@ -1,0 +1,100 @@
+\section{Introduction}
+
+Attention contains two matrix products separated by softmax.  NVIDIA
+Blackwell executes 4-bit floating-point (FP4) matrix multiplication much
+faster than bfloat16 (BF16), but FP4 does not accelerate the work between
+those products.  Softmax must still reduce each score tile, evaluate
+exponentials, construct a scaled probability tile, and make that tile ready
+for the second product.  This middle stage becomes the bottleneck as the
+matrix products get faster.
+
+Attention combines a query matrix $Q$, key matrix $K$, and value matrix $V$:
+\begin{equation}
+  S=QK^\mathsf{T}/\sqrt d,\qquad
+  P=\softmax(S),\qquad
+  O=PV.
+  \label{eq:attention-intro}
+\end{equation}
+We call the two matrix products QK and PV.  Here $S$ contains similarity
+scores, $P$ contains the resulting probabilities, and $O$ is the output.
+FlashAttention evaluates these equations in tiles so that the quadratic score
+and probability matrices need not be stored in high-bandwidth memory (HBM)
+\cite{dao2022flashattention}.  Later versions improved how work is divided and
+overlapped \cite{dao2023flashattention2,shah2024flashattention3}.
+FlashAttention-4 (FA4) adapts this tiled algorithm to NVIDIA Blackwell's
+asynchronous matrix hardware \cite{zadouri2026flashattention4}.
+
+We study forward inference and causal training separately.  In the forward
+pass, we ask whether all four operands inside attention---$Q$, $K$, $P$, and
+$V$---can use FP4 and still outperform BF16 FA4.  We build on HAO AI Lab's
+two-query Blackwell schedule and replace its probability path
+\cite{hao2026fp4flashattention,zhang2026attnqat}.  Our method, \emph{Direct-P},
+maps normalized scores directly to MXFP4 probability codes and normalizes the
+same rounded values that the PV product consumes.  In this paper, ``full FP4''
+refers only to these four attention operands; it does not mean that every
+transformer operation uses FP4.
+
+In training, we ask whether causal backward can reuse the low-precision state
+created by the forward pass.  Forward passes the quantized $Q/K$ payload,
+its scales, and the softmax normalizer directly to backward.  The projection
+and gradient epilogues also publish the row- or column-oriented FP8 views
+needed by each gradient matrix product.  Backward reconstructs the
+probabilities from this state instead of creating a separate BF16 score path.
+Learned projections remain a separate precision boundary, so this is not
+pure-FP4 end-to-end training.
+
+The paper makes three contributions:
+\begin{enumerate}
+  \item Direct-P reaches up to 2.13$\times$ the BF16 forward throughput on
+  favorable Blackwell shapes; matched fixed-input evaluations measure its
+  error against an FP8 probability path.
+  \item Passing the forward quantization into backward accelerates
+  projection-inclusive attention and a
+  single-GPU 8-billion-parameter update.  Distributed diagnostics select FP8
+  P/V because every tested MXFP4 P/V trajectory diverges.
+  \item Hardware profiles identify tensor-memory ownership as the main limit on
+  overlap and motivate another allocatable score destination with compatible
+  issue semantics.
+\end{enumerate}
+
+Table~\ref{tab:reader-notation} defines the notation and hardware terms used
+throughout the paper.  E$x$M$y$ names a floating-point format with $x$
+exponent bits and $y$ explicit fraction bits; for example, E4M3 is an 8-bit
+format and E2M1 is the payload used by the FP4 formats studied here.
+
+\begin{table}[htbp]
+\centering
+\caption{Reader's guide to the main notation and Blackwell hardware terms.}
+\label{tab:reader-notation}
+\small
+\begin{tabularx}{\textwidth}{p{.21\textwidth}X}
+\toprule
+Term & Meaning \\
+\midrule
+$B,S,H,H_q,H_{kv},D$ & Batch size, sequence length, head count, query-head
+count, key/value-head count, and per-head dimension. \\
+Shape shorthand & Compact labels append each value: B1/S4096/H24/D128 means
+batch 1, sequence length 4096, 24 heads, and head dimension 128. \\
+FP32, BF16, FP8, FP4 & 32-, 16-, 8-, and 4-bit floating-point families.
+Smaller formats increase matrix throughput but need explicit scaling. \\
+NVFP4 and MXFP4 & The two block-scaled FP4 families used here.  NVFP4 uses
+fine-grained data-dependent scales; MXFP4 shares one power-of-two scale across
+each 32-value block. \\
+SM and CTA & A graphics processing unit (GPU) contains streaming
+multiprocessors (SMs).  A cooperative thread array (CTA) is a CUDA thread
+block scheduled on an SM. \\
+TMEM & Tensor memory: Blackwell's on-chip accumulator scratchpad for
+asynchronous matrix operations. \\
+TMA and MMA & The Tensor Memory Accelerator (TMA) moves tiles; a matrix
+multiply--accumulate (MMA) instruction performs the tensor-core product. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Sections~\ref{sec:hao-background}--\ref{sec:direct-p} develop the forward
+argument in order: inherited schedule, remaining problems, and proposed
+fixes.  Section~\ref{sec:causal-training} keeps isolated backward,
+projection-inclusive attention, complete model updates, and distributed
+training trajectories as separate measurement boundaries.
+Section~\ref{sec:current-headroom} then relates the measured bottlenecks to
+hardware and closes with the evidence boundaries and conclusions.

@@ -1,0 +1,778 @@
+{
+  "attribution": "CUDA kernels are attributed through runtime correlation IDs whose launch calls occur inside CPU-side NVTX ranges",
+  "comparison": {
+    "backward_kernel_counts": {
+      "fp8": 907,
+      "mx": 907
+    },
+    "backward_ordered_signature_sha256": "f1c727743474c3c3d5e4291882b5cc2081ea981791936e6a6b2c168d5f451fb4",
+    "backward_ordered_signatures_equal": true,
+    "mean_gpc_clock_mhz": {
+      "fp8": 1748.738034284952,
+      "mx": 1703.9224038966724
+    },
+    "mean_gpc_clock_ratio_fp8_over_mx": 1.026301450280712,
+    "profile_kernel_counts_equal": true,
+    "profile_signature_difference_count": 32,
+    "profile_signature_difference_indices": [
+      8,
+      9,
+      46,
+      47,
+      84,
+      85,
+      122,
+      123,
+      160,
+      161,
+      198,
+      199,
+      236,
+      237,
+      274,
+      275,
+      312,
+      313,
+      350,
+      351,
+      388,
+      389,
+      426,
+      427,
+      464,
+      465,
+      502,
+      503,
+      540,
+      541,
+      578,
+      579
+    ],
+    "stage_kernel_sum_delta_mx_minus_fp8_ms": {
+      "backward_total": 8.670128000000034,
+      "ce_forward": -0.22412999999999883,
+      "decoder_forward": -1.0310460000000035,
+      "gradient_clip": 0.0340480000000003,
+      "lowp/bwd/attention": 3.7518699999999967,
+      "lowp/bwd/attention_rmsnorm": 0.14748800000000006,
+      "lowp/bwd/dout_projection_publish": 0.27379099999999923,
+      "lowp/bwd/dy_scaled_nvfp4_pack": 0.04364799999999969,
+      "lowp/bwd/inverse_rope_decode_scale": 0.26854400000000034,
+      "lowp/bwd/output_weight_gradient": 0.1567039999999995,
+      "lowp/bwd/qkv_dgrad_bf16": 0.3370559999999996,
+      "lowp/bwd/qkv_weight_gradient": 1.4552949999999996,
+      "lowp/fwd/attention": -1.4895050000000012,
+      "lowp/fwd/attention_rmsnorm_nvfp4_pack": -0.028096000000000565,
+      "lowp/fwd/output_nvfp4_pack": -0.013344000000000023,
+      "lowp/fwd/output_projection": -0.011519999999999975,
+      "lowp/fwd/output_weight_nvfp4_dual_pack": -0.0015999999999999903,
+      "lowp/fwd/qkv_projection_rope_publish": 0.5088629999999998,
+      "lowp/fwd/qkv_weight_nvfp4_pack": -0.00201599999999999,
+      "optimizer": 0.6075840000000001
+    }
+  },
+  "fp8": {
+    "artifact": {
+      "bytes": 5488640,
+      "path": "/tmp/fa4_publish_order_nsys_abd962_20260826/fp8.sqlite",
+      "sha256": "43300b390ef0ce643150a71838c9f21ff0ee35bbcc09c3b6d79bdc4c94992827"
+    },
+    "capture_scope": {
+      "kernel_context_id": 1,
+      "kernel_device_id": 0,
+      "metric_source_id": 281479271677952,
+      "metric_type_id": 281479271677952
+    },
+    "metrics_over_first_to_last_kernel": {
+      "DRAM Read Bandwidth [Throughput %]": {
+        "maximum": 69.0,
+        "mean": 20.201351832088225,
+        "minimum": 0.0,
+        "p50": 17.0,
+        "samples": 5622,
+        "unit": "percent"
+      },
+      "DRAM Write Bandwidth [Throughput %]": {
+        "maximum": 49.0,
+        "mean": 9.72714336535041,
+        "minimum": 0.0,
+        "p50": 3.0,
+        "samples": 5622,
+        "unit": "percent"
+      },
+      "GPC Clock Frequency [MHz]": {
+        "maximum": 2064.84875,
+        "mean": 1748.738034284952,
+        "minimum": 1239.11625,
+        "p50": 1760.1993750000001,
+        "samples": 5622,
+        "unit": "MHz"
+      },
+      "GR Active [Throughput %]": {
+        "maximum": 100.0,
+        "mean": 99.35699039487727,
+        "minimum": 0.0,
+        "p50": 100.0,
+        "samples": 5622,
+        "unit": "percent"
+      },
+      "SMs Active [Throughput %]": {
+        "maximum": 100.0,
+        "mean": 93.48256848096763,
+        "minimum": 0.0,
+        "p50": 100.0,
+        "samples": 5622,
+        "unit": "percent"
+      },
+      "SYS Clock Frequency [MHz]": {
+        "maximum": 1915.41,
+        "mean": 1887.8241070793313,
+        "minimum": 1772.76,
+        "p50": 1897.47,
+        "samples": 5622,
+        "unit": "MHz"
+      },
+      "Tensor Active [Throughput %]": {
+        "maximum": 100.0,
+        "mean": 43.79011028103878,
+        "minimum": 0.0,
+        "p50": 18.0,
+        "samples": 5622,
+        "unit": "percent"
+      }
+    },
+    "profile": {
+      "all_captured_kernels_attributed_to_profile_step": true,
+      "first_kernel_start_ns": 30180584,
+      "kernel_count": 1730,
+      "kernel_span_ms": 562.20964,
+      "kernel_sum_ms": 553.735752,
+      "kernel_union_busy_ms": 553.38644,
+      "kernel_union_busy_percent": 98.43062100464873,
+      "last_kernel_end_ns": 592390224,
+      "maximum_internal_gap_ms": 0.6736,
+      "merged_interval_count": 1536,
+      "nvtx_range": "profile_step",
+      "nvtx_range_count": 1,
+      "ordered_signature_sha256": "275b0da1a56103834986a7cf673ee012cbfe2e0921b11d823d5df23aa740a013",
+      "sqlite_kernel_count": 1730,
+      "top_level_partition": {
+        "exact_partition": true,
+        "partition_entry_count": 1730,
+        "partition_union_matches_reference": true,
+        "partition_unique_count": 1730,
+        "partitions_are_disjoint": true
+      },
+      "top_level_ranges_close_profile": true
+    },
+    "ranges": {
+      "backward_total": {
+        "execution": {
+          "first_kernel_start_ns": 213562667,
+          "kernel_span_ms": 367.912421,
+          "kernel_union_busy_ms": 363.175429,
+          "kernel_union_busy_percent": 98.7124674978016,
+          "last_kernel_end_ns": 581475088,
+          "maximum_internal_gap_ms": 0.177888,
+          "merged_interval_count": 761
+        },
+        "kernel_count": 907,
+        "kernel_sum_ms": 363.506917,
+        "metrics_over_first_to_last_kernel": {
+          "DRAM Read Bandwidth [Throughput %]": {
+            "maximum": 69.0,
+            "mean": 22.14487632508834,
+            "minimum": 1.0,
+            "p50": 18.0,
+            "samples": 3679,
+            "unit": "percent"
+          },
+          "DRAM Write Bandwidth [Throughput %]": {
+            "maximum": 49.0,
+            "mean": 8.650176678445229,
+            "minimum": 0.0,
+            "p50": 3.0,
+            "samples": 3679,
+            "unit": "percent"
+          },
+          "GPC Clock Frequency [MHz]": {
+            "maximum": 2064.6975,
+            "mean": 1694.5576586708344,
+            "minimum": 1239.11625,
+            "p50": 1734.94125,
+            "samples": 3679,
+            "unit": "MHz"
+          },
+          "GR Active [Throughput %]": {
+            "maximum": 100.0,
+            "mean": 99.81951617287307,
+            "minimum": 86.0,
+            "p50": 100.0,
+            "samples": 3679,
+            "unit": "percent"
+          },
+          "SMs Active [Throughput %]": {
+            "maximum": 100.0,
+            "mean": 93.06931231312856,
+            "minimum": 5.0,
+            "p50": 99.0,
+            "samples": 3679,
+            "unit": "percent"
+          },
+          "SYS Clock Frequency [MHz]": {
+            "maximum": 1915.41,
+            "mean": 1882.7310491981518,
+            "minimum": 1772.76,
+            "p50": 1897.475,
+            "samples": 3679,
+            "unit": "MHz"
+          },
+          "Tensor Active [Throughput %]": {
+            "maximum": 100.0,
+            "mean": 46.633596085892904,
+            "minimum": 0.0,
+            "p50": 18.0,
+            "samples": 3679,
+            "unit": "percent"
+          }
+        },
+        "nvtx_range_count": 1,
+        "ordered_signature_sha256": "f1c727743474c3c3d5e4291882b5cc2081ea981791936e6a6b2c168d5f451fb4"
+      },
+      "ce_forward": {
+        "kernel_count": 10,
+        "kernel_sum_ms": 26.480769,
+        "nvtx_range_count": 1,
+        "ordered_signature_sha256": "7f4c78cd52a8cdd0e218879a0c8fc70c3a8bd41b151a681a5205737528873177"
+      },
+      "decoder_forward": {
+        "execution": {
+          "first_kernel_start_ns": 30180584,
+          "kernel_span_ms": 155.94429,
+          "kernel_union_busy_ms": 154.220354,
+          "kernel_union_busy_percent": 98.89451803589603,
+          "last_kernel_end_ns": 186124874,
+          "maximum_internal_gap_ms": 0.372544,
+          "merged_interval_count": 571
+        },
+        "kernel_count": 619,
+        "kernel_sum_ms": 154.238178,
+        "metrics_over_first_to_last_kernel": {
+          "DRAM Read Bandwidth [Throughput %]": {
+            "maximum": 67.0,
+            "mean": 17.10576923076923,
+            "minimum": 0.0,
+            "p50": 10.0,
+            "samples": 1560,
+            "unit": "percent"
+          },
+          "DRAM Write Bandwidth [Throughput %]": {
+            "maximum": 47.0,
+            "mean": 12.412179487179488,
+            "minimum": 1.0,
+            "p50": 12.0,
+            "samples": 1560,
+            "unit": "percent"
+          },
+          "GPC Clock Frequency [MHz]": {
+            "maximum": 2064.84875,
+            "mean": 1855.4131065705128,
+            "minimum": 1382.5975,
+            "p50": 1947.274375,
+            "samples": 1560,
+            "unit": "MHz"
+          },
+          "GR Active [Throughput %]": {
+            "maximum": 100.0,
+            "mean": 99.4,
+            "minimum": 0.0,
+            "p50": 100.0,
+            "samples": 1560,
+            "unit": "percent"
+          },
+          "SMs Active [Throughput %]": {
+            "maximum": 100.0,
+            "mean": 95.92820512820512,
+            "minimum": 0.0,
+            "p50": 100.0,
+            "samples": 1560,
+            "unit": "percent"
+          },
+          "SYS Clock Frequency [MHz]": {
+            "maximum": 1902.205,
+            "mean": 1896.727455128205,
+            "minimum": 1881.225,
+            "p50": 1897.46,
+            "samples": 1560,
+            "unit": "MHz"
+          },
+          "Tensor Active [Throughput %]": {
+            "maximum": 100.0,
+            "mean": 37.014102564102565,
+            "minimum": 0.0,
+            "p50": 10.0,
+            "samples": 1560,
+            "unit": "percent"
+          }
+        },
+        "nvtx_range_count": 1,
+        "ordered_signature_sha256": "f7fb380a751f15938f05a69d77324953376a4f6a47717028620e41e02c01a9fd"
+      },
+      "gradient_clip": {
+        "kernel_count": 132,
+        "kernel_sum_ms": 2.4768,
+        "nvtx_range_count": 1,
+        "ordered_signature_sha256": "a6e2fad2a226f8789488c27218421db75e59b5e3c3072c4f4115caea69f35d05"
+      },
+      "lowp/bwd/attention": {
+        "kernel_count": 16,
+        "kernel_sum_ms": 55.749152,
+        "nvtx_range_count": 16,
+        "ordered_signature_sha256": "3ce4542ecb13a678837b1680a4f9c64821802a2968a39a57fc3f534d979ff46e"
+      },
+      "lowp/bwd/attention_rmsnorm": {
+        "kernel_count": 32,
+        "kernel_sum_ms": 7.605888,
+        "nvtx_range_count": 16,
+        "ordered_signature_sha256": "57a7d90d76cf7171327b0f6566fc94087cea73423b45bf6a7fe1a4acb566e7d4"
+      },
+      "lowp/bwd/dout_projection_publish": {
+        "kernel_count": 16,
+        "kernel_sum_ms": 10.560672,
+        "nvtx_range_count": 16,
+        "ordered_signature_sha256": "682705cf0d6167421d0f53e78baa9f5b89ea9b79a5880f6cb0a2a1eb441b0ea2"
+      },
+      "lowp/bwd/dy_scaled_nvfp4_pack": {
+        "kernel_count": 96,
+        "kernel_sum_ms": 2.109824,
+        "nvtx_range_count": 16,
+        "ordered_signature_sha256": "77a9959b209bbd5df0ccf55102253a549b4cfacf657920dd8e10a2bdb76a8f6f"
+      },
+      "lowp/bwd/inverse_rope_decode_scale": {
+        "kernel_count": 16,
+        "kernel_sum_ms": 5.421408,
+        "nvtx_range_count": 16,
+        "ordered_signature_sha256": "85f15a895811448c1ac0174995b9dfbf49ca3f1d1cd75dff2323191732e0f113"
+      },
+      "lowp/bwd/output_weight_gradient": {
+        "kernel_count": 16,
+        "kernel_sum_ms": 5.3672,
+        "nvtx_range_count": 16,
+        "ordered_signature_sha256": "7b74ef9b656864ffc3a3a822395f04a4eefe04a6fb2f8bd5f2e03d9f99cb8695"
+      },
+      "lowp/bwd/qkv_dgrad_bf16": {
+        "kernel_count": 16,
+        "kernel_sum_ms": 7.39184,
+        "nvtx_range_count": 16,
+        "ordered_signature_sha256": "1c493ae0f23e69061d60723c1326069ad2b2dc9d1babc842fa60b0a21f18a494"
+      },
+      "lowp/bwd/qkv_weight_gradient": {
+        "kernel_count": 32,
+        "kernel_sum_ms": 21.753985,
+        "nvtx_range_count": 16,
+        "ordered_signature_sha256": "2748207d629c44c10b722bc643dca6c19a8720fd771a6b287d85cfdfa519a1c1"
+      },
+      "lowp/fwd/attention": {
+        "kernel_count": 16,
+        "kernel_sum_ms": 30.9432,
+        "nvtx_range_count": 16,
+        "ordered_signature_sha256": "7751aa4630952bdac760952b0e4e721b1a64ea73df1bd478e1da6519fe80709e"
+      },
+      "lowp/fwd/attention_rmsnorm_nvfp4_pack": {
+        "kernel_count": 32,
+        "kernel_sum_ms": 4.419552,
+        "nvtx_range_count": 16,
+        "ordered_signature_sha256": "9ef6b5ea339b8cb938f8e9454d0d1a8f9b9f4f61c03bff8990731de1ef8f6545"
+      },
+      "lowp/fwd/output_nvfp4_pack": {
+        "kernel_count": 80,
+        "kernel_sum_ms": 1.946368,
+        "nvtx_range_count": 16,
+        "ordered_signature_sha256": "1b95dc5366b06e96aaef54d342081ac15a51ca3c77560bb1cf48b3cd86942930"
+      },
+      "lowp/fwd/output_projection": {
+        "kernel_count": 16,
+        "kernel_sum_ms": 2.02848,
+        "nvtx_range_count": 16,
+        "ordered_signature_sha256": "183bd99bd8a4f3de13d132af24b58d1879545966083df117b0aa3f2ddab4954a"
+      },
+      "lowp/fwd/output_weight_nvfp4_dual_pack": {
+        "kernel_count": 96,
+        "kernel_sum_ms": 0.293408,
+        "nvtx_range_count": 16,
+        "ordered_signature_sha256": "4b0ba296d3584fa990ec19beabcd643212027907c5638611538a447bb555ee17"
+      },
+      "lowp/fwd/qkv_projection_rope_publish": {
+        "kernel_count": 16,
+        "kernel_sum_ms": 13.4064,
+        "nvtx_range_count": 16,
+        "ordered_signature_sha256": "ff06569288c72d7c95154246394aa05e8c77e9407a3cba56eb2b651f46a64c08"
+      },
+      "lowp/fwd/qkv_weight_nvfp4_pack": {
+        "kernel_count": 80,
+        "kernel_sum_ms": 0.24416,
+        "nvtx_range_count": 16,
+        "ordered_signature_sha256": "2de0ef4e1a72337a6dee5839737df99d1a84e069c506654bd8fb372ddf62880d"
+      },
+      "optimizer": {
+        "kernel_count": 62,
+        "kernel_sum_ms": 7.033088,
+        "nvtx_range_count": 1,
+        "ordered_signature_sha256": "958ec06eb942a5b1bb67c0d6bae71f0fe5809d780bba5bf2f013901105a56b57"
+      }
+    }
+  },
+  "metric_window": "first captured kernel start to last kernel end",
+  "mx": {
+    "artifact": {
+      "bytes": 5451776,
+      "path": "/tmp/fa4_publish_order_nsys_abd962_20260826/mx.sqlite",
+      "sha256": "7ece064bb36baf5d6ddbe3d169fae9a62a50851875f891a888cb50037846201c"
+    },
+    "capture_scope": {
+      "kernel_context_id": 1,
+      "kernel_device_id": 0,
+      "metric_source_id": 281479271677952,
+      "metric_type_id": 281479271677952
+    },
+    "metrics_over_first_to_last_kernel": {
+      "DRAM Read Bandwidth [Throughput %]": {
+        "maximum": 69.0,
+        "mean": 19.639754816112085,
+        "minimum": 0.0,
+        "p50": 16.0,
+        "samples": 5710,
+        "unit": "percent"
+      },
+      "DRAM Write Bandwidth [Throughput %]": {
+        "maximum": 49.0,
+        "mean": 9.552714535901927,
+        "minimum": 0.0,
+        "p50": 3.0,
+        "samples": 5710,
+        "unit": "percent"
+      },
+      "GPC Clock Frequency [MHz]": {
+        "maximum": 2065.44875,
+        "mean": 1703.9224038966724,
+        "minimum": 1192.18375,
+        "p50": 1704.771875,
+        "samples": 5710,
+        "unit": "MHz"
+      },
+      "GR Active [Throughput %]": {
+        "maximum": 100.0,
+        "mean": 99.23432574430824,
+        "minimum": 0.0,
+        "p50": 100.0,
+        "samples": 5710,
+        "unit": "percent"
+      },
+      "SMs Active [Throughput %]": {
+        "maximum": 100.0,
+        "mean": 93.3863397548161,
+        "minimum": 0.0,
+        "p50": 99.0,
+        "samples": 5710,
+        "unit": "percent"
+      },
+      "SYS Clock Frequency [MHz]": {
+        "maximum": 1907.915,
+        "mean": 1883.911507880911,
+        "minimum": 1761.245,
+        "p50": 1896.1575,
+        "samples": 5710,
+        "unit": "MHz"
+      },
+      "Tensor Active [Throughput %]": {
+        "maximum": 100.0,
+        "mean": 43.792819614711036,
+        "minimum": 0.0,
+        "p50": 18.0,
+        "samples": 5710,
+        "unit": "percent"
+      }
+    },
+    "profile": {
+      "all_captured_kernels_attributed_to_profile_step": true,
+      "first_kernel_start_ns": 30562770,
+      "kernel_count": 1730,
+      "kernel_span_ms": 571.003279,
+      "kernel_sum_ms": 561.792336,
+      "kernel_union_busy_ms": 561.419792,
+      "kernel_union_busy_percent": 98.32164063632285,
+      "last_kernel_end_ns": 601566049,
+      "maximum_internal_gap_ms": 0.726464,
+      "merged_interval_count": 1536,
+      "nvtx_range": "profile_step",
+      "nvtx_range_count": 1,
+      "ordered_signature_sha256": "815c7713e42d14f8fcaa6355df31242844608bb6c508423ba4846496dbde0cb3",
+      "sqlite_kernel_count": 1730,
+      "top_level_partition": {
+        "exact_partition": true,
+        "partition_entry_count": 1730,
+        "partition_union_matches_reference": true,
+        "partition_unique_count": 1730,
+        "partitions_are_disjoint": true
+      },
+      "top_level_ranges_close_profile": true
+    },
+    "ranges": {
+      "backward_total": {
+        "execution": {
+          "first_kernel_start_ns": 213312396,
+          "kernel_span_ms": 376.619189,
+          "kernel_union_busy_ms": 371.822165,
+          "kernel_union_busy_percent": 98.72629325852009,
+          "last_kernel_end_ns": 589931585,
+          "maximum_internal_gap_ms": 0.178592,
+          "merged_interval_count": 761
+        },
+        "kernel_count": 907,
+        "kernel_sum_ms": 372.177045,
+        "metrics_over_first_to_last_kernel": {
+          "DRAM Read Bandwidth [Throughput %]": {
+            "maximum": 69.0,
+            "mean": 21.285714285714285,
+            "minimum": 0.0,
+            "p50": 17.0,
+            "samples": 3766,
+            "unit": "percent"
+          },
+          "DRAM Write Bandwidth [Throughput %]": {
+            "maximum": 49.0,
+            "mean": 8.439989378651088,
+            "minimum": 0.0,
+            "p50": 3.0,
+            "samples": 3766,
+            "unit": "percent"
+          },
+          "GPC Clock Frequency [MHz]": {
+            "maximum": 2063.18875,
+            "mean": 1628.513164166224,
+            "minimum": 1192.18375,
+            "p50": 1638.8575,
+            "samples": 3766,
+            "unit": "MHz"
+          },
+          "GR Active [Throughput %]": {
+            "maximum": 100.0,
+            "mean": 99.81625066383431,
+            "minimum": 86.0,
+            "p50": 100.0,
+            "samples": 3766,
+            "unit": "percent"
+          },
+          "SMs Active [Throughput %]": {
+            "maximum": 100.0,
+            "mean": 93.01885289431758,
+            "minimum": 5.0,
+            "p50": 99.0,
+            "samples": 3766,
+            "unit": "percent"
+          },
+          "SYS Clock Frequency [MHz]": {
+            "maximum": 1907.915,
+            "mean": 1877.2491688794478,
+            "minimum": 1761.245,
+            "p50": 1889.8025,
+            "samples": 3766,
+            "unit": "MHz"
+          },
+          "Tensor Active [Throughput %]": {
+            "maximum": 100.0,
+            "mean": 46.77296866702071,
+            "minimum": 0.0,
+            "p50": 18.0,
+            "samples": 3766,
+            "unit": "percent"
+          }
+        },
+        "nvtx_range_count": 1,
+        "ordered_signature_sha256": "f1c727743474c3c3d5e4291882b5cc2081ea981791936e6a6b2c168d5f451fb4"
+      },
+      "ce_forward": {
+        "kernel_count": 10,
+        "kernel_sum_ms": 26.256639,
+        "nvtx_range_count": 1,
+        "ordered_signature_sha256": "7f4c78cd52a8cdd0e218879a0c8fc70c3a8bd41b151a681a5205737528873177"
+      },
+      "decoder_forward": {
+        "execution": {
+          "first_kernel_start_ns": 30562770,
+          "kernel_span_ms": 155.543835,
+          "kernel_union_busy_ms": 153.189468,
+          "kernel_union_busy_percent": 98.48636431009946,
+          "last_kernel_end_ns": 186106605,
+          "maximum_internal_gap_ms": 0.573823,
+          "merged_interval_count": 571
+        },
+        "kernel_count": 619,
+        "kernel_sum_ms": 153.207132,
+        "metrics_over_first_to_last_kernel": {
+          "DRAM Read Bandwidth [Throughput %]": {
+            "maximum": 68.0,
+            "mean": 17.07005141388175,
+            "minimum": 1.0,
+            "p50": 10.0,
+            "samples": 1556,
+            "unit": "percent"
+          },
+          "DRAM Write Bandwidth [Throughput %]": {
+            "maximum": 47.0,
+            "mean": 12.399100257069408,
+            "minimum": 1.0,
+            "p50": 12.0,
+            "samples": 1556,
+            "unit": "percent"
+          },
+          "GPC Clock Frequency [MHz]": {
+            "maximum": 2065.44875,
+            "mean": 1863.4117255784063,
+            "minimum": 1392.96375,
+            "p50": 1949.2875,
+            "samples": 1556,
+            "unit": "MHz"
+          },
+          "GR Active [Throughput %]": {
+            "maximum": 100.0,
+            "mean": 98.98007712082263,
+            "minimum": 0.0,
+            "p50": 100.0,
+            "samples": 1556,
+            "unit": "percent"
+          },
+          "SMs Active [Throughput %]": {
+            "maximum": 100.0,
+            "mean": 95.82133676092545,
+            "minimum": 0.0,
+            "p50": 100.0,
+            "samples": 1556,
+            "unit": "percent"
+          },
+          "SYS Clock Frequency [MHz]": {
+            "maximum": 1902.14,
+            "mean": 1896.5140584832905,
+            "minimum": 1877.85,
+            "p50": 1897.46,
+            "samples": 1556,
+            "unit": "MHz"
+          },
+          "Tensor Active [Throughput %]": {
+            "maximum": 100.0,
+            "mean": 36.562982005141386,
+            "minimum": 0.0,
+            "p50": 7.0,
+            "samples": 1556,
+            "unit": "percent"
+          }
+        },
+        "nvtx_range_count": 1,
+        "ordered_signature_sha256": "04ddbaf4ac8c58d385cb51e6131a73c3d3b3bd200d04debaff377b41b88c2a49"
+      },
+      "gradient_clip": {
+        "kernel_count": 132,
+        "kernel_sum_ms": 2.510848,
+        "nvtx_range_count": 1,
+        "ordered_signature_sha256": "a6e2fad2a226f8789488c27218421db75e59b5e3c3072c4f4115caea69f35d05"
+      },
+      "lowp/bwd/attention": {
+        "kernel_count": 16,
+        "kernel_sum_ms": 59.501022,
+        "nvtx_range_count": 16,
+        "ordered_signature_sha256": "3ce4542ecb13a678837b1680a4f9c64821802a2968a39a57fc3f534d979ff46e"
+      },
+      "lowp/bwd/attention_rmsnorm": {
+        "kernel_count": 32,
+        "kernel_sum_ms": 7.753376,
+        "nvtx_range_count": 16,
+        "ordered_signature_sha256": "57a7d90d76cf7171327b0f6566fc94087cea73423b45bf6a7fe1a4acb566e7d4"
+      },
+      "lowp/bwd/dout_projection_publish": {
+        "kernel_count": 16,
+        "kernel_sum_ms": 10.834463,
+        "nvtx_range_count": 16,
+        "ordered_signature_sha256": "682705cf0d6167421d0f53e78baa9f5b89ea9b79a5880f6cb0a2a1eb441b0ea2"
+      },
+      "lowp/bwd/dy_scaled_nvfp4_pack": {
+        "kernel_count": 96,
+        "kernel_sum_ms": 2.153472,
+        "nvtx_range_count": 16,
+        "ordered_signature_sha256": "77a9959b209bbd5df0ccf55102253a549b4cfacf657920dd8e10a2bdb76a8f6f"
+      },
+      "lowp/bwd/inverse_rope_decode_scale": {
+        "kernel_count": 16,
+        "kernel_sum_ms": 5.689952,
+        "nvtx_range_count": 16,
+        "ordered_signature_sha256": "85f15a895811448c1ac0174995b9dfbf49ca3f1d1cd75dff2323191732e0f113"
+      },
+      "lowp/bwd/output_weight_gradient": {
+        "kernel_count": 16,
+        "kernel_sum_ms": 5.523904,
+        "nvtx_range_count": 16,
+        "ordered_signature_sha256": "7b74ef9b656864ffc3a3a822395f04a4eefe04a6fb2f8bd5f2e03d9f99cb8695"
+      },
+      "lowp/bwd/qkv_dgrad_bf16": {
+        "kernel_count": 16,
+        "kernel_sum_ms": 7.728896,
+        "nvtx_range_count": 16,
+        "ordered_signature_sha256": "1c493ae0f23e69061d60723c1326069ad2b2dc9d1babc842fa60b0a21f18a494"
+      },
+      "lowp/bwd/qkv_weight_gradient": {
+        "kernel_count": 32,
+        "kernel_sum_ms": 23.20928,
+        "nvtx_range_count": 16,
+        "ordered_signature_sha256": "2748207d629c44c10b722bc643dca6c19a8720fd771a6b287d85cfdfa519a1c1"
+      },
+      "lowp/fwd/attention": {
+        "kernel_count": 16,
+        "kernel_sum_ms": 29.453695,
+        "nvtx_range_count": 16,
+        "ordered_signature_sha256": "6f616d27c77e7a4155d50ff0d265ff20b6a29d774af97fd387aa72fdb8d18732"
+      },
+      "lowp/fwd/attention_rmsnorm_nvfp4_pack": {
+        "kernel_count": 32,
+        "kernel_sum_ms": 4.391456,
+        "nvtx_range_count": 16,
+        "ordered_signature_sha256": "9ef6b5ea339b8cb938f8e9454d0d1a8f9b9f4f61c03bff8990731de1ef8f6545"
+      },
+      "lowp/fwd/output_nvfp4_pack": {
+        "kernel_count": 80,
+        "kernel_sum_ms": 1.933024,
+        "nvtx_range_count": 16,
+        "ordered_signature_sha256": "1b95dc5366b06e96aaef54d342081ac15a51ca3c77560bb1cf48b3cd86942930"
+      },
+      "lowp/fwd/output_projection": {
+        "kernel_count": 16,
+        "kernel_sum_ms": 2.01696,
+        "nvtx_range_count": 16,
+        "ordered_signature_sha256": "183bd99bd8a4f3de13d132af24b58d1879545966083df117b0aa3f2ddab4954a"
+      },
+      "lowp/fwd/output_weight_nvfp4_dual_pack": {
+        "kernel_count": 96,
+        "kernel_sum_ms": 0.291808,
+        "nvtx_range_count": 16,
+        "ordered_signature_sha256": "4b0ba296d3584fa990ec19beabcd643212027907c5638611538a447bb555ee17"
+      },
+      "lowp/fwd/qkv_projection_rope_publish": {
+        "kernel_count": 16,
+        "kernel_sum_ms": 13.915263,
+        "nvtx_range_count": 16,
+        "ordered_signature_sha256": "6870f9715033c94a1656565f061be76767a4e553944691d0d1cbfa8545b49598"
+      },
+      "lowp/fwd/qkv_weight_nvfp4_pack": {
+        "kernel_count": 80,
+        "kernel_sum_ms": 0.242144,
+        "nvtx_range_count": 16,
+        "ordered_signature_sha256": "2de0ef4e1a72337a6dee5839737df99d1a84e069c506654bd8fb372ddf62880d"
+      },
+      "optimizer": {
+        "kernel_count": 62,
+        "kernel_sum_ms": 7.640672,
+        "nvtx_range_count": 1,
+        "ordered_signature_sha256": "958ec06eb942a5b1bb67c0d6bae71f0fe5809d780bba5bf2f013901105a56b57"
+      }
+    }
+  },
+  "schema": "saturated_nsys_pair_analysis_v1"
+}

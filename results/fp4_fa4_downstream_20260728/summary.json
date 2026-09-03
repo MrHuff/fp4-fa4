@@ -1,0 +1,279 @@
+{
+  "schema": "tk_fp4_downstream_summary_v2",
+  "date": "2026-07-28",
+  "gpu": "NVIDIA GB200",
+  "p_scale_policy": {
+    "unshifted_global_log2": 0.0,
+    "shifted_global_factor": 2688.0,
+    "shifted_global_log2": 11.39231742277876,
+    "derivation": "E4M3 max 448 multiplied by E2M1 max 6",
+    "kernel_convention": "G multiplies the stored E4M3 P block scale and softmax denominator",
+    "reciprocal_range_scale": "r = 1/G; r <= 1 is the equivalent range-expansion convention",
+    "calibration_note": "G is compile-time in this implementation; it is not learned",
+    "flashattention3_fixed_reference_factor": 256.0
+  },
+  "vit_cifar10": {
+    "samples": 10000,
+    "bf16": {
+      "accuracy": 0.9854
+    },
+    "global1": {
+      "accuracy": 0.9838,
+      "top1_agreement": 0.9964,
+      "logit_cosine": 0.9995470643043518,
+      "logit_relative_l2": 0.02987908199429512,
+      "mean_kl": 0.0030998275615274906,
+      "max_abs": 3.25,
+      "raw_sha256": "a1e6e3a858ae9b82e4c87bbb698ed2809cc9b41caee1197400a9e64c99984003"
+    },
+    "global2688": {
+      "accuracy": 0.9848,
+      "top1_agreement": 0.997,
+      "logit_cosine": 0.9996415376663208,
+      "logit_relative_l2": 0.026533013209700584,
+      "mean_kl": 0.002242574468255043,
+      "max_abs": 2.6875,
+      "raw_sha256": "6652f6a3b1999810f5a1e77b448c8d1c0b295a9a50fa3ca2eb8dd50292ea6624"
+    },
+    "pairwise_global1_to_global2688": {
+      "changed_predictions": 29,
+      "wrong_to_right": 18,
+      "right_to_wrong": 8,
+      "wrong_to_different_wrong": 3,
+      "bf16_disagreements_global1": 36,
+      "bf16_disagreements_global2688": 30
+    }
+  },
+  "bert_wikitext_mlm": {
+    "blocks": 800,
+    "masked_tokens": 30510,
+    "bf16": {
+      "loss": 2.2066139909174747,
+      "perplexity": 9.084902691716087,
+      "masked_accuracy": 0.6174041297935103
+    },
+    "global1": {
+      "loss": 2.224974188152902,
+      "perplexity": 9.253243957506182,
+      "masked_accuracy": 0.6142576204523107,
+      "top1_agreement": 0.9300557194362504,
+      "logit_cosine": 0.9983206391384235,
+      "logit_relative_l2": 0.0579305282058808,
+      "mean_kl": 0.029455427841079778,
+      "max_abs": 16.5078125,
+      "raw_sha256": "43a60e973369bd27a5fc808e38a48a3374e6825f010be29263c2a35d72d1fb58"
+    },
+    "global2688": {
+      "loss": 2.222595352752996,
+      "perplexity": 9.231258173864177,
+      "masked_accuracy": 0.6139626352015732,
+      "top1_agreement": 0.9296951819075713,
+      "logit_cosine": 0.9983082142133671,
+      "logit_relative_l2": 0.058148252499978376,
+      "mean_kl": 0.0297771911182899,
+      "max_abs": 16.2578125,
+      "raw_sha256": "52a59b8dab0b9a75f7d6772a2548a8828c7f1a580d303b2d20a0dbef933db830"
+    }
+  },
+  "kernel_timing_us": {
+    "shape": "B1 S256 H16 D128",
+    "protocol": "8 interleaved trials, 20 ms warmup, 100 ms repetition",
+    "global1_median": 12.576,
+    "global2688_median": 12.496
+  },
+  "scale_calibration_pilot": {
+    "convention": "kernel G; reciprocal user scale r=1/G",
+    "vit_cifar10_1000": {
+      "G1": {
+        "qk_format": "nvfp4_e4m3_block16",
+        "pv_format": "nvfp4_e4m3_block16",
+        "samples": 1000,
+        "baseline_accuracy": 0.989,
+        "fp4_accuracy": 0.989,
+        "top1_agreement": 0.998,
+        "logit_cosine": 0.9996429681777954,
+        "logit_relative_l2": 0.026681723073124886,
+        "mean_kl": 0.0020353980362415314,
+        "max_abs": 1.34375,
+        "raw_sha256": "5e032d899316a1c37d624a7274551888c4f205435b6f41f359c50b3fba39a00d"
+      },
+      "G256": {
+        "qk_format": "nvfp4_e4m3_block16",
+        "pv_format": "nvfp4_e4m3_block16",
+        "samples": 1000,
+        "baseline_accuracy": 0.989,
+        "fp4_accuracy": 0.987,
+        "top1_agreement": 0.996,
+        "logit_cosine": 0.9996609687805176,
+        "logit_relative_l2": 0.026000360026955605,
+        "mean_kl": 0.0018489356152713299,
+        "max_abs": 1.4765625,
+        "raw_sha256": "85c3607212885e8601d115004e555c43e9f5b3e606ed8f40cecba4016ad1e3ab"
+      },
+      "G448": {
+        "qk_format": "nvfp4_e4m3_block16",
+        "pv_format": "nvfp4_e4m3_block16",
+        "samples": 1000,
+        "baseline_accuracy": 0.989,
+        "fp4_accuracy": 0.986,
+        "top1_agreement": 0.997,
+        "logit_cosine": 0.9995566010475159,
+        "logit_relative_l2": 0.02972506918013096,
+        "mean_kl": 0.0028830370865762234,
+        "max_abs": 1.4609375,
+        "raw_sha256": "342ae1772d420de3160494c2ace1e1ad38038df63cfbf760600c1f824b2ec7f4"
+      },
+      "G2048": {
+        "qk_format": "nvfp4_e4m3_block16",
+        "pv_format": "nvfp4_e4m3_block16",
+        "samples": 1000,
+        "baseline_accuracy": 0.989,
+        "fp4_accuracy": 0.987,
+        "top1_agreement": 0.998,
+        "logit_cosine": 0.9997139573097229,
+        "logit_relative_l2": 0.023888153955340385,
+        "mean_kl": 0.0013308473862707615,
+        "max_abs": 1.30859375,
+        "raw_sha256": "385f590475b4e99235d9772f1ecba00c022d5cec0c676b461869fde719e8269d"
+      },
+      "G2688": {
+        "qk_format": "nvfp4_e4m3_block16",
+        "pv_format": "nvfp4_e4m3_block16",
+        "samples": 1000,
+        "baseline_accuracy": 0.989,
+        "fp4_accuracy": 0.988,
+        "top1_agreement": 0.999,
+        "logit_cosine": 0.9997122287750244,
+        "logit_relative_l2": 0.023954711854457855,
+        "mean_kl": 0.0015098645817488432,
+        "max_abs": 1.1328125,
+        "raw_sha256": "dabbeeabbc504a584812a9184892447a30c12d49284125c6d859e6989eddffb0"
+      }
+    },
+    "note": "The best factor depends on the metric and model; the sweep is not monotonic."
+  },
+  "format_combination_pilot": {
+    "policy": "stabilized exact online softmax; NVFP4 P uses G=2048, MXFP4 P uses its native E8M0 scale and no E4M3 lift",
+    "vit_cifar10_1000": {
+      "nv-nv": {
+        "qk_format": "nvfp4_e4m3_block16",
+        "pv_format": "nvfp4_e4m3_block16",
+        "samples": 1000,
+        "baseline_accuracy": 0.989,
+        "fp4_accuracy": 0.987,
+        "top1_agreement": 0.998,
+        "logit_cosine": 0.9997139573097229,
+        "logit_relative_l2": 0.023888153955340385,
+        "mean_kl": 0.0013308473862707615,
+        "max_abs": 1.30859375,
+        "raw_sha256": "385f590475b4e99235d9772f1ecba00c022d5cec0c676b461869fde719e8269d"
+      },
+      "mx-nv": {
+        "qk_format": "mxfp4_e8m0_block32",
+        "pv_format": "nvfp4_e4m3_block16",
+        "samples": 1000,
+        "baseline_accuracy": 0.989,
+        "fp4_accuracy": 0.982,
+        "top1_agreement": 0.993,
+        "logit_cosine": 0.9992213249206543,
+        "logit_relative_l2": 0.039686013013124466,
+        "mean_kl": 0.005605508107692003,
+        "max_abs": 1.65625,
+        "raw_sha256": "bfb044ac2cbc46ebf07ad77a5cf6d6d04fc898a2b5c2981ebd53c8ca9f0e4e1c"
+      },
+      "nv-mx": {
+        "qk_format": "nvfp4_e4m3_block16",
+        "pv_format": "mxfp4_e8m0_block32",
+        "samples": 1000,
+        "baseline_accuracy": 0.989,
+        "fp4_accuracy": 0.99,
+        "top1_agreement": 0.995,
+        "logit_cosine": 0.9993176460266113,
+        "logit_relative_l2": 0.036951590329408646,
+        "mean_kl": 0.003443442052230239,
+        "max_abs": 2.015625,
+        "raw_sha256": "484a963f55ed5cf07b255f95e3975b875cea2552262242f9eaba5088db244c37"
+      },
+      "mx-mx": {
+        "qk_format": "mxfp4_e8m0_block32",
+        "pv_format": "mxfp4_e8m0_block32",
+        "samples": 1000,
+        "baseline_accuracy": 0.989,
+        "fp4_accuracy": 0.984,
+        "top1_agreement": 0.991,
+        "logit_cosine": 0.998569130897522,
+        "logit_relative_l2": 0.053680937737226486,
+        "mean_kl": 0.01108285691589117,
+        "max_abs": 3.1484375,
+        "raw_sha256": "595f22cd5bbcad2782ac40681f145847dc8c7c62c63e03fccf769fb7e8cc36f2"
+      }
+    },
+    "bert_wikitext_200": {
+      "nv-nv": {
+        "qk_format": "nvfp4_e4m3_block16",
+        "pv_format": "nvfp4_e4m3_block16",
+        "blocks": 200,
+        "masked_tokens": 7583,
+        "baseline_loss": 2.2253651290082623,
+        "fp4_loss": 2.2446364176771687,
+        "baseline_masked_accuracy": 0.6058288276407754,
+        "fp4_masked_accuracy": 0.6030594751417645,
+        "top1_agreement": 0.9249637346696558,
+        "logit_cosine": 0.9983762814718377,
+        "logit_relative_l2": 0.056968726850726445,
+        "mean_kl": 0.029695371681949353,
+        "max_abs": 10.9375,
+        "raw_sha256": "87e3de3649aa681e5303ede8d940279afa70774cd86e2b15d3a43fc509d9d1bc"
+      },
+      "mx-nv": {
+        "qk_format": "mxfp4_e8m0_block32",
+        "pv_format": "nvfp4_e4m3_block16",
+        "blocks": 200,
+        "masked_tokens": 7583,
+        "baseline_loss": 2.2253651290082623,
+        "fp4_loss": 2.2420865687345524,
+        "baseline_masked_accuracy": 0.6058288276407754,
+        "fp4_masked_accuracy": 0.5979163919293156,
+        "top1_agreement": 0.8884346564684162,
+        "logit_cosine": 0.9960449644945445,
+        "logit_relative_l2": 0.08925117459286357,
+        "mean_kl": 0.07373807090859638,
+        "max_abs": 9.375,
+        "raw_sha256": "10a43b4bc421f97f4263af9a578fb4f788409b308f01863e07077bb30cdab2cd"
+      },
+      "nv-mx": {
+        "qk_format": "nvfp4_e4m3_block16",
+        "pv_format": "mxfp4_e8m0_block32",
+        "blocks": 200,
+        "masked_tokens": 7583,
+        "baseline_loss": 2.2253651290082623,
+        "fp4_loss": 2.2481624500647426,
+        "baseline_masked_accuracy": 0.6058288276407754,
+        "fp4_masked_accuracy": 0.6025319794276671,
+        "top1_agreement": 0.9108532243175524,
+        "logit_cosine": 0.9976034540278849,
+        "logit_relative_l2": 0.06919215468952915,
+        "mean_kl": 0.04169098247045517,
+        "max_abs": 11.515625,
+        "raw_sha256": "1ca62717634d0e1724ffee33fbe95a8a027473e8591b946056b082b8de234da7"
+      },
+      "mx-mx": {
+        "qk_format": "mxfp4_e8m0_block32",
+        "pv_format": "mxfp4_e8m0_block32",
+        "blocks": 200,
+        "masked_tokens": 7583,
+        "baseline_loss": 2.2253651290082623,
+        "fp4_loss": 2.252169922852947,
+        "baseline_masked_accuracy": 0.6058288276407754,
+        "fp4_masked_accuracy": 0.5979163919293156,
+        "top1_agreement": 0.8788078596861401,
+        "logit_cosine": 0.9954341388511478,
+        "logit_relative_l2": 0.09585099377087716,
+        "mean_kl": 0.08435158241114264,
+        "max_abs": 11.578125,
+        "raw_sha256": "9fbf798af6f45120e453eccf5c8fe2c6b7580b8cb3e5ed3f007638fcb1a99ec0"
+      }
+    },
+    "note": "Pilot sample sizes are suitable for format triage, not final model-quality claims."
+  }
+}

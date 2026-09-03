@@ -1,0 +1,182 @@
+# PV-only power-of-two matched precision study
+
+- Device: `cuda:0`
+- Seqlens: `(1024, 2048, 4096, 8192)`
+- Input modes: `('random_live_fp4', 'zero_qk_random_v')`
+- P modes: `('live_direct', 'live_sa3_baseline', 'live_localcta_cta_amax_experimental', 'stored_p')`
+- PV backends: `('localcta', 'mxfp4_v3')`
+- PV execution modes: `('real_kernel', 'qdq_proxy')`
+- Distribution: `gaussian`
+
+## Winners by case
+
+- `S=1024` `random_live_fp4`:
+- `real_kernel` winner: `live_direct/localcta` MAE `0.002514652`, LSE max `0.000001431`
+- `real_kernel` best live: `live_direct/localcta` MAE `0.002514652`
+- `real_kernel` `stored_p/mxfp4_v3`: MAE `0.002728329`, LSE max `0.000001431`
+- `real_kernel` delta `localcta_localcta_minus_live_direct_mae` = `+0.007000293`
+- `real_kernel` delta `localcta_localcta_minus_sa3_mae` = `+0.006654993`
+- `real_kernel` delta `localcta_sa3_minus_live_direct_mae` = `+0.000345301`
+- `real_kernel` delta `mxfp4_v3_localcta_minus_live_direct_mae` = `+0.000702310`
+- `real_kernel` delta `mxfp4_v3_localcta_minus_sa3_mae` = `+0.000729959`
+- `real_kernel` delta `mxfp4_v3_sa3_minus_live_direct_mae` = `-0.000027649`
+- `real_kernel` delta `stored_mxfp4_v3_minus_best_live_mae` = `+0.000213677`
+- `qdq_proxy` winner: `stored_p/localcta` MAE `0.002252108`, LSE max `0.000001431`
+- `qdq_proxy` best live: `live_localcta_cta_amax_experimental/localcta` MAE `0.002369176`
+- `qdq_proxy` `stored_p/mxfp4_v3`: MAE `0.017250724`, LSE max `0.000001431`
+- `qdq_proxy` delta `localcta_localcta_minus_live_direct_mae` = `-0.000137182`
+- `qdq_proxy` delta `localcta_localcta_minus_sa3_mae` = `-0.000042023`
+- `qdq_proxy` delta `localcta_sa3_minus_live_direct_mae` = `-0.000095159`
+- `qdq_proxy` delta `mxfp4_v3_localcta_minus_live_direct_mae` = `+0.000000027`
+- `qdq_proxy` delta `mxfp4_v3_localcta_minus_sa3_mae` = `+0.000023197`
+- `qdq_proxy` delta `mxfp4_v3_sa3_minus_live_direct_mae` = `-0.000023169`
+- `qdq_proxy` delta `stored_mxfp4_v3_minus_best_live_mae` = `+0.014881548`
+- `S=1024` `zero_qk_random_v`:
+- `real_kernel` winner: `live_sa3_baseline/localcta` MAE `0.001509298`, LSE max `0.000000954`
+- `real_kernel` best live: `live_sa3_baseline/localcta` MAE `0.001509298`
+- `real_kernel` `stored_p/mxfp4_v3`: MAE `0.003163022`, LSE max `0.000000954`
+- `real_kernel` delta `localcta_localcta_minus_live_direct_mae` = `+0.007364917`
+- `real_kernel` delta `localcta_localcta_minus_sa3_mae` = `+0.007515033`
+- `real_kernel` delta `localcta_sa3_minus_live_direct_mae` = `-0.000150116`
+- `real_kernel` delta `mxfp4_v3_localcta_minus_live_direct_mae` = `+0.004074267`
+- `real_kernel` delta `mxfp4_v3_localcta_minus_sa3_mae` = `+0.001925142`
+- `real_kernel` delta `mxfp4_v3_sa3_minus_live_direct_mae` = `+0.002149126`
+- `real_kernel` delta `stored_mxfp4_v3_minus_best_live_mae` = `+0.001653725`
+- `qdq_proxy` winner: `live_sa3_baseline/localcta` MAE `0.001491439`, LSE max `0.000000954`
+- `qdq_proxy` best live: `live_sa3_baseline/localcta` MAE `0.001491439`
+- `qdq_proxy` `stored_p/mxfp4_v3`: MAE `0.017007262`, LSE max `0.000000954`
+- `qdq_proxy` delta `localcta_localcta_minus_live_direct_mae` = `-0.000039520`
+- `qdq_proxy` delta `localcta_localcta_minus_sa3_mae` = `+0.000090019`
+- `qdq_proxy` delta `localcta_sa3_minus_live_direct_mae` = `-0.000129538`
+- `qdq_proxy` delta `mxfp4_v3_localcta_minus_live_direct_mae` = `+0.002304545`
+- `qdq_proxy` delta `mxfp4_v3_localcta_minus_sa3_mae` = `+0.000158922`
+- `qdq_proxy` delta `mxfp4_v3_sa3_minus_live_direct_mae` = `+0.002145623`
+- `qdq_proxy` delta `stored_mxfp4_v3_minus_best_live_mae` = `+0.015515822`
+- `S=2048` `random_live_fp4`:
+- `real_kernel` winner: `live_sa3_baseline/mxfp4_v3` MAE `0.001908443`, LSE max `0.000001431`
+- `real_kernel` best live: `live_sa3_baseline/mxfp4_v3` MAE `0.001908443`
+- `real_kernel` `stored_p/mxfp4_v3`: MAE `0.001955451`, LSE max `0.000001431`
+- `real_kernel` delta `localcta_localcta_minus_live_direct_mae` = `-0.001262058`
+- `real_kernel` delta `localcta_localcta_minus_sa3_mae` = `-0.000683773`
+- `real_kernel` delta `localcta_sa3_minus_live_direct_mae` = `-0.000578284`
+- `real_kernel` delta `mxfp4_v3_localcta_minus_live_direct_mae` = `+0.000641420`
+- `real_kernel` delta `mxfp4_v3_localcta_minus_sa3_mae` = `+0.000695525`
+- `real_kernel` delta `mxfp4_v3_sa3_minus_live_direct_mae` = `-0.000054105`
+- `real_kernel` delta `stored_mxfp4_v3_minus_best_live_mae` = `+0.000047008`
+- `real_kernel` invalid rows: `1` (errors `0`)
+- `qdq_proxy` winner: `stored_p/localcta` MAE `0.001578751`, LSE max `0.000001431`
+- `qdq_proxy` best live: `live_localcta_cta_amax_experimental/localcta` MAE `0.001741811`
+- `qdq_proxy` `stored_p/mxfp4_v3`: MAE `0.012232591`, LSE max `0.000001431`
+- `qdq_proxy` delta `localcta_localcta_minus_live_direct_mae` = `-0.000062419`
+- `qdq_proxy` delta `localcta_localcta_minus_sa3_mae` = `-0.000023769`
+- `qdq_proxy` delta `localcta_sa3_minus_live_direct_mae` = `-0.000038650`
+- `qdq_proxy` delta `mxfp4_v3_localcta_minus_live_direct_mae` = `+0.000002722`
+- `qdq_proxy` delta `mxfp4_v3_localcta_minus_sa3_mae` = `+0.000051962`
+- `qdq_proxy` delta `mxfp4_v3_sa3_minus_live_direct_mae` = `-0.000049240`
+- `qdq_proxy` delta `stored_mxfp4_v3_minus_best_live_mae` = `+0.010490780`
+- `S=2048` `zero_qk_random_v`:
+- `real_kernel` winner: `live_direct/mxfp4_v3` MAE `0.001359805`, LSE max `0.000000954`
+- `real_kernel` best live: `live_direct/mxfp4_v3` MAE `0.001359805`
+- `real_kernel` `stored_p/mxfp4_v3`: MAE `0.002271102`, LSE max `0.000000954`
+- `real_kernel` delta `localcta_localcta_minus_live_direct_mae` = `-0.001142636`
+- `real_kernel` delta `localcta_localcta_minus_sa3_mae` = `-0.000451600`
+- `real_kernel` delta `localcta_sa3_minus_live_direct_mae` = `-0.000691036`
+- `real_kernel` delta `mxfp4_v3_localcta_minus_live_direct_mae` = `+0.003159482`
+- `real_kernel` delta `mxfp4_v3_localcta_minus_sa3_mae` = `+0.001479164`
+- `real_kernel` delta `mxfp4_v3_sa3_minus_live_direct_mae` = `+0.001680317`
+- `real_kernel` delta `stored_mxfp4_v3_minus_best_live_mae` = `+0.000911297`
+- `real_kernel` invalid rows: `1` (errors `0`)
+- `qdq_proxy` winner: `live_sa3_baseline/localcta` MAE `0.001149714`, LSE max `0.000000954`
+- `qdq_proxy` best live: `live_sa3_baseline/localcta` MAE `0.001149714`
+- `qdq_proxy` `stored_p/mxfp4_v3`: MAE `0.011447240`, LSE max `0.000000954`
+- `qdq_proxy` delta `localcta_localcta_minus_live_direct_mae` = `-0.000026804`
+- `qdq_proxy` delta `localcta_localcta_minus_sa3_mae` = `+0.000075358`
+- `qdq_proxy` delta `localcta_sa3_minus_live_direct_mae` = `-0.000102162`
+- `qdq_proxy` delta `mxfp4_v3_localcta_minus_live_direct_mae` = `+0.001963471`
+- `qdq_proxy` delta `mxfp4_v3_localcta_minus_sa3_mae` = `+0.000285492`
+- `qdq_proxy` delta `mxfp4_v3_sa3_minus_live_direct_mae` = `+0.001677979`
+- `qdq_proxy` delta `stored_mxfp4_v3_minus_best_live_mae` = `+0.010297525`
+- `S=4096` `random_live_fp4`:
+- `real_kernel` winner: `live_sa3_baseline/mxfp4_v3` MAE `0.001289536`, LSE max `0.000001907`
+- `real_kernel` best live: `live_sa3_baseline/mxfp4_v3` MAE `0.001289536`
+- `real_kernel` `stored_p/mxfp4_v3`: MAE `0.001382809`, LSE max `0.000001907`
+- `real_kernel` delta `localcta_localcta_minus_live_direct_mae` = `+0.005601098`
+- `real_kernel` delta `mxfp4_v3_localcta_minus_live_direct_mae` = `+0.000355622`
+- `real_kernel` delta `mxfp4_v3_localcta_minus_sa3_mae` = `+0.000482949`
+- `real_kernel` delta `mxfp4_v3_sa3_minus_live_direct_mae` = `-0.000127327`
+- `real_kernel` delta `stored_mxfp4_v3_minus_best_live_mae` = `+0.000093273`
+- `real_kernel` invalid rows: `2` (errors `0`)
+- `qdq_proxy` winner: `stored_p/localcta` MAE `0.001079482`, LSE max `0.000001907`
+- `qdq_proxy` best live: `live_direct/localcta` MAE `0.001236261`
+- `qdq_proxy` `stored_p/mxfp4_v3`: MAE `0.007982104`, LSE max `0.000001907`
+- `qdq_proxy` delta `localcta_localcta_minus_live_direct_mae` = `+0.000004394`
+- `qdq_proxy` delta `localcta_localcta_minus_sa3_mae` = `-0.000019492`
+- `qdq_proxy` delta `localcta_sa3_minus_live_direct_mae` = `+0.000023886`
+- `qdq_proxy` delta `mxfp4_v3_localcta_minus_live_direct_mae` = `-0.000053205`
+- `qdq_proxy` delta `mxfp4_v3_localcta_minus_sa3_mae` = `+0.000070078`
+- `qdq_proxy` delta `mxfp4_v3_sa3_minus_live_direct_mae` = `-0.000123282`
+- `qdq_proxy` delta `stored_mxfp4_v3_minus_best_live_mae` = `+0.006745843`
+- `S=4096` `zero_qk_random_v`:
+- `real_kernel` winner: `live_direct/mxfp4_v3` MAE `0.000996488`, LSE max `0.000000954`
+- `real_kernel` best live: `live_direct/mxfp4_v3` MAE `0.000996488`
+- `real_kernel` `stored_p/mxfp4_v3`: MAE `0.001667930`, LSE max `0.000000954`
+- `real_kernel` delta `localcta_localcta_minus_live_direct_mae` = `+0.005665932`
+- `real_kernel` delta `mxfp4_v3_localcta_minus_live_direct_mae` = `+0.002258704`
+- `real_kernel` delta `mxfp4_v3_localcta_minus_sa3_mae` = `+0.001021969`
+- `real_kernel` delta `mxfp4_v3_sa3_minus_live_direct_mae` = `+0.001236735`
+- `real_kernel` delta `stored_mxfp4_v3_minus_best_live_mae` = `+0.000671442`
+- `real_kernel` invalid rows: `2` (errors `0`)
+- `qdq_proxy` winner: `live_sa3_baseline/localcta` MAE `0.000772170`, LSE max `0.000000954`
+- `qdq_proxy` best live: `live_sa3_baseline/localcta` MAE `0.000772170`
+- `qdq_proxy` `stored_p/mxfp4_v3`: MAE `0.008246187`, LSE max `0.000000954`
+- `qdq_proxy` delta `localcta_localcta_minus_live_direct_mae` = `-0.000018072`
+- `qdq_proxy` delta `localcta_localcta_minus_sa3_mae` = `+0.000080956`
+- `qdq_proxy` delta `localcta_sa3_minus_live_direct_mae` = `-0.000099029`
+- `qdq_proxy` delta `mxfp4_v3_localcta_minus_live_direct_mae` = `+0.001531065`
+- `qdq_proxy` delta `mxfp4_v3_localcta_minus_sa3_mae` = `+0.000295937`
+- `qdq_proxy` delta `mxfp4_v3_sa3_minus_live_direct_mae` = `+0.001235128`
+- `qdq_proxy` delta `stored_mxfp4_v3_minus_best_live_mae` = `+0.007474017`
+- `S=8192` `random_live_fp4`:
+- `real_kernel` winner: `live_sa3_baseline/mxfp4_v3` MAE `0.000904791`, LSE max `0.000001907`
+- `real_kernel` best live: `live_sa3_baseline/mxfp4_v3` MAE `0.000904791`
+- `real_kernel` `stored_p/mxfp4_v3`: MAE `0.000996327`, LSE max `0.000001907`
+- `real_kernel` delta `localcta_localcta_minus_live_direct_mae` = `+0.000241983`
+- `real_kernel` delta `localcta_localcta_minus_sa3_mae` = `-0.000025375`
+- `real_kernel` delta `localcta_sa3_minus_live_direct_mae` = `+0.000267358`
+- `real_kernel` delta `mxfp4_v3_localcta_minus_live_direct_mae` = `+0.000276288`
+- `real_kernel` delta `mxfp4_v3_localcta_minus_sa3_mae` = `+0.000408802`
+- `real_kernel` delta `mxfp4_v3_sa3_minus_live_direct_mae` = `-0.000132514`
+- `real_kernel` delta `stored_mxfp4_v3_minus_best_live_mae` = `+0.000091535`
+- `real_kernel` invalid rows: `1` (errors `0`)
+- `qdq_proxy` winner: `stored_p/localcta` MAE `0.000796939`, LSE max `0.000001907`
+- `qdq_proxy` best live: `live_localcta_cta_amax_experimental/localcta` MAE `0.000882591`
+- `qdq_proxy` `stored_p/mxfp4_v3`: MAE `0.005702749`, LSE max `0.000001907`
+- `qdq_proxy` delta `localcta_localcta_minus_live_direct_mae` = `-0.000011610`
+- `qdq_proxy` delta `localcta_localcta_minus_sa3_mae` = `-0.000014487`
+- `qdq_proxy` delta `localcta_sa3_minus_live_direct_mae` = `+0.000002877`
+- `qdq_proxy` delta `mxfp4_v3_localcta_minus_live_direct_mae` = `-0.000051949`
+- `qdq_proxy` delta `mxfp4_v3_localcta_minus_sa3_mae` = `+0.000077375`
+- `qdq_proxy` delta `mxfp4_v3_sa3_minus_live_direct_mae` = `-0.000129324`
+- `qdq_proxy` delta `stored_mxfp4_v3_minus_best_live_mae` = `+0.004820158`
+- `S=8192` `zero_qk_random_v`:
+- `real_kernel` winner: `live_direct/mxfp4_v3` MAE `0.000711758`, LSE max `0.000000954`
+- `real_kernel` best live: `live_direct/mxfp4_v3` MAE `0.000711758`
+- `real_kernel` `stored_p/mxfp4_v3`: MAE `0.001163710`, LSE max `0.000000954`
+- `real_kernel` delta `localcta_localcta_minus_live_direct_mae` = `+0.000184004`
+- `real_kernel` delta `localcta_localcta_minus_sa3_mae` = `+0.000184004`
+- `real_kernel` delta `localcta_sa3_minus_live_direct_mae` = `+0.000000000`
+- `real_kernel` delta `mxfp4_v3_localcta_minus_live_direct_mae` = `+0.001620334`
+- `real_kernel` delta `mxfp4_v3_localcta_minus_sa3_mae` = `+0.000774249`
+- `real_kernel` delta `mxfp4_v3_sa3_minus_live_direct_mae` = `+0.000846084`
+- `real_kernel` delta `stored_mxfp4_v3_minus_best_live_mae` = `+0.000451953`
+- `real_kernel` invalid rows: `1` (errors `0`)
+- `qdq_proxy` winner: `live_sa3_baseline/localcta` MAE `0.000579086`, LSE max `0.000000954`
+- `qdq_proxy` best live: `live_sa3_baseline/localcta` MAE `0.000579086`
+- `qdq_proxy` `stored_p/mxfp4_v3`: MAE `0.005687907`, LSE max `0.000000954`
+- `qdq_proxy` delta `localcta_localcta_minus_live_direct_mae` = `-0.000006114`
+- `qdq_proxy` delta `localcta_localcta_minus_sa3_mae` = `+0.000027474`
+- `qdq_proxy` delta `localcta_sa3_minus_live_direct_mae` = `-0.000033588`
+- `qdq_proxy` delta `mxfp4_v3_localcta_minus_live_direct_mae` = `+0.001107295`
+- `qdq_proxy` delta `mxfp4_v3_localcta_minus_sa3_mae` = `+0.000262603`
+- `qdq_proxy` delta `mxfp4_v3_sa3_minus_live_direct_mae` = `+0.000844692`
+- `qdq_proxy` delta `stored_mxfp4_v3_minus_best_live_mae` = `+0.005108821`

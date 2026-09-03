@@ -1,0 +1,120 @@
+{
+  "schema": "d4all_represented_probability_mass_calibration_v1",
+  "created_utc": "2026-08-20T21:52:00Z",
+  "shape": {
+    "batch": 1,
+    "sequence": 4096,
+    "q_heads": 32,
+    "kv_heads": 8,
+    "head_dim": 64,
+    "hidden": 2048,
+    "causal": true
+  },
+  "method": {
+    "description": "For each seed, publish represented per-block NVFP4 Q/K and the D4ALL forward LSE, decode the backward E4M3 Q/K payloads by their fixed x4 publication scale, compute a causal CuTe-BF16 reference LSE, and evaluate exp(reference_lse - d4all_lse) for every query row and head.",
+    "qk_reference": "BF16 decode of represented E4M3 backward Q/K",
+    "mass_expression": "exp(reference_lse - d4all_lse)",
+    "selected_global_backward_gain": 0.9768740549154875,
+    "selection_rule": "inverse of the aggregate mean represented probability mass"
+  },
+  "forward_policy": {
+    "route": "real_fwd_tk_hao_direct_nvfp4_mxfp4pv",
+    "qk_format": "nvfp4_e4m3_block16",
+    "pv_format": "mxfp4_e8m0_block32",
+    "mx_pwl_exp2_mode": 23,
+    "mx_mode23_native_density": 4,
+    "mx_mode23_native_quarter_mask": 15,
+    "mx_quantized_denom": true,
+    "mx_shiftless_softmax": true,
+    "mx_stored_scale_shift_log2": 16,
+    "q_quant_scale": 2.25,
+    "k_quant_scale": 2.0,
+    "projection_weight_scaling": "2d",
+    "v_mxfp4_scaling": "1d"
+  },
+  "aggregate": {
+    "rows": 524288,
+    "mean": 1.023673415184021,
+    "median": 1.0226936340332031,
+    "p01": 1.0003139972686768,
+    "p10": 1.01194429397583,
+    "p90": 1.0353806018829346,
+    "p99": 1.0584557056427002,
+    "minimum": 0.7949130535125732,
+    "maximum": 1.5053492784500122,
+    "inverse_mean": 0.9768740549154875,
+    "mean_of_seed_inverse_means": 0.9768740285542875
+  },
+  "records": [
+    {
+      "seed": 20260818,
+      "mean": 1.023602843284607,
+      "median": 1.0226390361785889,
+      "p01": 1.0003855228424072,
+      "p10": 1.0119541883468628,
+      "p90": 1.035309910774231,
+      "p99": 1.0580931901931763,
+      "minimum": 0.8454828858375549,
+      "maximum": 1.4945498704910278,
+      "inverse_mean": 0.9769414051167848,
+      "probability_scale_sha256": "7120efeedf2998b889977ed37e6a6a7fc3a19e271d19def02d291a70d9d5ea7f"
+    },
+    {
+      "seed": 20260819,
+      "mean": 1.023707628250122,
+      "median": 1.0227229595184326,
+      "p01": 1.000500202178955,
+      "p10": 1.0119632482528687,
+      "p90": 1.0354191064834595,
+      "p99": 1.058409333229065,
+      "minimum": 0.7949130535125732,
+      "maximum": 1.4973803758621216,
+      "inverse_mean": 0.9768414070620468,
+      "probability_scale_sha256": "3a1f969d63ab41d125b64433dce4371fefed69f07e951895177c4faac024cded"
+    },
+    {
+      "seed": 20260820,
+      "mean": 1.02372407913208,
+      "median": 1.022698998451233,
+      "p01": 1.0005459785461426,
+      "p10": 1.0119657516479492,
+      "p90": 1.0354901552200317,
+      "p99": 1.059340000152588,
+      "minimum": 0.8406203389167786,
+      "maximum": 1.4827834367752075,
+      "inverse_mean": 0.9768257095679594,
+      "probability_scale_sha256": "098b49eb73319dfafb62c33c754a5738f8b515e97a2529fa0a3bc74979eaee74"
+    },
+    {
+      "seed": 20260821,
+      "mean": 1.0236592292785645,
+      "median": 1.022718071937561,
+      "p01": 0.9999033808708191,
+      "p10": 1.0119082927703857,
+      "p90": 1.035306453704834,
+      "p99": 1.0580191612243652,
+      "minimum": 0.8481926918029785,
+      "maximum": 1.5053492784500122,
+      "inverse_mean": 0.976887592470359,
+      "probability_scale_sha256": "753701d75873ed388caab46a7a7c63bd3f42acec3725e0c456d3a059ad161560"
+    }
+  ],
+  "provenance": {
+    "git_head": "7ea16e6d3e7cf5a6b7f01452786161b9526d58b2",
+    "measurement_source": "/workspace/codebases/pv/fp4_matmul_worktrees/causal_matrix_20260820/tk_fa4/lowp_fa4_bwd/validate_gqa_d64_replay_preexp.py",
+    "measurement_source_sha256": "975e9570b7d7950478ea5cdcc1c21a6543c5ee9cf9f7534c2f6a513329ffddf7",
+    "python": "/workspace/codebases/poly_stuff/.venv-poly/bin/python",
+    "device": "NVIDIA GB200",
+    "physical_gpu": 3,
+    "forward_extension": {
+      "path": "/tmp/codex-d4all-pscale-replay-20260820/_C_cfwd_mx_d4all_pscale_s4096h32kv8d64_20260820.cpython-312-aarch64-linux-gnu.so",
+      "sha256": "62618c7869d4656f762f14d0e09465ba4c753af29ed10dde21af82ca3c722e78",
+      "bytes": 1953512
+    },
+    "projection_extension": {
+      "path": "/tmp/codex-aug19-stable-bwd-rebuild-20260820/tk_fa4/_C_b300_lowp_bwd.cpython-312-aarch64-linux-gnu.so",
+      "sha256": "6480ed82250766c6448fb424a2eba5c8b7d57c68e99c58ea8913ef71c7c7e65e",
+      "bytes": 17220528
+    }
+  }
+}

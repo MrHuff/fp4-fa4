@@ -1,0 +1,57 @@
+{
+  "checkpoint": {
+    "branch": "tk-fa4-sm100-rewrite",
+    "commit": "c805474",
+    "pushed": true
+  },
+  "shape": {
+    "batch": 1,
+    "sequence": 4096,
+    "q_heads": 32,
+    "kv_heads": 8,
+    "head_dim": 128,
+    "hidden": 4096
+  },
+  "projection_n_multicast": {
+    "stress_runs": 20,
+    "maximum_abs_error": 0.0,
+    "retained_two_cta_us": 52.25599929690361,
+    "cluster_2_us": 50.49600079655647,
+    "cluster_4_us": 69.18399780988693,
+    "cluster_8_us": 67.35999882221222,
+    "cluster_16_us": 67.10399687290192
+  },
+  "causal_forward": {
+    "new_us": 92.19200164079666,
+    "old_us": 176.96000635623932,
+    "bf16_cute_us": 184.1599941253662,
+    "new_speedup_over_old": 1.9194724401984484,
+    "new_output_cosine_vs_bf16": 0.9910477995872498,
+    "old_output_cosine_vs_bf16": 0.9994760155677795,
+    "new_through_output_projection_cosine_vs_bf16": 0.9822966456413269,
+    "old_through_output_projection_cosine_vs_bf16": 0.9903820753097534
+  },
+  "full_layer_us": {
+    "lowp_materialized_output": 800.480030477047,
+    "lowp_prepacked_output_ceiling": 769.6960270404816,
+    "bf16_current_materialized": 1622.87999689579,
+    "bf16_favorable_lower_bound": 1236.0319942235947
+  },
+  "full_layer_speedup": {
+    "vs_current_bf16_materialized": 2.027383488790636,
+    "vs_favorable_bf16_lower_bound": 1.5441134658749451,
+    "prepacked_output_ceiling_vs_favorable_bf16": 1.60587030567924
+  },
+  "gradient_quality_vs_true_bf16": {
+    "dq_cosine": 0.9960516095161438,
+    "dk_cosine": 0.9955618977546692,
+    "dv_cosine": 0.9992926716804504,
+    "qkv_dgrad_nvfp4_cosine": 0.990334689617157,
+    "qkv_dgrad_rowwise_fp8_cosine": 0.9986152648925781
+  },
+  "decision": {
+    "production_backward": "regular materialized-gradient route",
+    "projection_n_multicast": "diagnostic only; multi-pair clusters regress",
+    "new_causal_forward": "aggressive mode pending convergence validation"
+  }
+}

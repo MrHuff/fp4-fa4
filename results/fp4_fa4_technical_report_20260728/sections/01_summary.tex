@@ -1,0 +1,67 @@
+\section{Introduction}
+
+Attention is usually written as
+\begin{equation}
+  S=QK^\mathsf{T}/\sqrt d,\qquad
+  P=\softmax(S),\qquad
+  O=PV.
+  \label{eq:attention-intro}
+\end{equation}
+The fastest GPU implementation is determined not only by these equations but
+also by where each tile lives and when it becomes ready. FlashAttention avoids
+writing the quadratic $S$ and $P$ matrices to high-bandwidth memory
+\cite{dao2022flashattention}. Later versions improved work partitioning and
+adapted the pipeline to asynchronous matrix units
+\cite{dao2023flashattention2,shah2024flashattention3}. FlashAttention-4 (FA4)
+redesigns this schedule for Blackwell's tensor memory (TMEM), TMA transfers,
+and fully asynchronous tensor-core operations
+\cite{zadouri2026flashattention4}.
+
+Blackwell also provides block-scaled FP4 matrix multiplication with a peak
+throughput target near four times BF16 on GB200. That ratio applies to QK and
+PV, but not to the work between them. Q, K, and V can be quantized before the
+attention kernel starts. P cannot: each online-softmax iteration must create,
+scale, pack, and publish P before the next matrix product can consume it.
+Making QK and PV shorter therefore makes this serial path more visible.
+
+HAO AI Lab's exploratory FP4 FA4 implementation demonstrates the central
+counterexample: NVFP4 QK with FP8 PV is often faster than an all-NVFP4 route
+\cite{hao2026fp4flashattention,zhang2026attnqat}. Its two-query CTA and TMEM
+ownership model solve the large scheduling problem. We keep that structure
+and ask a narrower question: can the online probability representation be
+changed so that full FP4 PV becomes worthwhile?
+
+Our retained format split is
+\begin{equation}
+  \boxed{\text{NVFP4 }QK \quad + \quad \text{MXFP4 }P/V.}
+  \label{eq:retained-format}
+\end{equation}
+NVFP4 keeps fine block-16 scales for signed Q and K. MXFP4 gives each block of
+32 P and V values a power-of-two E8M0 scale. This wider range is useful for
+small probability blocks and lets scale selection fold into a log-domain code
+map.
+
+This report makes four contributions:
+\begin{enumerate}
+  \item It reconstructs HAO's two-query full-FP4 pipeline in ThunderKittens
+  and states its TMEM ownership and N32-to-K64 publication rules explicitly.
+
+  \item It introduces an NV/MX probability path that maps log scores directly
+  toward E2M1 codes with packed FMA, mixes native EX2 with arithmetic work,
+  and normalizes by the probabilities that PV actually consumed.
+
+  \item It adds a low-cost range guard for extreme model logits. The final
+  version enforces one exponent budget and uses an underflow-safe but
+  algebraically equivalent denominator evaluation, fixing the observed
+  20-step Wan failure without a full row scan.
+
+  \item It evaluates latency and numerical error from matched records on
+  GB200 and B300, compares against HAO and BF16, and adds ViT, BERT, ViT-MAE,
+  and Wan model replays.
+\end{enumerate}
+
+The scope is forward, noncausal D128 and D64 attention. Kernel timings include
+QK, online softmax, P quantization, PV, correction, and the output epilogue;
+they exclude dynamic Q/K/V quantization and optional K/V reordering. The
+paper first explains the inherited storage schedule, then the new probability
+path, followed by matched performance, accuracy, and remaining limits.

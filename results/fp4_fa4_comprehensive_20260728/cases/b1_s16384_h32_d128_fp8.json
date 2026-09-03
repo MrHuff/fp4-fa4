@@ -1,0 +1,107 @@
+{
+  "benchmark": {
+    "correctness": {
+      "tk_vs_bf16_lse": {
+        "cosine": 0.9999978542327881,
+        "max_abs": 0.12821292877197266,
+        "mean_abs": 0.01711324043571949,
+        "rmse": 0.021568581461906433
+      },
+      "tk_vs_bf16_output": {
+        "cosine": 0.9570236206054688,
+        "max_abs": 0.039306640625,
+        "mean_abs": 0.0029871128499507904,
+        "rmse": 0.003752914723008871
+      },
+      "tk_vs_hao_lse": {
+        "cosine": 0.9999984502792358,
+        "max_abs": 0.0942087173461914,
+        "mean_abs": 0.01423257403075695,
+        "rmse": 0.017927303910255432
+      },
+      "tk_vs_hao_output": {
+        "cosine": 0.9670329689979553,
+        "max_abs": 0.0364990234375,
+        "mean_abs": 0.002617564285174012,
+        "rmse": 0.0032851179130375385
+      }
+    },
+    "protocol": {
+      "factory": "HAO create_nvfp4_attention_tensors",
+      "rep_ms": 25,
+      "timer": "triton.testing.do_bench median",
+      "tk_qk_format": "nvfp4",
+      "warmup_ms": 10
+    },
+    "shape": {
+      "batch": 1,
+      "dim": 128,
+      "heads": 32,
+      "seqlen": 16384
+    },
+    "speedup_vs_hao_bf16": {
+      "hao_native_nvfp4_fp8pv": 0.9484557210827659,
+      "tk_hao_direct_nvfp4_fp8pv": 1.031854662912621
+    },
+    "tflops": {
+      "hao_native_bf16": 1679.033397245822,
+      "hao_native_nvfp4_fp8pv": 1592.488831506832,
+      "tk_hao_direct_nvfp4_fp8pv": 1732.5184401341207
+    },
+    "timing_ms": {
+      "hao_native_bf16": 2.619391918182373,
+      "hao_native_nvfp4_fp8pv": 2.7617440223693848,
+      "tk_hao_direct_nvfp4_fp8pv": 2.5385279655456543
+    },
+    "topology": {
+      "batch": 1,
+      "correction_regs": 80,
+      "dqk": 128,
+      "dvo": 128,
+      "dynamic_smem_bytes": 157696,
+      "early_q3": false,
+      "ex2_emu_mask": 12696,
+      "fixed_p_ceiling": false,
+      "heads": 32,
+      "kv_stages": 4,
+      "logical_jobs": 2048,
+      "p_first_chunks": 3,
+      "p_ilp_pipeline": false,
+      "persistent": true,
+      "physical_grid_ctas": 152,
+      "producer_regs": 80,
+      "pv_format": "e4m3_fp8",
+      "qk_format": "nvfp4_e4m3_block16",
+      "query_stages": 2,
+      "retain_q0": 0,
+      "retain_q2_mode": 1,
+      "route": "real_fwd_tk_hao_direct_nvfp4_fp8pv",
+      "schema": "tk_hao_direct_pipeline_v1",
+      "score_pack_ceiling": false,
+      "seqlen": 16384,
+      "shiftless_fp8_mode": 4,
+      "softmax_regs": 176,
+      "threads_per_cta": 512,
+      "tmem_columns": 512,
+      "two_chunk_pipeline": false,
+      "valid": 1,
+      "wait_hint_cycles": 10000000
+    }
+  },
+  "build": {
+    "barriers": 1,
+    "registers": 128,
+    "spill_load_bytes": 0,
+    "spill_store_bytes": 0,
+    "static_smem_bytes": 256
+  },
+  "label": "b1_s16384_h32_d128",
+  "shape": {
+    "batch": 1,
+    "dim": 128,
+    "heads": 32,
+    "seqlen": 16384
+  },
+  "status": "complete",
+  "variant": "fp8"
+}

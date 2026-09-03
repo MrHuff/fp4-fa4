@@ -1,0 +1,73 @@
+{
+  "schema": "llama12b_mx_pre2k_drift_gate_audit_v2",
+  "sources": {
+    "failed_v3_log": {
+      "path": "results/causal_isolated_matrix_20260820/training/dolmino_dclm_a319_2k_d4all_mass_calibrated_noreplay_seed20260818_20260820_v3.log",
+      "bytes": 237424,
+      "sha256": "6c2b5170da6f37ac2fe512893558a510d445c98b76e7348d4ba9674c73c12b49"
+    },
+    "completed_replay_control": {
+      "path": "results/causal_isolated_matrix_20260820/training/dolmino_dclm_a319_2k_d4all_replay_aug19_bwd_d2p0_nosplit_seed20260818_20260820.json",
+      "bytes": 4189118,
+      "sha256": "02ee062b571485a3cf2fb7c2aee2137f87e6ae14fb6a2cbe9da0207e417d8555"
+    }
+  },
+  "method": {
+    "subject_route": "nvfp4_qk_mxfp4_pv",
+    "reference_routes": [
+      "bf16_cute",
+      "nvfp4_qk_fp8_pv_exact"
+    ],
+    "window": 32,
+    "comparison": "rolling mean of matched-batch subject loss minus each reference loss",
+    "warning_threshold": 0.08,
+    "failure_threshold": 0.15,
+    "failure_patience": 3,
+    "minimum_updates": 256,
+    "failure_rule": "both rolling reference gaps strictly exceed the failure threshold for three consecutive windows"
+  },
+  "failed_v3_no_replay": {
+    "warning": {
+      "round_zero_based": 823,
+      "completed_updates": 824,
+      "rolling_mean_loss_gaps": {
+        "bf16_cute": 0.08199815625000009,
+        "nvfp4_qk_fp8_pv_exact": 0.08323518750000011
+      }
+    },
+    "first_failure_threshold_crossing": {
+      "round_zero_based": 837,
+      "completed_updates": 838,
+      "rolling_mean_loss_gaps": {
+        "bf16_cute": 0.15180731250000004,
+        "nvfp4_qk_fp8_pv_exact": 0.15269315625000016
+      }
+    },
+    "patience_gate_failure": {
+      "round_zero_based": 839,
+      "completed_updates": 840,
+      "rolling_mean_loss_gaps": {
+        "bf16_cute": 0.15956834375000004,
+        "nvfp4_qk_fp8_pv_exact": 0.16065643750000014
+      }
+    },
+    "observed_nonfinite": {
+      "round_zero_based": 894,
+      "attempted_update": 895,
+      "route": "nvfp4_qk_mxfp4_pv",
+      "stage": "forward_loss",
+      "loss": "nan"
+    }
+  },
+  "completed_replay_control": {
+    "rounds_observed": 2000,
+    "warning_latched_at_completed_updates": null,
+    "hard_gate_fired": false,
+    "maximum_joint_32_update_gap": 0.056811362504959106,
+    "maximum_joint_gap_round_zero_based": 1883
+  },
+  "interpretation": {
+    "verified": "The configured gate retrospectively warns after update 824 and stops the preserved failed no-replay trajectory after update 840. It neither warns nor stops on the preserved completed 2K replay control.",
+    "uncertainty": "This is one failed no-replay seed and one completed replay control. It is a bounded rerun guard and diagnostic trigger, not proof that the loss gap causes the later NaN or that the thresholds generalize to other seeds or configurations."
+  }
+}

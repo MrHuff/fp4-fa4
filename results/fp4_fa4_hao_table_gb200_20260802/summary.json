@@ -1,0 +1,1505 @@
+{
+  "schema": "fp4-fa4-hao-grid-gb200-v2",
+  "hardware": {
+    "driver": "580.126.09",
+    "max_sm_clock_mhz": 2062,
+    "memory_mib": 189471,
+    "name": "NVIDIA GB200",
+    "power_limit_w": 1200.0,
+    "uuid": "GPU-5a755dd4-1813-db08-ed72-5a7aca637ac2"
+  },
+  "protocol": {
+    "causal": false,
+    "cooldown_seconds": 0.8,
+    "factory": "HAO create_nvfp4_attention_tensors",
+    "flop_convention": "B*H*2*Sq*Sk*(Dqk+Dvo)",
+    "rep_ms": 3000,
+    "seed": 20260814,
+    "timer": "triton.testing.do_bench median",
+    "warmup_ms": 300
+  },
+  "unsupported": [
+    {
+      "shape": "b1_s32768_h24_d64",
+      "reason": "The specialized TK scaled-FP4 PV path requires D128."
+    }
+  ],
+  "aggregate": {
+    "TK NV/MX fast": {
+      "geomean_speedup_vs_bf16": 2.022737050031788,
+      "min_speedup_vs_bf16": 1.6873449552994046,
+      "max_speedup_vs_bf16": 2.3773945984184466,
+      "peak_tflops": 2998.3628932058846,
+      "mean_cosine": 0.9437893496619331,
+      "mean_relative_l2": 0.3366016944249471
+    },
+    "TK NV/MX accurate": {
+      "geomean_speedup_vs_bf16": 1.6689630344221673,
+      "min_speedup_vs_bf16": 1.3968776395525135,
+      "max_speedup_vs_bf16": 2.154513847308982,
+      "peak_tflops": 2416.056036073244,
+      "mean_cosine": 0.9516686598459879,
+      "mean_relative_l2": 0.327225430144204
+    },
+    "HAO NV/NV": {
+      "geomean_speedup_vs_bf16": 0.8843084302921967,
+      "min_speedup_vs_bf16": 0.5252707391574053,
+      "max_speedup_vs_bf16": 1.0307309383684315,
+      "peak_tflops": 1355.632111432214,
+      "mean_cosine": 0.9818175699975755,
+      "mean_relative_l2": 0.19080034560627407
+    }
+  },
+  "rows": [
+    {
+      "shape": "b1_s256_h16_d128",
+      "batch": 1,
+      "seqlen": 256,
+      "heads": 16,
+      "dim": 128,
+      "provider": "TK NV/MX fast",
+      "time_ms": 0.01056000031530857,
+      "tflops": 50.84004696682741,
+      "speedup_vs_bf16": 1.7636363347730615,
+      "cosine": 0.9444772601127625,
+      "relative_l2": 0.33673346042633057,
+      "rmse": 0.03436284512281418
+    },
+    {
+      "shape": "b1_s256_h16_d128",
+      "batch": 1,
+      "seqlen": 256,
+      "heads": 16,
+      "dim": 128,
+      "provider": "TK NV/MX accurate",
+      "time_ms": 0.01228800043463707,
+      "tflops": 43.69066512129048,
+      "speedup_vs_bf16": 1.5156249668413402,
+      "cosine": 0.9527462720870972,
+      "relative_l2": 0.32422173023223877,
+      "rmse": 0.033086180686950684
+    },
+    {
+      "shape": "b1_s256_h16_d128",
+      "batch": 1,
+      "seqlen": 256,
+      "heads": 16,
+      "dim": 128,
+      "provider": "HAO NV/NV",
+      "time_ms": 0.03545600175857544,
+      "tflops": 15.141890945731115,
+      "speedup_vs_bf16": 0.5252707391574053,
+      "cosine": 0.9821733832359314,
+      "relative_l2": 0.18892118334770203,
+      "rmse": 0.019278954714536667
+    },
+    {
+      "shape": "b1_s256_h16_d128",
+      "batch": 1,
+      "seqlen": 256,
+      "heads": 16,
+      "dim": 128,
+      "provider": "HAO BF16",
+      "time_ms": 0.018624000251293182,
+      "tflops": 28.826831226160536,
+      "speedup_vs_bf16": 1.0,
+      "cosine": 1.0,
+      "relative_l2": 0.0,
+      "rmse": 0.0
+    },
+    {
+      "shape": "b1_s1024_h16_d128",
+      "batch": 1,
+      "seqlen": 1024,
+      "heads": 16,
+      "dim": 128,
+      "provider": "TK NV/MX fast",
+      "time_ms": 0.016704000532627106,
+      "tflops": 514.244152185083,
+      "speedup_vs_bf16": 2.3773945984184466,
+      "cosine": 0.9441036581993103,
+      "relative_l2": 0.33568745851516724,
+      "rmse": 0.017384013161063194
+    },
+    {
+      "shape": "b1_s1024_h16_d128",
+      "batch": 1,
+      "seqlen": 1024,
+      "heads": 16,
+      "dim": 128,
+      "provider": "TK NV/MX accurate",
+      "time_ms": 0.018432000651955605,
+      "tflops": 466.03376129376505,
+      "speedup_vs_bf16": 2.154513847308982,
+      "cosine": 0.9518978595733643,
+      "relative_l2": 0.3268224895000458,
+      "rmse": 0.016924915835261345
+    },
+    {
+      "shape": "b1_s1024_h16_d128",
+      "batch": 1,
+      "seqlen": 1024,
+      "heads": 16,
+      "dim": 128,
+      "provider": "HAO NV/NV",
+      "time_ms": 0.03852799907326698,
+      "tflops": 222.95304190765012,
+      "speedup_vs_bf16": 1.0307309383684315,
+      "cosine": 0.982042670249939,
+      "relative_l2": 0.18955837190151215,
+      "rmse": 0.009816527366638184
+    },
+    {
+      "shape": "b1_s1024_h16_d128",
+      "batch": 1,
+      "seqlen": 1024,
+      "heads": 16,
+      "dim": 128,
+      "provider": "HAO BF16",
+      "time_ms": 0.039712000638246536,
+      "tflops": 216.3057628410454,
+      "speedup_vs_bf16": 1.0,
+      "cosine": 1.0,
+      "relative_l2": 0.0,
+      "rmse": 0.0
+    },
+    {
+      "shape": "b1_s4096_h12_d128",
+      "batch": 1,
+      "seqlen": 4096,
+      "heads": 12,
+      "dim": 128,
+      "provider": "TK NV/MX fast",
+      "time_ms": 0.0644799992442131,
+      "tflops": 1598.6230817651733,
+      "speedup_vs_bf16": 1.6873449552994046,
+      "cosine": 0.9434115886688232,
+      "relative_l2": 0.33755624294281006,
+      "rmse": 0.008703300729393959
+    },
+    {
+      "shape": "b1_s4096_h12_d128",
+      "batch": 1,
+      "seqlen": 4096,
+      "heads": 12,
+      "dim": 128,
+      "provider": "TK NV/MX accurate",
+      "time_ms": 0.07788799703121185,
+      "tflops": 1323.4287570996764,
+      "speedup_vs_bf16": 1.3968776395525135,
+      "cosine": 0.951458215713501,
+      "relative_l2": 0.32865723967552185,
+      "rmse": 0.008473856374621391
+    },
+    {
+      "shape": "b1_s4096_h12_d128",
+      "batch": 1,
+      "seqlen": 4096,
+      "heads": 12,
+      "dim": 128,
+      "provider": "HAO NV/NV",
+      "time_ms": 0.13142399489879608,
+      "tflops": 784.325687127201,
+      "speedup_vs_bf16": 0.8278549250174183,
+      "cosine": 0.9815990328788757,
+      "relative_l2": 0.19212965667247772,
+      "rmse": 0.00495372898876667
+    },
+    {
+      "shape": "b1_s4096_h12_d128",
+      "batch": 1,
+      "seqlen": 4096,
+      "heads": 12,
+      "dim": 128,
+      "provider": "HAO BF16",
+      "time_ms": 0.1088000014424324,
+      "tflops": 947.4192439100348,
+      "speedup_vs_bf16": 1.0,
+      "cosine": 1.0,
+      "relative_l2": 0.0,
+      "rmse": 0.0
+    },
+    {
+      "shape": "b1_s4096_h24_d128",
+      "batch": 1,
+      "seqlen": 4096,
+      "heads": 24,
+      "dim": 128,
+      "provider": "TK NV/MX fast",
+      "time_ms": 0.09216000139713287,
+      "tflops": 2236.962099421297,
+      "speedup_vs_bf16": 1.833333360281324,
+      "cosine": 0.9439730048179626,
+      "relative_l2": 0.3357754051685333,
+      "rmse": 0.008708740584552288
+    },
+    {
+      "shape": "b1_s4096_h24_d128",
+      "batch": 1,
+      "seqlen": 4096,
+      "heads": 24,
+      "dim": 128,
+      "provider": "TK NV/MX accurate",
+      "time_ms": 0.11052799969911575,
+      "tflops": 1865.2145227382532,
+      "speedup_vs_bf16": 1.5286624701875324,
+      "cosine": 0.9518826007843018,
+      "relative_l2": 0.3266148269176483,
+      "rmse": 0.008471155539155006
+    },
+    {
+      "shape": "b1_s4096_h24_d128",
+      "batch": 1,
+      "seqlen": 4096,
+      "heads": 24,
+      "dim": 128,
+      "provider": "HAO NV/NV",
+      "time_ms": 0.19094400107860565,
+      "tflops": 1079.6800582550431,
+      "speedup_vs_bf16": 0.8848667886422973,
+      "cosine": 0.9818943738937378,
+      "relative_l2": 0.19047357141971588,
+      "rmse": 0.004940161947160959
+    },
+    {
+      "shape": "b1_s4096_h24_d128",
+      "batch": 1,
+      "seqlen": 4096,
+      "heads": 24,
+      "dim": 128,
+      "provider": "HAO BF16",
+      "time_ms": 0.16896000504493713,
+      "tflops": 1220.1611272038579,
+      "speedup_vs_bf16": 1.0,
+      "cosine": 1.0,
+      "relative_l2": 0.0,
+      "rmse": 0.0
+    },
+    {
+      "shape": "b4_s4096_h16_d128",
+      "batch": 4,
+      "seqlen": 4096,
+      "heads": 16,
+      "dim": 128,
+      "provider": "TK NV/MX fast",
+      "time_ms": 0.20099200308322906,
+      "tflops": 2735.212373899029,
+      "speedup_vs_bf16": 1.9875815750560948,
+      "cosine": 0.9435626268386841,
+      "relative_l2": 0.336995005607605,
+      "rmse": 0.008719646371901035
+    },
+    {
+      "shape": "b4_s4096_h16_d128",
+      "batch": 4,
+      "seqlen": 4096,
+      "heads": 16,
+      "dim": 128,
+      "provider": "TK NV/MX accurate",
+      "time_ms": 0.2483839988708496,
+      "tflops": 2213.330232169474,
+      "speedup_vs_bf16": 1.6083483794363207,
+      "cosine": 0.9513890743255615,
+      "relative_l2": 0.327867329120636,
+      "rmse": 0.008483472280204296
+    },
+    {
+      "shape": "b4_s4096_h16_d128",
+      "batch": 4,
+      "seqlen": 4096,
+      "heads": 16,
+      "dim": 128,
+      "provider": "HAO NV/NV",
+      "time_ms": 0.4382080137729645,
+      "tflops": 1254.5544504186735,
+      "speedup_vs_bf16": 0.9116401104175574,
+      "cosine": 0.9817495346069336,
+      "relative_l2": 0.19109885394573212,
+      "rmse": 0.0049446262419223785
+    },
+    {
+      "shape": "b4_s4096_h16_d128",
+      "batch": 4,
+      "seqlen": 4096,
+      "heads": 16,
+      "dim": 128,
+      "provider": "HAO BF16",
+      "time_ms": 0.39948800206184387,
+      "tflops": 1376.1510009076405,
+      "speedup_vs_bf16": 1.0,
+      "cosine": 1.0,
+      "relative_l2": 0.0,
+      "rmse": 0.0
+    },
+    {
+      "shape": "b4_s4096_h32_d128",
+      "batch": 4,
+      "seqlen": 4096,
+      "heads": 32,
+      "dim": 128,
+      "provider": "TK NV/MX fast",
+      "time_ms": 0.3911679983139038,
+      "tflops": 2810.8424833200843,
+      "speedup_vs_bf16": 2.159767687434002,
+      "cosine": 0.9436423182487488,
+      "relative_l2": 0.33670392632484436,
+      "rmse": 0.008719648234546185
+    },
+    {
+      "shape": "b4_s4096_h32_d128",
+      "batch": 4,
+      "seqlen": 4096,
+      "heads": 32,
+      "dim": 128,
+      "provider": "TK NV/MX accurate",
+      "time_ms": 0.48927998542785645,
+      "tflops": 2247.20336110728,
+      "speedup_vs_bf16": 1.726684165054973,
+      "cosine": 0.951433539390564,
+      "relative_l2": 0.327650785446167,
+      "rmse": 0.008485198952257633
+    },
+    {
+      "shape": "b4_s4096_h32_d128",
+      "batch": 4,
+      "seqlen": 4096,
+      "heads": 32,
+      "dim": 128,
+      "provider": "HAO NV/NV",
+      "time_ms": 0.8642560243606567,
+      "tflops": 1272.205916747154,
+      "speedup_vs_bf16": 0.9775251537778771,
+      "cosine": 0.9817956686019897,
+      "relative_l2": 0.19095833599567413,
+      "rmse": 0.0049452632665634155
+    },
+    {
+      "shape": "b4_s4096_h32_d128",
+      "batch": 4,
+      "seqlen": 4096,
+      "heads": 32,
+      "dim": 128,
+      "provider": "HAO BF16",
+      "time_ms": 0.8448320031166077,
+      "tflops": 1301.455938837393,
+      "speedup_vs_bf16": 1.0,
+      "cosine": 1.0,
+      "relative_l2": 0.0,
+      "rmse": 0.0
+    },
+    {
+      "shape": "b1_s32768_h12_d128",
+      "batch": 1,
+      "seqlen": 32768,
+      "heads": 12,
+      "dim": 128,
+      "provider": "TK NV/MX fast",
+      "time_ms": 2.279968023300171,
+      "tflops": 2893.4922328897314,
+      "speedup_vs_bf16": 2.145293274128011,
+      "cosine": 0.944271445274353,
+      "relative_l2": 0.33484917879104614,
+      "rmse": 0.0030773922335356474
+    },
+    {
+      "shape": "b1_s32768_h12_d128",
+      "batch": 1,
+      "seqlen": 32768,
+      "heads": 12,
+      "dim": 128,
+      "provider": "TK NV/MX accurate",
+      "time_ms": 2.8675200939178467,
+      "tflops": 2300.618496326744,
+      "speedup_vs_bf16": 1.7057247745141428,
+      "cosine": 0.9517992734909058,
+      "relative_l2": 0.32623374462127686,
+      "rmse": 0.0029982130508869886
+    },
+    {
+      "shape": "b1_s32768_h12_d128",
+      "batch": 1,
+      "seqlen": 32768,
+      "heads": 12,
+      "dim": 128,
+      "provider": "HAO NV/NV",
+      "time_ms": 5.100992202758789,
+      "tflops": 1293.291482211653,
+      "speedup_vs_bf16": 0.958872288212373,
+      "cosine": 0.9818362593650818,
+      "relative_l2": 0.1905602365732193,
+      "rmse": 0.0017513216007500887
+    },
+    {
+      "shape": "b1_s32768_h12_d128",
+      "batch": 1,
+      "seqlen": 32768,
+      "heads": 12,
+      "dim": 128,
+      "provider": "HAO BF16",
+      "time_ms": 4.891200065612793,
+      "tflops": 1348.7630189237593,
+      "speedup_vs_bf16": 1.0,
+      "cosine": 1.0,
+      "relative_l2": 0.0,
+      "rmse": 0.0
+    },
+    {
+      "shape": "b1_s32768_h16_d128",
+      "batch": 1,
+      "seqlen": 32768,
+      "heads": 16,
+      "dim": 128,
+      "provider": "TK NV/MX fast",
+      "time_ms": 2.9645121097564697,
+      "tflops": 2967.1300694840425,
+      "speedup_vs_bf16": 2.151617512052575,
+      "cosine": 0.9428938627243042,
+      "relative_l2": 0.33872658014297485,
+      "rmse": 0.0030849033500999212
+    },
+    {
+      "shape": "b1_s32768_h16_d128",
+      "batch": 1,
+      "seqlen": 32768,
+      "heads": 16,
+      "dim": 128,
+      "provider": "TK NV/MX accurate",
+      "time_ms": 3.726912021636963,
+      "tflops": 2360.1557995309245,
+      "speedup_vs_bf16": 1.7114694774153358,
+      "cosine": 0.9508494138717651,
+      "relative_l2": 0.3294511139392853,
+      "rmse": 0.0030004282016307116
+    },
+    {
+      "shape": "b1_s32768_h16_d128",
+      "batch": 1,
+      "seqlen": 32768,
+      "heads": 16,
+      "dim": 128,
+      "provider": "HAO NV/NV",
+      "time_ms": 6.518239974975586,
+      "tflops": 1349.458297941991,
+      "speedup_vs_bf16": 0.9785611138178195,
+      "cosine": 0.981547474861145,
+      "relative_l2": 0.1922161877155304,
+      "rmse": 0.0017505810828879476
+    },
+    {
+      "shape": "b1_s32768_h16_d128",
+      "batch": 1,
+      "seqlen": 32768,
+      "heads": 16,
+      "dim": 128,
+      "provider": "HAO BF16",
+      "time_ms": 6.378496170043945,
+      "tflops": 1379.0230154120165,
+      "speedup_vs_bf16": 1.0,
+      "cosine": 1.0,
+      "relative_l2": 0.0,
+      "rmse": 0.0
+    },
+    {
+      "shape": "b1_s32768_h24_d128",
+      "batch": 1,
+      "seqlen": 32768,
+      "heads": 24,
+      "dim": 128,
+      "provider": "TK NV/MX fast",
+      "time_ms": 4.400447845458984,
+      "tflops": 2998.3628932058846,
+      "speedup_vs_bf16": 2.2055428195199,
+      "cosine": 0.9437683820724487,
+      "relative_l2": 0.3363879919052124,
+      "rmse": 0.003085117321461439
+    },
+    {
+      "shape": "b1_s32768_h24_d128",
+      "batch": 1,
+      "seqlen": 32768,
+      "heads": 24,
+      "dim": 128,
+      "provider": "TK NV/MX accurate",
+      "time_ms": 5.461023807525635,
+      "tflops": 2416.056036073244,
+      "speedup_vs_bf16": 1.7772081738316645,
+      "cosine": 0.951561689376831,
+      "relative_l2": 0.3275096118450165,
+      "rmse": 0.0030036908574402332
+    },
+    {
+      "shape": "b1_s32768_h24_d128",
+      "batch": 1,
+      "seqlen": 32768,
+      "heads": 24,
+      "dim": 128,
+      "provider": "HAO NV/NV",
+      "time_ms": 9.732831954956055,
+      "tflops": 1355.632111432214,
+      "speedup_vs_bf16": 0.9971790526273089,
+      "cosine": 0.9817197322845459,
+      "relative_l2": 0.19128671288490295,
+      "rmse": 0.0017543489811941981
+    },
+    {
+      "shape": "b1_s32768_h24_d128",
+      "batch": 1,
+      "seqlen": 32768,
+      "heads": 24,
+      "dim": 128,
+      "provider": "HAO BF16",
+      "time_ms": 9.705376148223877,
+      "tflops": 1359.4670965665334,
+      "speedup_vs_bf16": 1.0,
+      "cosine": 1.0,
+      "relative_l2": 0.0,
+      "rmse": 0.0
+    }
+  ],
+  "published_hao": {
+    "schema": "hao_flash_attention_fp4_readme_v1",
+    "source_url": "https://github.com/hao-ai-lab/flash-attention-fp4/blob/fp4/flash_attn/cute/README.md",
+    "retrieved_utc": "2026-08-05",
+    "throughput_units": "TFLOP/s",
+    "precision_fields": [
+      "cosine",
+      "max_abs",
+      "mean_abs"
+    ],
+    "notes": [
+      "B200 and GB300 throughput values are copied from the published README tables.",
+      "NVFP4+FP8 precision is published once because the quantization math is hardware-independent.",
+      "HAO does not publish relative-L2 for these rows."
+    ],
+    "rows": [
+      {
+        "shape": [
+          1,
+          256,
+          16,
+          128
+        ],
+        "b200": {
+          "nvfp4_fp8": 39,
+          "bf16": 35
+        },
+        "gb300": {
+          "nvfp4_fp8": 11,
+          "nvfp4_nvfp4": 12,
+          "bf16": 17
+        },
+        "nvfp4_fp8_precision": {
+          "cosine": 0.9904,
+          "max_abs": 0.1475,
+          "mean_abs": 0.0109
+        }
+      },
+      {
+        "shape": [
+          1,
+          1024,
+          16,
+          128
+        ],
+        "b200": {
+          "nvfp4_fp8": 416,
+          "bf16": 380
+        },
+        "gb300": {
+          "nvfp4_fp8": 203,
+          "nvfp4_nvfp4": 200,
+          "bf16": 289
+        },
+        "nvfp4_fp8_precision": {
+          "cosine": 0.9901,
+          "max_abs": 0.2119,
+          "mean_abs": 0.0057
+        }
+      },
+      {
+        "shape": [
+          4,
+          4096,
+          16,
+          128
+        ],
+        "b200": {
+          "nvfp4_fp8": 1875,
+          "bf16": 1479
+        },
+        "gb300": {
+          "nvfp4_fp8": 2502,
+          "nvfp4_nvfp4": 1524,
+          "bf16": 1508
+        },
+        "nvfp4_fp8_precision": {
+          "cosine": 0.9899,
+          "max_abs": 0.0432,
+          "mean_abs": 0.0029
+        }
+      },
+      {
+        "shape": [
+          1,
+          32768,
+          16,
+          128
+        ],
+        "b200": {
+          "nvfp4_fp8": 2016,
+          "bf16": 1543
+        },
+        "gb300": {
+          "nvfp4_fp8": 2666,
+          "nvfp4_nvfp4": 1720,
+          "bf16": 1585
+        },
+        "nvfp4_fp8_precision": {
+          "cosine": 0.9897,
+          "max_abs": 0.0122,
+          "mean_abs": 0.001
+        }
+      },
+      {
+        "shape": [
+          4,
+          4096,
+          32,
+          128
+        ],
+        "b200": {
+          "nvfp4_fp8": 1920,
+          "bf16": 1471
+        },
+        "gb300": {
+          "nvfp4_fp8": 2540,
+          "nvfp4_nvfp4": 1544,
+          "bf16": 1475
+        },
+        "nvfp4_fp8_precision": {
+          "cosine": 0.9898,
+          "max_abs": 0.0713,
+          "mean_abs": 0.0029
+        }
+      },
+      {
+        "shape": [
+          1,
+          4096,
+          12,
+          128
+        ],
+        "b200": {
+          "nvfp4_fp8": 1118,
+          "bf16": 940
+        },
+        "gb300": {
+          "nvfp4_fp8": 1458,
+          "nvfp4_nvfp4": 942,
+          "bf16": 1017
+        },
+        "nvfp4_fp8_precision": {
+          "cosine": 0.9899,
+          "max_abs": 0.0771,
+          "mean_abs": 0.0029
+        }
+      },
+      {
+        "shape": [
+          1,
+          32768,
+          12,
+          128
+        ],
+        "b200": {
+          "nvfp4_fp8": 1913,
+          "bf16": 1508
+        },
+        "gb300": {
+          "nvfp4_fp8": 2582,
+          "nvfp4_nvfp4": 1646,
+          "bf16": 1584
+        },
+        "nvfp4_fp8_precision": {
+          "cosine": 0.9896,
+          "max_abs": 0.0194,
+          "mean_abs": 0.001
+        }
+      },
+      {
+        "shape": [
+          1,
+          4096,
+          24,
+          128
+        ],
+        "b200": {
+          "nvfp4_fp8": 1548,
+          "bf16": 1274
+        },
+        "gb300": {
+          "nvfp4_fp8": 2046,
+          "nvfp4_nvfp4": 1291,
+          "bf16": 1322
+        },
+        "nvfp4_fp8_precision": {
+          "cosine": 0.9898,
+          "max_abs": 0.0645,
+          "mean_abs": 0.0029
+        }
+      },
+      {
+        "shape": [
+          1,
+          32768,
+          24,
+          128
+        ],
+        "b200": {
+          "nvfp4_fp8": 2018,
+          "bf16": 1545
+        },
+        "gb300": {
+          "nvfp4_fp8": 2677,
+          "nvfp4_nvfp4": 1725,
+          "bf16": 1533
+        },
+        "nvfp4_fp8_precision": {
+          "cosine": 0.9899,
+          "max_abs": 0.0142,
+          "mean_abs": 0.001
+        }
+      },
+      {
+        "shape": [
+          1,
+          32768,
+          24,
+          64
+        ],
+        "b200": {
+          "nvfp4_fp8": 986,
+          "bf16": 949
+        },
+        "gb300": {
+          "nvfp4_fp8": 1203,
+          "nvfp4_nvfp4": null,
+          "bf16": 1221
+        },
+        "nvfp4_fp8_precision": {
+          "cosine": 0.9892,
+          "max_abs": 0.0223,
+          "mean_abs": 0.0011
+        }
+      }
+    ]
+  },
+  "provenance": {
+    "fast": {
+      "variant": "nvmx-fast",
+      "manifests": [
+        {
+          "path": "fast_shard0/manifest.json",
+          "created_utc": "20260802T010225Z",
+          "completed_utc": "20260802T010622Z",
+          "gpu": {
+            "driver": "580.126.09",
+            "max_sm_clock_mhz": 2062,
+            "memory_mib": 189471,
+            "name": "NVIDIA GB200",
+            "power_limit_w": 1200.0,
+            "uuid": "GPU-5a755dd4-1813-db08-ed72-5a7aca637ac2"
+          },
+          "protocol": {
+            "causal": false,
+            "cooldown_seconds": 0.8,
+            "factory": "HAO create_nvfp4_attention_tensors",
+            "flop_convention": "B*H*2*Sq*Sk*(Dqk+Dvo)",
+            "rep_ms": 3000,
+            "seed": 20260814,
+            "timer": "triton.testing.do_bench median",
+            "warmup_ms": 300
+          },
+          "sources": {
+            "hao": {
+              "commit": "9b0abefdbbbe4d0da1d4e0c7aa128e3338c4b247",
+              "dirty": true,
+              "files": [
+                {
+                  "bytes": 237446,
+                  "path": "/workspace/codebases/flash-attention-fp4/flash_attn/cute/flash_fwd_sm100_fp4.py",
+                  "sha256": "00c6856075c55bae3d53c1d49c913a8b3b17cd997cd7634714defb1533034037"
+                },
+                {
+                  "bytes": 42916,
+                  "path": "/workspace/codebases/flash-attention-fp4/flash_attn/cute/benchmarks/bench_fp4.py",
+                  "sha256": "5ca604ed90ebc4e1ffe7f606fc97f3c774d2ac3869bea9092237d450cd2f85a4"
+                },
+                {
+                  "bytes": 13559,
+                  "path": "/workspace/codebases/flash-attention-fp4/flash_attn/cute/README.md",
+                  "sha256": "224f74483c4183f52b3f10da20d1c492fefaeafde212dae529f6881a0d2f9414"
+                }
+              ],
+              "path": "/workspace/codebases/flash-attention-fp4"
+            },
+            "tk": {
+              "commit": "cfc06dadf684279f657ab66254a3a074be4ee3a9",
+              "dirty": true,
+              "files": [
+                {
+                  "bytes": 350744,
+                  "path": "/workspace/codebases/pv/fp4_matmul/tk_fa4/fp4_fa4_fwd/hao_direct_fp4pv_kernel.inc",
+                  "sha256": "a388a4386c1e96ce987d4d898de902d481f27e1e97be5eac86882745ee9e6259"
+                },
+                {
+                  "bytes": 136528,
+                  "path": "/workspace/codebases/pv/fp4_matmul/tk_fa4/fp4_fa4_fwd/hao_direct_fp4pv_softmax_reader.inc",
+                  "sha256": "4e12f612e1e1966adc0ee5d68e3d1d25604f2dc7bf2d147c92b19e1d313db8da"
+                },
+                {
+                  "bytes": 47203,
+                  "path": "/workspace/codebases/pv/fp4_matmul/tk_fa4/fp4_fa4_fwd/hao_direct_kernel.inc",
+                  "sha256": "bd0be8ff877c9ae3a64c38cd9b9bf318d8898c37be52a015d7ab40b2f012989d"
+                },
+                {
+                  "bytes": 23064,
+                  "path": "/workspace/codebases/pv/fp4_matmul/tk_fa4/fp4_fa4_fwd/hao_direct_softmax_reader.inc",
+                  "sha256": "dd5b4235eeb8cf7c02a72800a178c904a2ac15fb0a950dd37e0501ffa6e98049"
+                },
+                {
+                  "bytes": 24497,
+                  "path": "/workspace/codebases/pv/fp4_matmul/tk_fa4/fp4_fa4_fwd/hao_comprehensive_suite.py",
+                  "sha256": "a2e0e589a7853f2452cbff77325109e42bbb2cc50e49a9404aa718b5c3ce170f"
+                }
+              ],
+              "path": "/workspace/codebases/pv/fp4_matmul"
+            }
+          },
+          "software": {
+            "cutlass": "4.5.2",
+            "flashinfer": "0.6.15.post1",
+            "python": "3.12.3",
+            "torch": "2.9.0a0+145a3a7bda.nv25.10",
+            "torch_cuda": "13.0",
+            "triton": "3.5.1"
+          }
+        },
+        {
+          "path": "fast_shard1/manifest.json",
+          "created_utc": "20260802T010237Z",
+          "completed_utc": "20260802T010520Z",
+          "gpu": {
+            "driver": "580.126.09",
+            "max_sm_clock_mhz": 2062,
+            "memory_mib": 189471,
+            "name": "NVIDIA GB200",
+            "power_limit_w": 1200.0,
+            "uuid": "GPU-5a755dd4-1813-db08-ed72-5a7aca637ac2"
+          },
+          "protocol": {
+            "causal": false,
+            "cooldown_seconds": 0.8,
+            "factory": "HAO create_nvfp4_attention_tensors",
+            "flop_convention": "B*H*2*Sq*Sk*(Dqk+Dvo)",
+            "rep_ms": 3000,
+            "seed": 20260814,
+            "timer": "triton.testing.do_bench median",
+            "warmup_ms": 300
+          },
+          "sources": {
+            "hao": {
+              "commit": "9b0abefdbbbe4d0da1d4e0c7aa128e3338c4b247",
+              "dirty": true,
+              "files": [
+                {
+                  "bytes": 237446,
+                  "path": "/workspace/codebases/flash-attention-fp4/flash_attn/cute/flash_fwd_sm100_fp4.py",
+                  "sha256": "00c6856075c55bae3d53c1d49c913a8b3b17cd997cd7634714defb1533034037"
+                },
+                {
+                  "bytes": 42916,
+                  "path": "/workspace/codebases/flash-attention-fp4/flash_attn/cute/benchmarks/bench_fp4.py",
+                  "sha256": "5ca604ed90ebc4e1ffe7f606fc97f3c774d2ac3869bea9092237d450cd2f85a4"
+                },
+                {
+                  "bytes": 13559,
+                  "path": "/workspace/codebases/flash-attention-fp4/flash_attn/cute/README.md",
+                  "sha256": "224f74483c4183f52b3f10da20d1c492fefaeafde212dae529f6881a0d2f9414"
+                }
+              ],
+              "path": "/workspace/codebases/flash-attention-fp4"
+            },
+            "tk": {
+              "commit": "cfc06dadf684279f657ab66254a3a074be4ee3a9",
+              "dirty": true,
+              "files": [
+                {
+                  "bytes": 350744,
+                  "path": "/workspace/codebases/pv/fp4_matmul/tk_fa4/fp4_fa4_fwd/hao_direct_fp4pv_kernel.inc",
+                  "sha256": "a388a4386c1e96ce987d4d898de902d481f27e1e97be5eac86882745ee9e6259"
+                },
+                {
+                  "bytes": 136528,
+                  "path": "/workspace/codebases/pv/fp4_matmul/tk_fa4/fp4_fa4_fwd/hao_direct_fp4pv_softmax_reader.inc",
+                  "sha256": "4e12f612e1e1966adc0ee5d68e3d1d25604f2dc7bf2d147c92b19e1d313db8da"
+                },
+                {
+                  "bytes": 47203,
+                  "path": "/workspace/codebases/pv/fp4_matmul/tk_fa4/fp4_fa4_fwd/hao_direct_kernel.inc",
+                  "sha256": "bd0be8ff877c9ae3a64c38cd9b9bf318d8898c37be52a015d7ab40b2f012989d"
+                },
+                {
+                  "bytes": 23064,
+                  "path": "/workspace/codebases/pv/fp4_matmul/tk_fa4/fp4_fa4_fwd/hao_direct_softmax_reader.inc",
+                  "sha256": "dd5b4235eeb8cf7c02a72800a178c904a2ac15fb0a950dd37e0501ffa6e98049"
+                },
+                {
+                  "bytes": 24497,
+                  "path": "/workspace/codebases/pv/fp4_matmul/tk_fa4/fp4_fa4_fwd/hao_comprehensive_suite.py",
+                  "sha256": "a2e0e589a7853f2452cbff77325109e42bbb2cc50e49a9404aa718b5c3ce170f"
+                }
+              ],
+              "path": "/workspace/codebases/pv/fp4_matmul"
+            }
+          },
+          "software": {
+            "cutlass": "4.5.2",
+            "flashinfer": "0.6.15.post1",
+            "python": "3.12.3",
+            "torch": "2.9.0a0+145a3a7bda.nv25.10",
+            "torch_cuda": "13.0",
+            "triton": "3.5.1"
+          }
+        },
+        {
+          "path": "fast_shard2/manifest.json",
+          "created_utc": "20260802T010247Z",
+          "completed_utc": "20260802T010528Z",
+          "gpu": {
+            "driver": "580.126.09",
+            "max_sm_clock_mhz": 2062,
+            "memory_mib": 189471,
+            "name": "NVIDIA GB200",
+            "power_limit_w": 1200.0,
+            "uuid": "GPU-5a755dd4-1813-db08-ed72-5a7aca637ac2"
+          },
+          "protocol": {
+            "causal": false,
+            "cooldown_seconds": 0.8,
+            "factory": "HAO create_nvfp4_attention_tensors",
+            "flop_convention": "B*H*2*Sq*Sk*(Dqk+Dvo)",
+            "rep_ms": 3000,
+            "seed": 20260814,
+            "timer": "triton.testing.do_bench median",
+            "warmup_ms": 300
+          },
+          "sources": {
+            "hao": {
+              "commit": "9b0abefdbbbe4d0da1d4e0c7aa128e3338c4b247",
+              "dirty": true,
+              "files": [
+                {
+                  "bytes": 237446,
+                  "path": "/workspace/codebases/flash-attention-fp4/flash_attn/cute/flash_fwd_sm100_fp4.py",
+                  "sha256": "00c6856075c55bae3d53c1d49c913a8b3b17cd997cd7634714defb1533034037"
+                },
+                {
+                  "bytes": 42916,
+                  "path": "/workspace/codebases/flash-attention-fp4/flash_attn/cute/benchmarks/bench_fp4.py",
+                  "sha256": "5ca604ed90ebc4e1ffe7f606fc97f3c774d2ac3869bea9092237d450cd2f85a4"
+                },
+                {
+                  "bytes": 13559,
+                  "path": "/workspace/codebases/flash-attention-fp4/flash_attn/cute/README.md",
+                  "sha256": "224f74483c4183f52b3f10da20d1c492fefaeafde212dae529f6881a0d2f9414"
+                }
+              ],
+              "path": "/workspace/codebases/flash-attention-fp4"
+            },
+            "tk": {
+              "commit": "cfc06dadf684279f657ab66254a3a074be4ee3a9",
+              "dirty": true,
+              "files": [
+                {
+                  "bytes": 350744,
+                  "path": "/workspace/codebases/pv/fp4_matmul/tk_fa4/fp4_fa4_fwd/hao_direct_fp4pv_kernel.inc",
+                  "sha256": "a388a4386c1e96ce987d4d898de902d481f27e1e97be5eac86882745ee9e6259"
+                },
+                {
+                  "bytes": 136528,
+                  "path": "/workspace/codebases/pv/fp4_matmul/tk_fa4/fp4_fa4_fwd/hao_direct_fp4pv_softmax_reader.inc",
+                  "sha256": "4e12f612e1e1966adc0ee5d68e3d1d25604f2dc7bf2d147c92b19e1d313db8da"
+                },
+                {
+                  "bytes": 47203,
+                  "path": "/workspace/codebases/pv/fp4_matmul/tk_fa4/fp4_fa4_fwd/hao_direct_kernel.inc",
+                  "sha256": "bd0be8ff877c9ae3a64c38cd9b9bf318d8898c37be52a015d7ab40b2f012989d"
+                },
+                {
+                  "bytes": 23064,
+                  "path": "/workspace/codebases/pv/fp4_matmul/tk_fa4/fp4_fa4_fwd/hao_direct_softmax_reader.inc",
+                  "sha256": "dd5b4235eeb8cf7c02a72800a178c904a2ac15fb0a950dd37e0501ffa6e98049"
+                },
+                {
+                  "bytes": 24497,
+                  "path": "/workspace/codebases/pv/fp4_matmul/tk_fa4/fp4_fa4_fwd/hao_comprehensive_suite.py",
+                  "sha256": "a2e0e589a7853f2452cbff77325109e42bbb2cc50e49a9404aa718b5c3ce170f"
+                }
+              ],
+              "path": "/workspace/codebases/pv/fp4_matmul"
+            }
+          },
+          "software": {
+            "cutlass": "4.5.2",
+            "flashinfer": "0.6.15.post1",
+            "python": "3.12.3",
+            "torch": "2.9.0a0+145a3a7bda.nv25.10",
+            "torch_cuda": "13.0",
+            "triton": "3.5.1"
+          }
+        },
+        {
+          "path": "fast_shard3/manifest.json",
+          "created_utc": "20260802T010259Z",
+          "completed_utc": "20260802T010541Z",
+          "gpu": {
+            "driver": "580.126.09",
+            "max_sm_clock_mhz": 2062,
+            "memory_mib": 189471,
+            "name": "NVIDIA GB200",
+            "power_limit_w": 1200.0,
+            "uuid": "GPU-5a755dd4-1813-db08-ed72-5a7aca637ac2"
+          },
+          "protocol": {
+            "causal": false,
+            "cooldown_seconds": 0.8,
+            "factory": "HAO create_nvfp4_attention_tensors",
+            "flop_convention": "B*H*2*Sq*Sk*(Dqk+Dvo)",
+            "rep_ms": 3000,
+            "seed": 20260814,
+            "timer": "triton.testing.do_bench median",
+            "warmup_ms": 300
+          },
+          "sources": {
+            "hao": {
+              "commit": "9b0abefdbbbe4d0da1d4e0c7aa128e3338c4b247",
+              "dirty": true,
+              "files": [
+                {
+                  "bytes": 237446,
+                  "path": "/workspace/codebases/flash-attention-fp4/flash_attn/cute/flash_fwd_sm100_fp4.py",
+                  "sha256": "00c6856075c55bae3d53c1d49c913a8b3b17cd997cd7634714defb1533034037"
+                },
+                {
+                  "bytes": 42916,
+                  "path": "/workspace/codebases/flash-attention-fp4/flash_attn/cute/benchmarks/bench_fp4.py",
+                  "sha256": "5ca604ed90ebc4e1ffe7f606fc97f3c774d2ac3869bea9092237d450cd2f85a4"
+                },
+                {
+                  "bytes": 13559,
+                  "path": "/workspace/codebases/flash-attention-fp4/flash_attn/cute/README.md",
+                  "sha256": "224f74483c4183f52b3f10da20d1c492fefaeafde212dae529f6881a0d2f9414"
+                }
+              ],
+              "path": "/workspace/codebases/flash-attention-fp4"
+            },
+            "tk": {
+              "commit": "cfc06dadf684279f657ab66254a3a074be4ee3a9",
+              "dirty": true,
+              "files": [
+                {
+                  "bytes": 350744,
+                  "path": "/workspace/codebases/pv/fp4_matmul/tk_fa4/fp4_fa4_fwd/hao_direct_fp4pv_kernel.inc",
+                  "sha256": "a388a4386c1e96ce987d4d898de902d481f27e1e97be5eac86882745ee9e6259"
+                },
+                {
+                  "bytes": 136528,
+                  "path": "/workspace/codebases/pv/fp4_matmul/tk_fa4/fp4_fa4_fwd/hao_direct_fp4pv_softmax_reader.inc",
+                  "sha256": "4e12f612e1e1966adc0ee5d68e3d1d25604f2dc7bf2d147c92b19e1d313db8da"
+                },
+                {
+                  "bytes": 47203,
+                  "path": "/workspace/codebases/pv/fp4_matmul/tk_fa4/fp4_fa4_fwd/hao_direct_kernel.inc",
+                  "sha256": "bd0be8ff877c9ae3a64c38cd9b9bf318d8898c37be52a015d7ab40b2f012989d"
+                },
+                {
+                  "bytes": 23064,
+                  "path": "/workspace/codebases/pv/fp4_matmul/tk_fa4/fp4_fa4_fwd/hao_direct_softmax_reader.inc",
+                  "sha256": "dd5b4235eeb8cf7c02a72800a178c904a2ac15fb0a950dd37e0501ffa6e98049"
+                },
+                {
+                  "bytes": 24497,
+                  "path": "/workspace/codebases/pv/fp4_matmul/tk_fa4/fp4_fa4_fwd/hao_comprehensive_suite.py",
+                  "sha256": "a2e0e589a7853f2452cbff77325109e42bbb2cc50e49a9404aa718b5c3ce170f"
+                }
+              ],
+              "path": "/workspace/codebases/pv/fp4_matmul"
+            }
+          },
+          "software": {
+            "cutlass": "4.5.2",
+            "flashinfer": "0.6.15.post1",
+            "python": "3.12.3",
+            "torch": "2.9.0a0+145a3a7bda.nv25.10",
+            "torch_cuda": "13.0",
+            "triton": "3.5.1"
+          }
+        }
+      ]
+    },
+    "accurate": {
+      "variant": "nvmx-accurate",
+      "manifests": [
+        {
+          "path": "accurate_shard0/manifest.json",
+          "created_utc": "20260802T010947Z",
+          "completed_utc": "20260802T011354Z",
+          "gpu": {
+            "driver": "580.126.09",
+            "max_sm_clock_mhz": 2062,
+            "memory_mib": 189471,
+            "name": "NVIDIA GB200",
+            "power_limit_w": 1200.0,
+            "uuid": "GPU-5a755dd4-1813-db08-ed72-5a7aca637ac2"
+          },
+          "protocol": {
+            "causal": false,
+            "cooldown_seconds": 0.8,
+            "factory": "HAO create_nvfp4_attention_tensors",
+            "flop_convention": "B*H*2*Sq*Sk*(Dqk+Dvo)",
+            "rep_ms": 3000,
+            "seed": 20260814,
+            "timer": "triton.testing.do_bench median",
+            "warmup_ms": 300
+          },
+          "sources": {
+            "hao": {
+              "commit": "9b0abefdbbbe4d0da1d4e0c7aa128e3338c4b247",
+              "dirty": true,
+              "files": [
+                {
+                  "bytes": 237446,
+                  "path": "/workspace/codebases/flash-attention-fp4/flash_attn/cute/flash_fwd_sm100_fp4.py",
+                  "sha256": "00c6856075c55bae3d53c1d49c913a8b3b17cd997cd7634714defb1533034037"
+                },
+                {
+                  "bytes": 42916,
+                  "path": "/workspace/codebases/flash-attention-fp4/flash_attn/cute/benchmarks/bench_fp4.py",
+                  "sha256": "5ca604ed90ebc4e1ffe7f606fc97f3c774d2ac3869bea9092237d450cd2f85a4"
+                },
+                {
+                  "bytes": 13559,
+                  "path": "/workspace/codebases/flash-attention-fp4/flash_attn/cute/README.md",
+                  "sha256": "224f74483c4183f52b3f10da20d1c492fefaeafde212dae529f6881a0d2f9414"
+                }
+              ],
+              "path": "/workspace/codebases/flash-attention-fp4"
+            },
+            "tk": {
+              "commit": "cfc06dadf684279f657ab66254a3a074be4ee3a9",
+              "dirty": true,
+              "files": [
+                {
+                  "bytes": 350744,
+                  "path": "/workspace/codebases/pv/fp4_matmul/tk_fa4/fp4_fa4_fwd/hao_direct_fp4pv_kernel.inc",
+                  "sha256": "a388a4386c1e96ce987d4d898de902d481f27e1e97be5eac86882745ee9e6259"
+                },
+                {
+                  "bytes": 136528,
+                  "path": "/workspace/codebases/pv/fp4_matmul/tk_fa4/fp4_fa4_fwd/hao_direct_fp4pv_softmax_reader.inc",
+                  "sha256": "4e12f612e1e1966adc0ee5d68e3d1d25604f2dc7bf2d147c92b19e1d313db8da"
+                },
+                {
+                  "bytes": 47203,
+                  "path": "/workspace/codebases/pv/fp4_matmul/tk_fa4/fp4_fa4_fwd/hao_direct_kernel.inc",
+                  "sha256": "bd0be8ff877c9ae3a64c38cd9b9bf318d8898c37be52a015d7ab40b2f012989d"
+                },
+                {
+                  "bytes": 23064,
+                  "path": "/workspace/codebases/pv/fp4_matmul/tk_fa4/fp4_fa4_fwd/hao_direct_softmax_reader.inc",
+                  "sha256": "dd5b4235eeb8cf7c02a72800a178c904a2ac15fb0a950dd37e0501ffa6e98049"
+                },
+                {
+                  "bytes": 24497,
+                  "path": "/workspace/codebases/pv/fp4_matmul/tk_fa4/fp4_fa4_fwd/hao_comprehensive_suite.py",
+                  "sha256": "a2e0e589a7853f2452cbff77325109e42bbb2cc50e49a9404aa718b5c3ce170f"
+                }
+              ],
+              "path": "/workspace/codebases/pv/fp4_matmul"
+            }
+          },
+          "software": {
+            "cutlass": "4.5.2",
+            "flashinfer": "0.6.15.post1",
+            "python": "3.12.3",
+            "torch": "2.9.0a0+145a3a7bda.nv25.10",
+            "torch_cuda": "13.0",
+            "triton": "3.5.1"
+          }
+        },
+        {
+          "path": "accurate_shard1/manifest.json",
+          "created_utc": "20260802T010947Z",
+          "completed_utc": "20260802T011242Z",
+          "gpu": {
+            "driver": "580.126.09",
+            "max_sm_clock_mhz": 2062,
+            "memory_mib": 189471,
+            "name": "NVIDIA GB200",
+            "power_limit_w": 1200.0,
+            "uuid": "GPU-5a755dd4-1813-db08-ed72-5a7aca637ac2"
+          },
+          "protocol": {
+            "causal": false,
+            "cooldown_seconds": 0.8,
+            "factory": "HAO create_nvfp4_attention_tensors",
+            "flop_convention": "B*H*2*Sq*Sk*(Dqk+Dvo)",
+            "rep_ms": 3000,
+            "seed": 20260814,
+            "timer": "triton.testing.do_bench median",
+            "warmup_ms": 300
+          },
+          "sources": {
+            "hao": {
+              "commit": "9b0abefdbbbe4d0da1d4e0c7aa128e3338c4b247",
+              "dirty": true,
+              "files": [
+                {
+                  "bytes": 237446,
+                  "path": "/workspace/codebases/flash-attention-fp4/flash_attn/cute/flash_fwd_sm100_fp4.py",
+                  "sha256": "00c6856075c55bae3d53c1d49c913a8b3b17cd997cd7634714defb1533034037"
+                },
+                {
+                  "bytes": 42916,
+                  "path": "/workspace/codebases/flash-attention-fp4/flash_attn/cute/benchmarks/bench_fp4.py",
+                  "sha256": "5ca604ed90ebc4e1ffe7f606fc97f3c774d2ac3869bea9092237d450cd2f85a4"
+                },
+                {
+                  "bytes": 13559,
+                  "path": "/workspace/codebases/flash-attention-fp4/flash_attn/cute/README.md",
+                  "sha256": "224f74483c4183f52b3f10da20d1c492fefaeafde212dae529f6881a0d2f9414"
+                }
+              ],
+              "path": "/workspace/codebases/flash-attention-fp4"
+            },
+            "tk": {
+              "commit": "cfc06dadf684279f657ab66254a3a074be4ee3a9",
+              "dirty": true,
+              "files": [
+                {
+                  "bytes": 350744,
+                  "path": "/workspace/codebases/pv/fp4_matmul/tk_fa4/fp4_fa4_fwd/hao_direct_fp4pv_kernel.inc",
+                  "sha256": "a388a4386c1e96ce987d4d898de902d481f27e1e97be5eac86882745ee9e6259"
+                },
+                {
+                  "bytes": 136528,
+                  "path": "/workspace/codebases/pv/fp4_matmul/tk_fa4/fp4_fa4_fwd/hao_direct_fp4pv_softmax_reader.inc",
+                  "sha256": "4e12f612e1e1966adc0ee5d68e3d1d25604f2dc7bf2d147c92b19e1d313db8da"
+                },
+                {
+                  "bytes": 47203,
+                  "path": "/workspace/codebases/pv/fp4_matmul/tk_fa4/fp4_fa4_fwd/hao_direct_kernel.inc",
+                  "sha256": "bd0be8ff877c9ae3a64c38cd9b9bf318d8898c37be52a015d7ab40b2f012989d"
+                },
+                {
+                  "bytes": 23064,
+                  "path": "/workspace/codebases/pv/fp4_matmul/tk_fa4/fp4_fa4_fwd/hao_direct_softmax_reader.inc",
+                  "sha256": "dd5b4235eeb8cf7c02a72800a178c904a2ac15fb0a950dd37e0501ffa6e98049"
+                },
+                {
+                  "bytes": 24497,
+                  "path": "/workspace/codebases/pv/fp4_matmul/tk_fa4/fp4_fa4_fwd/hao_comprehensive_suite.py",
+                  "sha256": "a2e0e589a7853f2452cbff77325109e42bbb2cc50e49a9404aa718b5c3ce170f"
+                }
+              ],
+              "path": "/workspace/codebases/pv/fp4_matmul"
+            }
+          },
+          "software": {
+            "cutlass": "4.5.2",
+            "flashinfer": "0.6.15.post1",
+            "python": "3.12.3",
+            "torch": "2.9.0a0+145a3a7bda.nv25.10",
+            "torch_cuda": "13.0",
+            "triton": "3.5.1"
+          }
+        },
+        {
+          "path": "accurate_shard2/manifest.json",
+          "created_utc": "20260802T010946Z",
+          "completed_utc": "20260802T011232Z",
+          "gpu": {
+            "driver": "580.126.09",
+            "max_sm_clock_mhz": 2062,
+            "memory_mib": 189471,
+            "name": "NVIDIA GB200",
+            "power_limit_w": 1200.0,
+            "uuid": "GPU-5a755dd4-1813-db08-ed72-5a7aca637ac2"
+          },
+          "protocol": {
+            "causal": false,
+            "cooldown_seconds": 0.8,
+            "factory": "HAO create_nvfp4_attention_tensors",
+            "flop_convention": "B*H*2*Sq*Sk*(Dqk+Dvo)",
+            "rep_ms": 3000,
+            "seed": 20260814,
+            "timer": "triton.testing.do_bench median",
+            "warmup_ms": 300
+          },
+          "sources": {
+            "hao": {
+              "commit": "9b0abefdbbbe4d0da1d4e0c7aa128e3338c4b247",
+              "dirty": true,
+              "files": [
+                {
+                  "bytes": 237446,
+                  "path": "/workspace/codebases/flash-attention-fp4/flash_attn/cute/flash_fwd_sm100_fp4.py",
+                  "sha256": "00c6856075c55bae3d53c1d49c913a8b3b17cd997cd7634714defb1533034037"
+                },
+                {
+                  "bytes": 42916,
+                  "path": "/workspace/codebases/flash-attention-fp4/flash_attn/cute/benchmarks/bench_fp4.py",
+                  "sha256": "5ca604ed90ebc4e1ffe7f606fc97f3c774d2ac3869bea9092237d450cd2f85a4"
+                },
+                {
+                  "bytes": 13559,
+                  "path": "/workspace/codebases/flash-attention-fp4/flash_attn/cute/README.md",
+                  "sha256": "224f74483c4183f52b3f10da20d1c492fefaeafde212dae529f6881a0d2f9414"
+                }
+              ],
+              "path": "/workspace/codebases/flash-attention-fp4"
+            },
+            "tk": {
+              "commit": "cfc06dadf684279f657ab66254a3a074be4ee3a9",
+              "dirty": true,
+              "files": [
+                {
+                  "bytes": 350744,
+                  "path": "/workspace/codebases/pv/fp4_matmul/tk_fa4/fp4_fa4_fwd/hao_direct_fp4pv_kernel.inc",
+                  "sha256": "a388a4386c1e96ce987d4d898de902d481f27e1e97be5eac86882745ee9e6259"
+                },
+                {
+                  "bytes": 136528,
+                  "path": "/workspace/codebases/pv/fp4_matmul/tk_fa4/fp4_fa4_fwd/hao_direct_fp4pv_softmax_reader.inc",
+                  "sha256": "4e12f612e1e1966adc0ee5d68e3d1d25604f2dc7bf2d147c92b19e1d313db8da"
+                },
+                {
+                  "bytes": 47203,
+                  "path": "/workspace/codebases/pv/fp4_matmul/tk_fa4/fp4_fa4_fwd/hao_direct_kernel.inc",
+                  "sha256": "bd0be8ff877c9ae3a64c38cd9b9bf318d8898c37be52a015d7ab40b2f012989d"
+                },
+                {
+                  "bytes": 23064,
+                  "path": "/workspace/codebases/pv/fp4_matmul/tk_fa4/fp4_fa4_fwd/hao_direct_softmax_reader.inc",
+                  "sha256": "dd5b4235eeb8cf7c02a72800a178c904a2ac15fb0a950dd37e0501ffa6e98049"
+                },
+                {
+                  "bytes": 24497,
+                  "path": "/workspace/codebases/pv/fp4_matmul/tk_fa4/fp4_fa4_fwd/hao_comprehensive_suite.py",
+                  "sha256": "a2e0e589a7853f2452cbff77325109e42bbb2cc50e49a9404aa718b5c3ce170f"
+                }
+              ],
+              "path": "/workspace/codebases/pv/fp4_matmul"
+            }
+          },
+          "software": {
+            "cutlass": "4.5.2",
+            "flashinfer": "0.6.15.post1",
+            "python": "3.12.3",
+            "torch": "2.9.0a0+145a3a7bda.nv25.10",
+            "torch_cuda": "13.0",
+            "triton": "3.5.1"
+          }
+        },
+        {
+          "path": "accurate_shard3/manifest.json",
+          "created_utc": "20260802T010947Z",
+          "completed_utc": "20260802T011238Z",
+          "gpu": {
+            "driver": "580.126.09",
+            "max_sm_clock_mhz": 2062,
+            "memory_mib": 189471,
+            "name": "NVIDIA GB200",
+            "power_limit_w": 1200.0,
+            "uuid": "GPU-5a755dd4-1813-db08-ed72-5a7aca637ac2"
+          },
+          "protocol": {
+            "causal": false,
+            "cooldown_seconds": 0.8,
+            "factory": "HAO create_nvfp4_attention_tensors",
+            "flop_convention": "B*H*2*Sq*Sk*(Dqk+Dvo)",
+            "rep_ms": 3000,
+            "seed": 20260814,
+            "timer": "triton.testing.do_bench median",
+            "warmup_ms": 300
+          },
+          "sources": {
+            "hao": {
+              "commit": "9b0abefdbbbe4d0da1d4e0c7aa128e3338c4b247",
+              "dirty": true,
+              "files": [
+                {
+                  "bytes": 237446,
+                  "path": "/workspace/codebases/flash-attention-fp4/flash_attn/cute/flash_fwd_sm100_fp4.py",
+                  "sha256": "00c6856075c55bae3d53c1d49c913a8b3b17cd997cd7634714defb1533034037"
+                },
+                {
+                  "bytes": 42916,
+                  "path": "/workspace/codebases/flash-attention-fp4/flash_attn/cute/benchmarks/bench_fp4.py",
+                  "sha256": "5ca604ed90ebc4e1ffe7f606fc97f3c774d2ac3869bea9092237d450cd2f85a4"
+                },
+                {
+                  "bytes": 13559,
+                  "path": "/workspace/codebases/flash-attention-fp4/flash_attn/cute/README.md",
+                  "sha256": "224f74483c4183f52b3f10da20d1c492fefaeafde212dae529f6881a0d2f9414"
+                }
+              ],
+              "path": "/workspace/codebases/flash-attention-fp4"
+            },
+            "tk": {
+              "commit": "cfc06dadf684279f657ab66254a3a074be4ee3a9",
+              "dirty": true,
+              "files": [
+                {
+                  "bytes": 350744,
+                  "path": "/workspace/codebases/pv/fp4_matmul/tk_fa4/fp4_fa4_fwd/hao_direct_fp4pv_kernel.inc",
+                  "sha256": "a388a4386c1e96ce987d4d898de902d481f27e1e97be5eac86882745ee9e6259"
+                },
+                {
+                  "bytes": 136528,
+                  "path": "/workspace/codebases/pv/fp4_matmul/tk_fa4/fp4_fa4_fwd/hao_direct_fp4pv_softmax_reader.inc",
+                  "sha256": "4e12f612e1e1966adc0ee5d68e3d1d25604f2dc7bf2d147c92b19e1d313db8da"
+                },
+                {
+                  "bytes": 47203,
+                  "path": "/workspace/codebases/pv/fp4_matmul/tk_fa4/fp4_fa4_fwd/hao_direct_kernel.inc",
+                  "sha256": "bd0be8ff877c9ae3a64c38cd9b9bf318d8898c37be52a015d7ab40b2f012989d"
+                },
+                {
+                  "bytes": 23064,
+                  "path": "/workspace/codebases/pv/fp4_matmul/tk_fa4/fp4_fa4_fwd/hao_direct_softmax_reader.inc",
+                  "sha256": "dd5b4235eeb8cf7c02a72800a178c904a2ac15fb0a950dd37e0501ffa6e98049"
+                },
+                {
+                  "bytes": 24497,
+                  "path": "/workspace/codebases/pv/fp4_matmul/tk_fa4/fp4_fa4_fwd/hao_comprehensive_suite.py",
+                  "sha256": "a2e0e589a7853f2452cbff77325109e42bbb2cc50e49a9404aa718b5c3ce170f"
+                }
+              ],
+              "path": "/workspace/codebases/pv/fp4_matmul"
+            }
+          },
+          "software": {
+            "cutlass": "4.5.2",
+            "flashinfer": "0.6.15.post1",
+            "python": "3.12.3",
+            "torch": "2.9.0a0+145a3a7bda.nv25.10",
+            "torch_cuda": "13.0",
+            "triton": "3.5.1"
+          }
+        }
+      ]
+    }
+  }
+}

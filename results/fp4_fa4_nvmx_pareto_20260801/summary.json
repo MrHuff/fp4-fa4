@@ -1,0 +1,289 @@
+{
+  "schema": "tk_fp4_fa4_nvmx_pareto_v1",
+  "date": "2026-08-01",
+  "hardware": "NVIDIA GB200",
+  "headline_shape": {
+    "batch": 1,
+    "seqlen": 4096,
+    "heads": 24,
+    "dim": 128
+  },
+  "policies": {
+    "fast": {
+      "qk_format": "nvfp4",
+      "pv_format": "mxfp4",
+      "global_anchor_rows": 0,
+      "folded_qk_k64_scales": true,
+      "timing_ms": 0.09244800359010696,
+      "matched_hao_bf16_ms": 0.16659200191497803,
+      "speedup_vs_matched_hao_bf16": 1.8020075658270391,
+      "synthetic_folded_qk": {
+        "seed": 20260814,
+        "cosine_bf16": 0.9439735412597656,
+        "relative_l2_bf16": 0.3357727527618408,
+        "rmse_bf16": 0.008708707056939602
+      }
+    },
+    "balanced": {
+      "qk_format": "nvfp4",
+      "pv_format": "mxfp4",
+      "global_anchor_rows": 32,
+      "folded_qk_k64_scales": true,
+      "timing_ms": 0.094144,
+      "matched_hao_bf16_ms": 0.169536,
+      "speedup_vs_matched_hao_bf16": 1.8008157715839563,
+      "synthetic_folded_qk": {
+        "seed": 20260814,
+        "cosine_bf16": 0.9453153610229492,
+        "relative_l2_bf16": 0.35669761896133423,
+        "rmse_bf16": 0.00925141479820013
+      }
+    },
+    "accurate": {
+      "qk_format": "nvfp4",
+      "pv_format": "mxfp4",
+      "global_anchor_rows": 32,
+      "folded_qk_k64_scales": false,
+      "timing_ms": 0.110592,
+      "matched_hao_bf16_ms": 0.16752,
+      "speedup_vs_matched_hao_bf16": 1.5147569444444444,
+      "synthetic": {
+        "seed": 20260814,
+        "cosine_bf16": 0.9516028761863708,
+        "relative_l2_bf16": 0.3226708471775055,
+        "rmse_bf16": 0.00836888700723648
+      }
+    }
+  },
+  "native_references": {
+    "hao_nvfp4_fp8pv_ms_s4096_h24": 0.15824000537395477,
+    "hao_bf16_ms_s4096_h24": 0.16950400173664093,
+    "hao_fp8_vs_bf16_output": {
+      "cosine": 0.9897237420082092,
+      "rmse": 0.0036765073891729116
+    },
+    "hao_nvfp4_nvfp4pv_ms_s4096_h24": 0.192512,
+    "hao_nvfp4_nvfp4pv_vs_bf16_output": {
+      "cosine": 0.9814145565032959,
+      "relative_l2": 0.1927669495344162,
+      "rmse": 0.004946504253894091
+    }
+  },
+  "cross_shape_ms": [
+    {
+      "seqlen": 256,
+      "heads": 16,
+      "fast": 0.01024,
+      "balanced": 0.01024,
+      "accurate": 0.012288,
+      "hao_fp8": 0.06255999952554703,
+      "hao_bf16": 0.061024,
+      "balanced_speedup_vs_bf16": 5.959375
+    },
+    {
+      "seqlen": 1024,
+      "heads": 24,
+      "fast": 0.017952,
+      "balanced": 0.016864,
+      "accurate": 0.018432,
+      "hao_fp8": 0.059904,
+      "hao_bf16": 0.076096,
+      "balanced_speedup_vs_bf16": 4.512333965844402
+    },
+    {
+      "seqlen": 2048,
+      "heads": 24,
+      "fast": 0.039232,
+      "balanced": 0.039232,
+      "accurate": 0.045696,
+      "hao_fp8": 0.074688,
+      "hao_bf16": 0.062464,
+      "balanced_speedup_vs_bf16": 1.5921696574225122
+    },
+    {
+      "seqlen": 4096,
+      "heads": 24,
+      "fast": 0.092448,
+      "balanced": 0.094144,
+      "accurate": 0.110592,
+      "hao_fp8": 0.15824000537395477,
+      "hao_bf16": 0.169536,
+      "balanced_speedup_vs_bf16": 1.8008157715839563
+    },
+    {
+      "seqlen": 4096,
+      "heads": 64,
+      "fast": 0.202784,
+      "balanced": 0.206944,
+      "accurate": null,
+      "hao_fp8": 0.3585920035839081,
+      "hao_bf16": 0.404864,
+      "balanced_speedup_vs_bf16": 1.9563940003092626
+    },
+    {
+      "seqlen": 8192,
+      "heads": 64,
+      "fast": 0.75776,
+      "balanced": 0.778592,
+      "accurate": null,
+      "hao_fp8": 1.4014079570770264,
+      "hao_bf16": 1.641504,
+      "balanced_speedup_vs_bf16": 2.1082980559779707
+    }
+  ],
+  "downstream": {
+    "fast": {
+      "vit_s4096_200": {
+        "bf16_accuracy": 0.885,
+        "fp4_accuracy": 0.885,
+        "top1_agreement": 0.955,
+        "logit_cosine": 0.9886742830276489,
+        "logit_relative_l2": 0.15086132287979126
+      },
+      "vit_s256_1000": {
+        "bf16_accuracy": 0.989,
+        "fp4_accuracy": 0.988,
+        "top1_agreement": 0.993,
+        "logit_cosine": 0.9986833930015564,
+        "logit_relative_l2": 0.051392290741205215
+      },
+      "bert_s256_800": {
+        "bf16_masked_accuracy": 0.6174041297935103,
+        "fp4_masked_accuracy": 0.6131104555883317,
+        "top1_agreement": 0.9068829891838741,
+        "logit_cosine": 0.9969211003410422,
+        "logit_relative_l2": 0.0786475299072111
+      }
+    },
+    "balanced": {
+      "vit_s4096_200": {
+        "bf16_accuracy": 0.885,
+        "fp4_accuracy": 0.885,
+        "top1_agreement": 0.985,
+        "logit_cosine": 0.9984233379364014,
+        "logit_relative_l2": 0.056593213230371475
+      },
+      "vit_s256_1000": {
+        "bf16_accuracy": 0.989,
+        "fp4_accuracy": 0.987,
+        "top1_agreement": 0.994,
+        "logit_cosine": 0.9983712434768677,
+        "logit_relative_l2": 0.05714176967740059
+      },
+      "bert_s256_800": {
+        "bf16_masked_accuracy": 0.6174041297935103,
+        "fp4_masked_accuracy": 0.6127171419206817,
+        "top1_agreement": 0.9043920026220911,
+        "logit_cosine": 0.9967983988898458,
+        "logit_relative_l2": 0.08015360065182421
+      }
+    },
+    "accurate": {
+      "vit_s4096_200": {
+        "bf16_accuracy": 0.885,
+        "fp4_accuracy": 0.89,
+        "top1_agreement": 0.985,
+        "logit_cosine": 0.9988611340522766,
+        "logit_relative_l2": 0.04799385741353035
+      },
+      "vit_s256_1000": {
+        "bf16_accuracy": 0.989,
+        "fp4_accuracy": 0.986,
+        "top1_agreement": 0.995,
+        "logit_cosine": 0.9986494183540344,
+        "logit_relative_l2": 0.05199643224477768
+      },
+      "bert_s256_800": {
+        "bf16_masked_accuracy": 0.6174041297935103,
+        "fp4_masked_accuracy": 0.6136020976728941,
+        "top1_agreement": 0.9111438872500819,
+        "logit_cosine": 0.9971358046934501,
+        "logit_relative_l2": 0.07575754290522854
+      }
+    }
+  },
+  "approximation_rejections": {
+    "q0_quadratic": {
+      "timing_ms": 0.09788800030946732,
+      "cosine_bf16": 0.7539040446281433,
+      "relative_l2_bf16": 0.7611202597618103,
+      "static_ffma2_baseline": 128,
+      "static_ffma2_quadratic": 160,
+      "static_f2fp_both": 144
+    },
+    "q0_direct_code_mode3": {
+      "timing_ms": 0.14774399995803833,
+      "cosine_bf16": 0.9500696659088135,
+      "relative_l2_bf16": 0.3147740960121155
+    },
+    "q0_direct_code_mode4": {
+      "timing_ms": 0.14364799857139587,
+      "cosine_bf16": 0.9500696659088135,
+      "relative_l2_bf16": 0.3147740960121155
+    },
+    "two_word_denominator_vit20": {
+      "bf16_accuracy": 0.9,
+      "fp4_accuracy": 0.0,
+      "top1_agreement": 0.0,
+      "logit_relative_l2": 1.0107638835906982
+    },
+    "three_word_denominator_vit20": {
+      "bf16_accuracy": 0.9,
+      "fp4_accuracy": 0.65,
+      "top1_agreement": 0.75,
+      "logit_relative_l2": 0.6102610230445862
+    },
+    "accurate_qk_preload": {
+      "status": "rejected",
+      "reason": "Correction-warpgroup plus folded-QK preload variants failed to complete and held the GPU at 100 percent utilization."
+    }
+  },
+  "final_local_pass": {
+    "fast_clean_reproduction_ms": 0.09251199662685394,
+    "fast_record_ms": 0.09244800359010696,
+    "denominator_reschedule_rejections": {
+      "stream_after_each_word": {
+        "timing_ms": 0.09446399658918381,
+        "change_vs_clean_percent": 2.109,
+        "output_identical_to_baseline": true
+      },
+      "pairwise_partials": {
+        "timing_ms": 0.0942080020904541,
+        "change_vs_clean_percent": 1.833,
+        "output_identical_to_baseline": true
+      }
+    },
+    "current_headroom": {
+      "score_pack_ceiling_ms": 0.091168,
+      "score_pack_gap_us": 1.28,
+      "raw_score_pack_ceiling_ms": 0.090112,
+      "raw_score_pack_gap_us": 2.336,
+      "fixed_p_ceiling_ms": 0.087616,
+      "fixed_p_gap_us": 4.832
+    },
+    "balanced_affine_retunes": {
+      "retained_a1p65_b0p8": {
+        "timing_ms": 0.094144,
+        "synthetic_relative_l2": 0.35669761896133423,
+        "vit20_logit_relative_l2": 0.03733176738023758
+      },
+      "rejected_a1p70_b1p20": {
+        "timing_ms": 0.0944959968328476,
+        "synthetic_relative_l2": 0.34356334805488586,
+        "vit20_logit_relative_l2": 0.04430939629673958
+      },
+      "rejected_a1p55_b1p00": {
+        "timing_ms": 0.09497600048780441,
+        "synthetic_relative_l2": 0.3414001762866974,
+        "vit20_logit_relative_l2": 0.048191335052251816
+      }
+    },
+    "promotion": "none"
+  },
+  "measurement_notes": [
+    "Kernel timing excludes Q/K/V quantization and the optional global K/V anchor permutation.",
+    "Fast and balanced require folded K64 Q/K scale quantization with MSE scale selection.",
+    "The raw full-reference fast/balanced files predate the benchmark-runner folded-QK argument fix; use their timings and native references, but use the folded-QK synthetic records for TK accuracy.",
+    "Synthetic random-input error is distribution-sensitive; downstream model gates are reported separately."
+  ]
+}

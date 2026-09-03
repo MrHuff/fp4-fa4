@@ -1,0 +1,261 @@
+{
+  "schema": "tkfa4.v416_llama12b_saturated_receipt.v1",
+  "date_utc": "2026-08-29",
+  "classification": {
+    "selected_v416_run": "valid_source_stable_authenticated_saturated_run",
+    "bf16_reference": "valid_established_fixed_state_authenticated_run",
+    "v382_reference": "valid_established_fixed_state_authenticated_run",
+    "concurrent_edit_v382_rerun": "rejected_source_drift_not_used"
+  },
+  "hardware": {
+    "physical_gpu_requested": 3,
+    "visible_gpu_index": 0,
+    "name": "NVIDIA GB200",
+    "compute_capability": [10, 0],
+    "multiprocessor_count": 152,
+    "total_memory_bytes": 197897617408,
+    "torch_version": "2.9.0a0+145a3a7bda.nv25.10",
+    "torch_cuda_version": "13.0"
+  },
+  "shape": {
+    "model": "llama3.2-1b",
+    "layers": 16,
+    "batch": 16,
+    "sequence": 4096,
+    "tokens_per_update": 65536,
+    "hidden": 2048,
+    "query_heads": 32,
+    "kv_heads": 8,
+    "head_dim": 64,
+    "batch_status": "maximal authenticated stable local saturated batch"
+  },
+  "method": {
+    "route": "NVFP4-QK with E4M3 FP8-PV forward and native TK E4M3 backward",
+    "forward_route": "real_fwd_tk_hao_direct_causal_gqa_nvfp4_fp8pv",
+    "qkv_projection_format": "e4m3",
+    "token_source": "deterministic_uniform_synthetic",
+    "seed": 20260825,
+    "warmups": 3,
+    "measured_updates": 20,
+    "loss": "cut-cross-entropy torch_compile",
+    "optimizer": "fused AdamW",
+    "checkpoint": {
+      "path": "/tmp/fp4_fa4_native_tk_b16_20260828/runs/initial_llama12b_b16_seed20260825.pt",
+      "bytes": 2471684915,
+      "sha256": "35f3bf75821c3b744893ebb8a512ea20517b9f39ef20c0fd4620d643ae6c9bbc"
+    },
+    "bf16_reference_samples": {
+      "path": "/tmp/fp4_fa4_native_tk_b16_20260828/runs/bf16_packed.samples.pt",
+      "bytes": 26194186,
+      "sha256": "37ca2927cce4767b3c4f0abfb781251e7adca97861f8e5d6dcf88b576a27e4ef"
+    }
+  },
+  "authenticated_v416_artifact": {
+    "path": "/tmp/tkfa4_v416_d64_gqa_production_bshd_dq_first_build/_C_sm100_gqa_tk_v416_d64_e4m3_production_bshd_dq_first.cpython-312-aarch64-linux-gnu.so",
+    "bytes": 3138360,
+    "sha256": "d974cdc3706bc48f1f5452f31c6688f13b510672992da8536e5fe2c824ffdfd5",
+    "module": "_C_sm100_gqa_tk_v416_d64_e4m3_production_bshd_dq_first",
+    "metadata_source_identity": "v416_d64_gqa_e4m3_production_bshd_dq_first_vec2_ds_v1",
+    "metadata_source_file": "v416_d64_gqa_e4m3_production_bshd_dq_first_vec2_ds.cu",
+    "metadata_topology": "split_qhead_cta_k128_q128_async_owner_aligned_tmem_p_half_overlap_shared_ds_tma_prelifted_stats_bshd_gradient_store_pipeline_dq_first",
+    "gradient_mma_issue_order": "dq_then_dk",
+    "ds_shared_store": "owner_aligned_v2_b32",
+    "production_data_abi_compatible": true,
+    "backward_out_clears_outputs": true,
+    "output_dtype": "bfloat16_additive"
+  },
+  "selected_full_model_result": {
+    "all_update_losses_finite": true,
+    "timing_statistics_ms": {
+      "decoder_forward": {
+        "minimum": 176.75506591796875,
+        "p10": 176.90617980957032,
+        "p50": 177.6992416381836,
+        "p90": 182.9706069946289,
+        "maximum": 184.37062072753906,
+        "mean": 178.8373649597168,
+        "standard_deviation": 2.4426226219185354
+      },
+      "ce_forward": {
+        "minimum": 25.183008193969727,
+        "p10": 25.229162216186523,
+        "p50": 25.90287971496582,
+        "p90": 28.666450881958006,
+        "maximum": 28.98409652709961,
+        "mean": 26.407910537719726,
+        "standard_deviation": 1.2428272624785042
+      },
+      "backward_total": {
+        "minimum": 396.8637390136719,
+        "p10": 400.6153106689453,
+        "p50": 404.2714538574219,
+        "p90": 409.95994262695314,
+        "maximum": 412.41314697265625,
+        "mean": 404.3846374511719,
+        "standard_deviation": 3.933805670801885
+      },
+      "gradient_clip": {
+        "minimum": 3.242016077041626,
+        "p10": 3.4218399047851564,
+        "p50": 3.5648800134658813,
+        "p90": 3.727145648002624,
+        "maximum": 3.9175360202789307,
+        "mean": 3.5668815970420837,
+        "standard_deviation": 0.151719576800442
+      },
+      "optimizer": {
+        "minimum": 7.070720195770264,
+        "p10": 7.075132989883423,
+        "p50": 7.295775890350342,
+        "p90": 7.840617418289185,
+        "maximum": 7.947264194488525,
+        "mean": 7.385441589355469,
+        "standard_deviation": 0.3051595082414865
+      },
+      "step": {
+        "minimum": 610.9661865234375,
+        "p10": 614.6709777832032,
+        "p50": 618.8103942871094,
+        "p90": 628.2134948730469,
+        "maximum": 636.8147583007812,
+        "mean": 620.5822387695313,
+        "standard_deviation": 6.784736330052037,
+        "coefficient_of_variation": 0.010932856124765309
+      },
+      "wall": {
+        "minimum": 611.0030801501125,
+        "p10": 614.710909477435,
+        "p50": 618.8454563962296,
+        "p90": 628.2501602778211,
+        "maximum": 636.8482450488955,
+        "mean": 620.6172473961487,
+        "standard_deviation": 6.784322308418982
+      }
+    },
+    "measured_loop_wall_ms": 12434.632631018758,
+    "p50_tokens_per_second": 105906.43047536346,
+    "sustained_tokens_per_second": 105408.82379832832,
+    "p50_bf16_equivalent_useful_tflops": 870.549150448577,
+    "p50_bf16_equivalent_useful_mfu_at_2250_tflops": 0.3869107335327009,
+    "memory": {
+      "peak_allocated_gib": 155.03160619735718,
+      "peak_reserved_gib": 166.98046875,
+      "gate_gib": 180.0
+    },
+    "loss": {
+      "first_measured_update": 12.164240837097168,
+      "last_measured_update": 11.94344711303711,
+      "heldout_initial": 12.171581268310547,
+      "heldout_final": 11.939157485961914,
+      "heldout_improvement": 0.2324237823486328,
+      "heldout_delta_vs_bf16": -0.0008478164672851562,
+      "twenty_update_trajectory_mae_vs_bf16": 0.006057643890380859,
+      "twenty_update_trajectory_rmse_vs_bf16": 0.007217391670111491
+    }
+  },
+  "references_and_speedups": {
+    "packed_bf16": {
+      "step_p50_ms": 679.3839111328125,
+      "backward_total_p50_ms": 444.2234802246094,
+      "decoder_forward_p50_ms": 196.4698715209961,
+      "sustained_tokens_per_second": 96080.49103899582,
+      "peak_allocated_gib": 160.71113395690918,
+      "peak_reserved_gib": 173.326171875,
+      "heldout_final_loss": 11.9400053024292,
+      "v416_step_speedup": 1.0978870384287676,
+      "v416_backward_total_speedup": 1.098824752492363,
+      "v416_allocated_hbm_saving_gib": 5.679527759552002,
+      "v416_reserved_hbm_saving_gib": 6.345703125
+    },
+    "retained_v382_fp8_forward": {
+      "step_p50_ms": 1883.2445678710938,
+      "backward_total_p50_ms": 1666.9702758789062,
+      "decoder_forward_p50_ms": 178.8670883178711,
+      "sustained_tokens_per_second": 34731.730966084906,
+      "peak_allocated_gib": 156.03160619735718,
+      "peak_reserved_gib": 167.98046875,
+      "heldout_final_loss": 11.938750267028809,
+      "v416_step_speedup": 3.043330534291777,
+      "v416_backward_total_speedup": 4.123393477261969,
+      "v416_allocated_hbm_saving_gib": 1.0,
+      "v416_reserved_hbm_saving_gib": 1.0
+    },
+    "v414_full_model": {
+      "step_p50_ms": 618.0112915039062,
+      "backward_total_p50_ms": 402.4107360839844,
+      "classification": "e2e_tied_with_v416_at_this_sample_size"
+    }
+  },
+  "isolated_attention_backward_attribution": {
+    "v416_vs_v414": {
+      "boundary": "backward_e4m3_bshd_precomputed_out including three output clears",
+      "warmups": 10,
+      "samples": 51,
+      "order": "per-sample two-way rotation in one process",
+      "v416_p50_ms": 3.7202560901641846,
+      "v414_p50_ms": 3.738464117050171,
+      "v416_speedup": 1.0048942939530765,
+      "all_outputs_finite": true,
+      "zero_dout_nonzeros": {"dq": 0, "dk": 0, "dv": 0}
+    },
+    "direct_v414_vs_v382": {
+      "boundary": "production precomputed-statistics backward out entrypoint including required clears and finalization",
+      "warmups": 10,
+      "samples": 51,
+      "order": "rotated per sample in one process on physical GPU 3",
+      "v414_p50_ms": 3.7409920692443848,
+      "v382_p50_ms": 82.81664276123047,
+      "v414_speedup": 22.13761516419306,
+      "v414_vs_v382_quality": {
+        "dq": {"cosine": 0.9978341460227966, "relative_l2": 0.0658341571688652},
+        "dk": {"cosine": 0.9978373050689697, "relative_l2": 0.06578843295574188},
+        "dv": {"cosine": 0.9999938011169434, "relative_l2": 0.0035574869252741337}
+      }
+    },
+    "causal_explanation": "The approximately 79.08 ms per-layer reduction from v382 to the direct-output schedule predicts approximately 1.265 s across 16 layers, matching the observed full-backward reduction in scale."
+  },
+  "evidence": {
+    "v416_full_model_json": {
+      "path": "/tmp/fp8_v416_native_tk_gpu3_saturated_20260829.json",
+      "bytes": 56718,
+      "sha256": "2df47fc63d2c90cac28c0823738ef1e5d7a156073172de0cd3dd307b160f11a0"
+    },
+    "v416_samples": {
+      "path": "/tmp/fp8_v416_native_tk_gpu3_saturated_20260829.samples.pt",
+      "bytes": 26195645,
+      "sha256": "3eb2731e04b1a3d0852fa549db29f4e77e61e219e1f332b84c8174b33e30e765"
+    },
+    "v416_log": {
+      "path": "/tmp/fp8_v416_native_tk_gpu3_saturated_20260829.log",
+      "bytes": 58154,
+      "sha256": "ddc681662124da58edeb9a87ddef4997c0d92ba242fab9dc5a7b4106316236a5"
+    },
+    "v416_isolated_receipt": "results/native_tk_d64_ptx_adaptation_20260829/v416_production_vec2_ds_receipt_20260829.json",
+    "direct_v414_v382_receipt": {
+      "path": "/tmp/v414_v382_b16_production_attention_backward_gpu3_20260829.json",
+      "bytes": 10292,
+      "sha256": "7ebf48fd5b5ccf9b7d9fcdcfa114eb84d7ba74d2cee0fc64db1a924c49ff22ae"
+    },
+    "retained_v382_full_model_json": {
+      "path": "/tmp/fp4_fa4_native_tk_b16_20260828/runs/fp8_native_tk.json",
+      "bytes": 53781,
+      "sha256": "2c26d138a4de6c4be299db5d1be8e98009df67655b1fba0edac2c271a460e578"
+    },
+    "packed_bf16_full_model_json": {
+      "path": "/tmp/fp4_fa4_native_tk_b16_20260828/runs/bf16_packed.json",
+      "bytes": 26849,
+      "sha256": "31a39ef16b250b78e396d5c69ca8052941c7b80ad4b6ceb11299ea002eb01804"
+    }
+  },
+  "rejected_concurrent_edit_v382_rerun": {
+    "status": "not_used",
+    "reason": "The harness detected that benchmark source files changed during execution and refused to publish a result JSON or sample artifact.",
+    "log": "/tmp/fp8_v382_native_tk_gpu3_saturated_rerun_20260829.log"
+  },
+  "limitations": [
+    "The 3+20 saturated run is a short execution and numerical smoke, not long-horizon convergence.",
+    "The full-model v416, v414, v382, and BF16 processes are fixed-state comparable but not a contemporaneous rotated process bracket.",
+    "v416 and v414 are end-to-end tied at this sample size; the selected v416 change is supported by the isolated paired result, not by an end-to-end speedup claim over v414.",
+    "Useful MFU is the harness BF16-equivalent model-FLOP estimate, not an Nsight hardware-utilization measurement."
+  ]
+}

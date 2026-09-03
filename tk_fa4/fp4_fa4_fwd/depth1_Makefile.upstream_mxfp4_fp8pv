@@ -1,0 +1,25 @@
+GPU := B200
+SRC := upstream_mxfp4_fp8pv_candidate.cu
+EXT_SUFFIX := $(shell python3 -c "import sysconfig; print(sysconfig.get_config_var('EXT_SUFFIX'))")
+OUT ?= /tmp/_C_b300_causal_fp4_fwd_upstream_fp8pv_two_stage$(EXT_SUFFIX)
+CONFIG := pytorch
+NVCC_THREADS ?= 2
+NVCC_SPLIT_COMPILE ?= 2
+include ../../ThunderKittens/kernels/common.mk
+NVCCFLAGS += -DTK_FA4_FORWARD_ONLY_BUILD \
+  -DTK_FA4_UPSTREAM_OWNED_TWO_STAGE_ONLY_BUILD=1 \
+  -DTK_FA4_ENABLE_MXFP4_FWD_TIMELINE=0 \
+  -DTK_FA4_ENABLE_MXFP4_FWD_PCHAIN_STAMPS=0 \
+  --threads $(NVCC_THREADS) --split-compile=$(NVCC_SPLIT_COMPILE) \
+  -UTORCH_EXTENSION_NAME \
+  -DTORCH_EXTENSION_NAME=_C_b300_causal_fp4_fwd_experiments
+
+all: $(OUT)
+
+$(OUT): $(SRC) fwd_bf16_baseline.inc fwd_configs.inc \
+  fwd_device_helpers.inc stage2_ex2_alu_helpers.cuh shared_host_helpers.inc \
+  upstream_mxfp4_fp8pv_config.inc upstream_mxfp4_fp8pv_kernel.inc \
+  upstream_mxfp4_fp8pv_quarter_reader.inc \
+  upstream_mxfp4_fp8pv_minimal_host.inc
+
+.PHONY: all

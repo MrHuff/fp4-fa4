@@ -1,0 +1,131 @@
+{
+  "benchmark": {
+    "correctness": {
+      "hao_vs_bf16_lse": {
+        "cosine": 0.9999990463256836,
+        "max_abs": 0.06540203094482422,
+        "mean_abs": 0.009777833707630634,
+        "reference_rms": 8.817536354064941,
+        "relative_l2": 0.0014017958892509341,
+        "rmse": 0.012360386550426483
+      },
+      "hao_vs_bf16_output": {
+        "cosine": 0.9899139404296875,
+        "max_abs": 0.0400390625,
+        "mean_abs": 0.0029023089446127415,
+        "reference_rms": 0.025936206802725792,
+        "relative_l2": 0.14194302260875702,
+        "rmse": 0.003681463422253728
+      },
+      "tk_vs_bf16_lse": {
+        "cosine": 0.9999911785125732,
+        "max_abs": 0.20046234130859375,
+        "mean_abs": 0.02951088175177574,
+        "reference_rms": 8.817536354064941,
+        "relative_l2": 0.004213552922010422,
+        "rmse": 0.037153154611587524
+      },
+      "tk_vs_bf16_output": {
+        "cosine": 0.9565500020980835,
+        "max_abs": 0.04736328125,
+        "mean_abs": 0.006052165292203426,
+        "reference_rms": 0.025936206802725792,
+        "relative_l2": 0.2935612201690674,
+        "rmse": 0.007613864261657
+      },
+      "tk_vs_hao_lse": {
+        "cosine": 0.9999921321868896,
+        "max_abs": 0.20054912567138672,
+        "mean_abs": 0.027761515229940414,
+        "reference_rms": 8.816692352294922,
+        "relative_l2": 0.003967131022363901,
+        "rmse": 0.03497697412967682
+      },
+      "tk_vs_hao_output": {
+        "cosine": 0.9663588404655457,
+        "max_abs": 0.04150390625,
+        "mean_abs": 0.005325667094439268,
+        "reference_rms": 0.025902699679136276,
+        "relative_l2": 0.2584703862667084,
+        "rmse": 0.006695081014186144
+      }
+    },
+    "protocol": {
+      "factory": "HAO create_nvfp4_attention_tensors",
+      "rep_ms": 3000,
+      "timer": "triton.testing.do_bench median",
+      "tk_qk_format": "nvfp4",
+      "warmup_ms": 300
+    },
+    "shape": {
+      "batch": 1,
+      "dim": 128,
+      "heads": 24,
+      "seqlen": 4096
+    },
+    "speedup_vs_hao_bf16": {
+      "hao_native_nvfp4_fp8pv": 1.0750811765394013,
+      "tk_hao_direct_nvfp4_fp8pv": 1.149739505568381
+    },
+    "tflops": {
+      "hao_native_bf16": 1216.0156949552975,
+      "hao_native_nvfp4_fp8pv": 1307.315584022919,
+      "tk_hao_direct_nvfp4_fp8pv": 1398.1012838812953
+    },
+    "timing_ms": {
+      "hao_native_bf16": 0.16953599452972412,
+      "hao_native_nvfp4_fp8pv": 0.15769599378108978,
+      "tk_hao_direct_nvfp4_fp8pv": 0.14745600521564484
+    },
+    "topology": {
+      "batch": 1,
+      "correction_regs": 80,
+      "dqk": 128,
+      "dvo": 128,
+      "dynamic_smem_bytes": 157696,
+      "early_q3": false,
+      "ex2_emu_mask": 12696,
+      "fixed_p_ceiling": false,
+      "heads": 24,
+      "kv_stages": 4,
+      "logical_jobs": 384,
+      "p_first_chunks": 3,
+      "p_ilp_pipeline": false,
+      "persistent": true,
+      "physical_grid_ctas": 152,
+      "producer_regs": 80,
+      "pv_format": "e4m3_fp8",
+      "qk_format": "nvfp4_e4m3_block16",
+      "query_stages": 2,
+      "retain_q0": 0,
+      "retain_q2_mode": 1,
+      "route": "real_fwd_tk_hao_direct_nvfp4_fp8pv",
+      "schema": "tk_hao_direct_pipeline_v1",
+      "score_pack_ceiling": false,
+      "seqlen": 4096,
+      "shiftless_fp8_mode": 4,
+      "softmax_regs": 176,
+      "threads_per_cta": 512,
+      "tmem_columns": 512,
+      "two_chunk_pipeline": false,
+      "valid": 1,
+      "wait_hint_cycles": 10000000
+    }
+  },
+  "build": {
+    "barriers": 1,
+    "registers": 128,
+    "spill_load_bytes": 0,
+    "spill_store_bytes": 0,
+    "static_smem_bytes": 256
+  },
+  "label": "b1_s4096_h24_d128",
+  "shape": {
+    "batch": 1,
+    "dim": 128,
+    "heads": 24,
+    "seqlen": 4096
+  },
+  "status": "complete",
+  "variant": "fp8"
+}

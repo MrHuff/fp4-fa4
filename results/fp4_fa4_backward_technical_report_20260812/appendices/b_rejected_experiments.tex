@@ -1,0 +1,144 @@
+\section{Rejected and Diagnostic Experiments}
+\label{app:rejected}
+
+\subsection{Two-command D192 score}
+
+Omitting the final K64 score command changes the score contraction from rank
+192 to at most rank 128.  It saved only 12.7 $\mu$s at S8192/H8 and 46.2
+$\mu$s at S16384/H24 in one calibrated screen, while unit-scale Q/K dQ/dK
+cosine fell to approximately 0.825.  Sparse-outlier cosine was approximately
+0.923--0.925.  CountSketch, dense Rademacher projection, and energy-selected
+chunks did not recover general inputs.  The mode is disabled.
+
+\subsection{Additional score pipelines}
+
+Split N64/N96 score publication and early-prefix consumption moved stall
+samples but did not reduce wall time.  A cross-iteration score preissue reused
+the existing exchange-tail scratch and failed its first runtime gate.  A
+second complete score accumulator is impossible in the active 512-column map.
+Streaming half of dV to recover 64 columns lost more to scratch drain and
+scatter than a later score could save.
+
+\subsection{dQ publication alternatives}
+
+Pairing twelve 32$\times$32 dQ reductions into six 64$\times$32 transactions
+was correct but 0.86\% slower at S8192/H8 because the pairwise barriers became
+exposed.  The equivalent mixed-route pairing was about 1.1\% slower.
+Accumulating unscaled dQ followed by a linear scale pass added a complete dQ
+read/write and regressed timing and rounding.
+
+A timing-only half-owner diagnostic bounded a four-CTA hierarchical reduction
+at roughly 3--4\% before DSM coordination cost.  Replacing TMA reduction with
+scalar atomics would increase instruction issue while retaining L2
+serialization.  No alternative was retained.
+
+A later two-lane implementation did perform the final dQ addition in the
+stacked NVFP4 producer, together with inverse RoPE and QKV packing.  It is
+correct but measures 1.635936~ms at the S4096/H24/K3072 activation boundary,
+versus 1.578336~ms for the selected interleaved path and 1.566048~ms for the
+unsignaled one-lane stacked control.  Nsight Systems attributes approximately
+37~$\mu$s to enabling tile-ready signaling even for one lane and roughly
+48~$\mu$s to the actual two-lane schedule.  K64 TMA descriptors and three
+attempts to split BF16/packed shared pages also produced illegal accesses and
+were discarded.  The retained producer uses the proven K128 descriptor and
+eight warps; the two-lane mode remains an opt-in structural diagnostic.
+
+\subsection{Aliased adaptive mixed-dP scale page}
+
+The first adaptive mixed-dP attempt reused the live score-scale TMEM word for
+the fixed E2M1 dP tail.  Robust per-head Q/K metadata made the alias visible as
+repeatable tile-local dQ corruption.  That exact layout remains rejected.  The
+replacement assigns the dP word a distinct lifetime-safe page, compiles at 128
+registers without spills, and is exposed explicitly as
+\code{route="mixed"}.  It is not the default because it regresses H8 timing
+and reduces calibrated dQ/dK cosine from approximately 0.991 to 0.983.
+
+\subsection{Whole-row tile-ready projection consumer}
+
+The first head-major grid used one readiness gate in front of the whole
+projection tile.  It measured 16.608 $\mu$s slower than attention plus cuBLAS
+at S8192/H8.  Launching the polling grid first can also prevent producer
+admission and is invalid.  This version was superseded by per-head waits inside
+the projection K loop and two alternating TMEM accumulators; the replacement
+saves 2.592 $\mu$s at H8.  The rejected result remains relevant because it
+shows that launch order alone is not reduction-topology integration.
+
+\subsection{Forward probability cache and MXFP4 P-to-dS replay}
+
+Local represented-E4M3 P reuse saves 6.784 $\mu$s at S8192/H8, but persisting
+the complete forward probability matrix would require approximately 272 MiB
+for one MXFP4 payload plus scale pages.  A forward write and backward read
+cannot repay a single-digit-microsecond local saving, so no global cache was
+implemented.
+
+A stronger candidate kept the three-command mixed dV route and reused its
+MXFP4 P fragment directly for dS.  It regressed from 0.756192 to 0.782464 ms,
+reduced dQ/dK cosine to 0.981658/0.981543, and returned a non-finite dV.  Its
+two feature gates were restored to zero and the stable route was rebuilt.
+
+\subsection{Compact 96-byte mixed-dP transport}
+
+Each retained mixed-dP row transfers 128 bytes although its final 32 bytes are
+not consumed by the dP contraction.  A 96-byte depth descriptor appears to
+reclaim the padding, but the grouped SM100 transaction does not retire under
+the score/dO barrier even when the tail MMA is omitted.  The 128-byte row is
+therefore retained.  The padding is a real storage inefficiency, not currently
+a legally removable one.
+
+\subsection{Pure-MX production dispatch}
+
+The all-MX endpoint now passes launch, finiteness, payload, and output
+validation with projection-native Q/K/V and producer-native dO.  It is no
+longer rejected as an implementation.  It is rejected only as the default:
+the broad sweep in Table~\ref{tab:pure-mxfp4-broad} leaves it behind the mixed
+dP route at every shape, while pure dQ/dK cosine is approximately
+0.864--0.887.  The route remains exposed as an aggressive research endpoint
+rather than being promoted over the higher-accuracy hybrid.
+
+\subsection{Additional pure-FP4 epilogue fusion}
+
+The final pass tested dS-scale fusion, direct P-scale publication, direct dQ
+scale application, interleaved dual E2M1 packing, early dO reload, a deferred
+native-dS TMEM wait, streamed dual dPsum, and two P/dO K-block interleave
+orders.  These variants either regressed or changed only stall attribution
+without improving calibrated wall time.  Their compile-time gates are all
+restored to zero.  The retained epilogue fusion is instead upstream: one Q/K
+projection quantization fans out into all required layouts, where it removes
+a complete conversion/publication boundary.
+
+A final scale-family sweep tested NVFP4 K16/E4M3 pages for dS and compact Q/K.
+NVFP4 dS improved dQ/dK cosine to approximately 0.969 but was 3.9--4.1\%
+slower than BF16.  NVFP4 Q/K was slower and less accurate than MXFP4 Q/K, and
+the combined diagnostic returned non-finite dQ/dK.  The three gates are
+restored to zero.
+
+\subsection{Global and row/block adaptive Q/K scales}
+
+A single global amax overreacted to sparse outliers, giving approximately
+0.753/0.757 dQ/dK cosine at S4096/H24.  Robust per-head scaling fixed most of
+that failure.  Finer row/block Q/K scales were not retained because their
+scale varies along the dQ/dK reduction dimension; mixed gradient instructions
+would need additional scale pages rather than the current scalar epilogue.
+
+\subsection{Barrier-only rearrangements}
+
+Score, dP, and dQ issue markers were useful because they changed when TMEM
+operations could enter the hardware scoreboard.  Additional fanout barriers,
+uniform rendezvous variants, and producer/consumer relays usually shifted
+sample attribution or exposed another wait without changing the underlying
+data-ready time.  The latest profile therefore treats barriers as a symptom
+below score production, not the next primary optimization target.
+
+\subsection{Cooperative inverse-RoPE staging in the NVFP4 quantizer}
+
+The direct fused inverse-RoPE quantizer is correct and retains a useful
+122-register no-publication specialization (153 registers with BF16
+republication), but its row-owned threads read
+the rotary tables with a 192-byte row stride.  Two cooperative alternatives
+staged either one 32-plane half at a time or one complete 64-plane QKV column
+tile.  Both made the table traffic coalesced and remained bit-exact.  Neither
+was retained: the half-tile form compiled at 182/234 registers for
+no-publication/publication, and the full compact tile reached 218--250
+registers.  Their extra barriers and lower occupancy made them slower than
+both the direct fusion and the separate transform.  Coalescing alone is not a
+win when it extends the lifetime of the quantizer's complete row fragment.

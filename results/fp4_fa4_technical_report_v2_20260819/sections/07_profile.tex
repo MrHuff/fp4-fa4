@@ -1,0 +1,214 @@
+\FloatBarrier
+\section{Discussion and Conclusion}
+\label{sec:current-headroom}
+
+The forward, backward, and training results point to three hardware
+takeaways.  We state each takeaway first and then give the measurement that
+supports it; the rejected kernel variants remain in the appendices.
+
+\begin{table}[htbp]
+\centering
+\caption{Hardware takeaways and the evidence that supports them.}
+\label{tab:hardware-takeaways}
+\small
+\begin{tabularx}{\textwidth}{p{.28\textwidth}X}
+\toprule
+Takeaway & Supporting evidence \\
+\midrule
+Tensor-memory ownership limits overlap & Two FP32 score banks and two FP32
+output accumulators use all $4\times128=512$ tensor-memory columns; reducing
+shared-memory use did not increase CTA residency or reduce latency. \\
+Readiness stalls leave matrix throughput unused & A matched diagnostic kept
+the same 98,304 tensor instructions but reached only 18.8\% tensor-pipe
+activity with the real probability path. \\
+Probability arithmetic is no longer the main gap & A fixed-P diagnostic that
+removes nearly all probability construction improved latency by only 5.23\%. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Takeaway 1: TMEM capacity and ownership bound the overlap window}
+
+The two-query pipeline in Figure~\ref{fig:quarter-pipeline} already overlaps
+QK, softmax, and PV across query stages.  The limitation is more specific:
+under the current D128 layout, the next QK cannot fully overlap the still-owned
+probability and tail-PV phase.  Figure~\ref{fig:tmem-layout} shows why.  Two
+128-column score banks and two 128-column FP32 output accumulators occupy all
+512 tensor-memory (TMEM) columns.  A retired part of a score bank is reused for
+the quantized probability and scale pages.  Until PV consumes that overlay,
+the next QK targeting that score bank and query stage has no legal score
+destination; the other query stage still provides partial overlap.
+
+This is a storage-ownership dependency, not simply a shortage of barriers or
+shared memory.  In a matched control, reducing dynamic shared memory from
+209,920 to 163,840 bytes did not improve latency because the 512-column TMEM
+allocation still allowed only one CTA per streaming multiprocessor.  More
+shared memory, or more raw on-chip bytes that cannot be allocated as another
+score bank, would not change this schedule.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[font=\small,
+  bank/.style={draw=inkgray,minimum width=2.35cm,minimum height=.72cm,
+    align=center},
+  extra/.style={draw=scoreblue,dashed,minimum width=2.35cm,
+    minimum height=.72cm,align=center}]
+  \node[anchor=east,font=\bfseries] at (-.25,1.05) {Current};
+  \node[bank,fill=scoreblue!22] (s0) at (1.0,1.05) {score 0 / P 0};
+  \node[bank,fill=scoreblue!34,right=0pt of s0] (s1) {score 1 / P 1};
+  \node[bank,fill=outputgreen!22,right=0pt of s1] (o0) {output 0};
+  \node[bank,fill=outputgreen!34,right=0pt of o0] (o1) {output 1};
+  \node[below=3pt of s1.south east,anchor=north,text=inkgray]
+    {all 512 columns owned};
+
+  \node[anchor=east,font=\bfseries] at (-.25,-.55) {Candidate contract};
+  \node[bank,fill=scoreblue!22] (t0) at (1.0,-.55) {score 0 / P 0};
+  \node[bank,fill=scoreblue!34,right=0pt of t0] (t1) {score 1 / P 1};
+  \node[bank,fill=outputgreen!22,right=0pt of t1] (u0) {output 0};
+  \node[bank,fill=outputgreen!34,right=0pt of u0] (u1) {output 1};
+  \node[extra,fill=scoreblue!8,right=4pt of u1] (next) {next score};
+  \node[below=4pt of t1.south,font=\scriptsize,text=scoreblue]
+    {PV still consuming};
+  \node[above=4pt of next.north,font=\scriptsize,text=scoreblue] (qkwrite)
+    {next QK writes};
+  \draw[-{Latex[length=2mm]},thick,scoreblue]
+    (qkwrite.south) -- (next.north);
+\end{tikzpicture}
+\caption{Conceptual hardware implication.  The useful addition is another
+allocatable score destination, together with legal issue and ownership
+semantics, so the next QK can proceed while PV still consumes the current
+overlay.  The lower row is not a measured kernel or a claim that raw capacity
+alone is sufficient.}
+\label{fig:extra-score-bank}
+\end{figure}
+
+\subsection{Takeaway 2: low tensor activity is a readiness symptom}
+
+The scaled-FP4 PV instruction consumes a K64 inner dimension, so two adjacent
+32-column probability fragments must be ready before useful PV work can
+start.  Publishing the first fragment alone does not advance the matrix
+issuer.  The score-to-probability path therefore creates paired rendezvous:
+Q0 and Q1 enable the first PV half, while Q2 and Q3 enable the tail.  Attempting
+to issue the next QK between the first and tail PV operations violates the
+current sequence of two K64 tensor-core accumulations.
+
+Table~\ref{tab:historical-readiness-profile} shows a matched historical
+profiling checkpoint.  The real and fixed-probability variants execute the
+same number of tensor instructions.  Removing probability work shortens wall
+time and raises the fraction of cycles attributed to the tensor pipe, but it
+does not create more matrix work.  Source sampling attributes 1,715 of 2,669
+not-issued samples to dependency stalls categorized by NVIDIA's profiler as
+long-scoreboard waits, chiefly final statistics, score readiness, and output
+publication.  Tensor-core underutilization is therefore a symptom of operands
+not being ready, not a lack of nominal FP4 throughput.
+
+\begin{table}[htbp]
+\centering
+\caption{Matched historical profile with identical tensor work.  This
+diagnostic predates the final Direct-P binary and is used only to identify the
+stall mechanism.}
+\label{tab:historical-readiness-profile}
+\small
+\begin{tabular}{lrrr}
+\toprule
+Probability path & Dynamic instructions & Tensor instructions & Tensor active \\
+\midrule
+Real probability construction & 54.6 million & 98,304 & 18.8\% \\
+Fixed probability & 11.9 million & 98,304 & 26.6\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The final Direct-P path has already removed most exposed probability cost.
+At B1/S4096/H24/D128, the retained kernel measures 0.092448 ms and repeats at
+0.092512 ms.  Intentionally incorrect ceilings bound what remains:
+
+\begin{table}[htbp]
+\centering
+\caption{Final-kernel ceilings relative to the 0.092448-ms valid record.  These
+rows deliberately remove required work and do not compute valid attention.}
+\label{tab:speed-of-light}
+\small
+\begin{tabular}{lrr}
+\toprule
+Diagnostic & Time (ms) & Gap from 0.092448 ms \\
+\midrule
+Simplified score packing & 0.091168 & 1.280\us\ (1.38\%) \\
+Keep row maximum, pack raw scores & 0.090112 & 2.336\us\ (2.53\%) \\
+Use a fixed probability tile & 0.087616 & 4.832\us\ (5.23\%) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Even the fixed-P diagnostic that removes nearly all probability construction
+saves only 5.23\%.  The remaining gap to the four-times-BF16 matrix ratio
+includes score loads, K64 publication granularity, scale delivery, online
+correction, output accumulation, and the epilogue.  This is also why fewer
+arithmetic instructions do not always help: independent arithmetic can occupy
+issue slots while the kernel is waiting for a dependency.
+
+\subsection{Takeaway 3: faster arithmetic does not scale the whole kernel}
+
+\begin{table}[htbp]
+\centering
+\caption{Hardware properties relevant to the measured kernels.  TMEM capacity
+does not increase from GB200 to the tested B300.}
+\label{tab:blackwell-generations}
+\small
+\begin{tabular}{lcc}
+\toprule
+Property & GB200 / SM100 & B300 / SM103 \\
+\midrule
+Visible SMs in this study & 152 & 148 \\
+Maximum reported clock & 2062 MHz & 2032 MHz \\
+TMEM per SM & 256 KB & 256 KB \\
+Key exponential rate & 16 ops/clock/SM & 32 ops/clock/SM \\
+Dense NVFP4 GPU class & 1.0$\times$ & 1.5$\times$ \\
+Fused TMEM load and reduction & no & yes \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Blackwell Ultra increases dense NVFP4 throughput, doubles important
+special-function rates, and adds a fused TMEM load/reduction instruction
+\cite{nvidia2025blackwellultra,nvidia2026ptx,zadouri2026flashattention4}.
+Those improvements do not enlarge the score/output allocation, so the whole
+attention loop does not become 1.5$\times$ faster.  The measurements are
+consistent with faster QK and PV making score reduction, scale publication,
+and correction more visible.
+
+Launch shape matters as well.  A persistent grid wider than the 148 visible
+B300 SMs creates a mostly empty second wave; recompiling for the device removes
+that tail.  With the corrected geometry, S8192/H64 and the wave-aligned
+S9472/H64 cases sustain 3116 and 3159 TFLOP/s.  At S32768/H24, however, B300
+reaches 2945 TFLOP/s versus 2998 on GB200.  Per-SM-clock normalization favors
+B300, but that normalization is an inference rather than an observed
+GPU-throughput win.
+
+Noncausal D64 measurements and unsafe-format controls are reported in
+Appendix~\ref{app:nvnv-d64}.  Their different tile and ownership regime should
+not be inferred from the D128 hardware profile above.
+
+\subsection{Implications for hardware and kernels}
+
+The measured dependencies motivate these candidate changes:
+\begin{description}
+  \item[Another allocatable score bank.] Allow the next QK to write while PV
+  still owns the current probability overlay.  This must preserve two-query
+  K/V reuse and provide legal issue semantics; a naive ping-pong prototype
+  doubled the query jobs and was 52.8\% slower.
+  \item[K32 scaled-FP4 PV.] Consume each 32-column probability completion
+  immediately instead of waiting for a K64 pair.
+  \item[Scales outside TMEM.] Remove instruction-facing scale pages from the
+  overlay by reading compact scales from shared memory or registers.  Existing
+  scale-footprint probes show that this alone neither creates a full
+  128-column score destination nor demonstrates a speedup.
+  \item[Wider tiles with a compatible lifecycle.] B300's wider matrix
+  instructions have high synthetic ceilings, but only if probability
+  production, K/V reuse, and score storage can be scheduled together.
+\end{description}
+
+These are hypotheses motivated by measured dependencies, not measured wins.
+The resulting design implication is that, once Direct-P shortens probability
+construction, another polynomial approximation is likely less valuable than
+a larger usable overlap window.

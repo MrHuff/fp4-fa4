@@ -1,0 +1,168 @@
+{
+  "schema": "llama12b_output_shared_split_v_abba_analysis_v1",
+  "decision": {
+    "accepted": true,
+    "scope": "native NVFP4-QK plus direct MXFP4-PV split-V publication only",
+    "reason": "The candidate is byte-exact at the isolated publication boundary, 4.88% faster there, and directionally faster in both adjacent saturated process pairs. The whole-step effect is small and its two-process interval includes zero."
+  },
+  "protocol": {
+    "order": [
+      "retained_a1",
+      "candidate_b1",
+      "candidate_b2",
+      "retained_a2"
+    ],
+    "shape": {
+      "model": "Llama-1.2B preset",
+      "batch": 16,
+      "sequence": 4096,
+      "hidden": 2048,
+      "layers": 16,
+      "q_heads": 32,
+      "kv_heads": 8,
+      "head_dim": 64
+    },
+    "seed": 20260825,
+    "warmup_updates_per_process": 3,
+    "measured_updates_per_process": 20,
+    "measured_updates_per_route": 40,
+    "tokens_per_update": 65536,
+    "data": "pinned local Dolma",
+    "loss": "cut-cross-entropy linear_cross_entropy with impl=torch_compile",
+    "physical_gpu": 3,
+    "gpu": "NVIDIA GB200"
+  },
+  "pooled": {
+    "retained": {
+      "step_mean_ms": 540.475260925293,
+      "step_p50_ms": 539.3139343261719,
+      "decoder_forward_mean_ms": 148.6614604949951,
+      "decoder_forward_p50_ms": 148.3576431274414,
+      "backward_mean_ms": 354.8613815307617,
+      "backward_p50_ms": 353.97607421875,
+      "ce_forward_mean_ms": 24.98052315711975,
+      "gradient_clip_mean_ms": 3.849034398794174,
+      "optimizer_mean_ms": 8.122858452796937,
+      "sustained_tokens_per_second": 121042.02322788353,
+      "useful_mfu_at_pooled_step_p50": 0.4439425135017626
+    },
+    "candidate": {
+      "step_mean_ms": 539.3783004760742,
+      "step_p50_ms": 539.1254577636719,
+      "decoder_forward_mean_ms": 148.02289276123048,
+      "decoder_forward_p50_ms": 147.76398468017578,
+      "backward_mean_ms": 354.4022346496582,
+      "backward_p50_ms": 354.1465148925781,
+      "ce_forward_mean_ms": 24.959666299819947,
+      "gradient_clip_mean_ms": 3.890064799785614,
+      "optimizer_mean_ms": 8.103448069095611,
+      "sustained_tokens_per_second": 121275.89247036548,
+      "useful_mfu_at_pooled_step_p50": 0.4440977144066495
+    },
+    "candidate_minus_retained": {
+      "step_mean_ms": -1.096960449218841,
+      "step_mean_percent": -0.2029621942992943,
+      "step_p50_ms": -0.1884765625,
+      "step_p50_percent": -0.034947467607249205,
+      "decoder_forward_mean_ms": -0.6385677337646314,
+      "decoder_forward_mean_percent": -0.4295449080335967,
+      "decoder_forward_p50_ms": -0.593658447265625,
+      "backward_mean_ms": -0.4591468811034929,
+      "backward_p50_ms": 0.170440673828125,
+      "ce_forward_mean_ms": -0.020856857299804688,
+      "gradient_clip_mean_ms": 0.04103040099143973,
+      "optimizer_mean_ms": -0.01941038370132553,
+      "sustained_tokens_per_second": 233.86924248194543,
+      "sustained_tokens_per_second_percent": 0.1932132628365224
+    }
+  },
+  "order_adjacent_process_pairs": {
+    "step_mean_candidate_minus_retained_ms": [
+      -0.900668334960983,
+      -1.2932525634765852
+    ],
+    "step_mean_delta_ms": -1.096960449218784,
+    "step_mean_delta_df1_95_percent_interval_ms": [
+      -3.5910882411255267,
+      1.3971673426879585
+    ],
+    "decoder_forward_mean_candidate_minus_retained_ms": [
+      -0.9394981384277514,
+      -0.3376373291015682
+    ],
+    "decoder_forward_mean_delta_ms": -0.6385677337646598,
+    "decoder_forward_mean_delta_df1_95_percent_interval_ms": [
+      -4.462251066831262,
+      3.185115599301942
+    ],
+    "backward_mean_candidate_minus_retained_ms": [
+      0.4847457885742301,
+      -1.4030395507812727
+    ],
+    "backward_mean_delta_ms": -0.4591468811035213
+  },
+  "isolated_gate": {
+    "artifact_sha256": "282dcee1606dedd156e21c4f9973a3bc011636816ac3cf5c72229f3a87bb62ff",
+    "artifact_bytes": 24814112,
+    "retained_median_us": 880.7840049266815,
+    "candidate_median_us": 839.792013168335,
+    "retained_over_candidate_median_speedup": 1.0488120762231277,
+    "balanced_candidate_minus_retained_mean_us": -42.155845165252686,
+    "balanced_mean_bootstrap_95_percent_interval_us": [
+      -42.68129535019398,
+      -41.62590776383877
+    ],
+    "addressable_publications_bitwise_equal": true,
+    "compared_publications": 11,
+    "valid_mxfp4_scale_bytes_only": true,
+    "authentication_receipt": {
+      "external_path": "/tmp/output_shared_split_v_noinline_auth_b4f06fc_20260826.json",
+      "bytes": 3682,
+      "sha256": "28596e2054f890dadfe322763c4d000b0416814583d1b4d6e702d76b114febed"
+    },
+    "timing_receipt": {
+      "external_path": "/tmp/output_shared_split_v_noinline_timing_b4f06fc_20260826.json",
+      "bytes": 61923,
+      "sha256": "52b17d68c4a89785787e53eb62edf7173af1e3350f29fd6773bebc67b0cd1372"
+    }
+  },
+  "numerics": {
+    "all_records_finite": true,
+    "shared_initial_loss": 12.170470237731934,
+    "initial_parameter_samples_bitwise_equal_across_all_processes": true,
+    "initial_hidden_samples_bitwise_equal_across_all_processes": true,
+    "initial_logit_samples_bitwise_equal_across_all_processes": true,
+    "initial_sampled_gradients_bitwise_equal": false,
+    "retained_repeat_initial_gradient_relative_l2": 0.026257168501615524,
+    "candidate_repeat_initial_gradient_relative_l2": 0.028584353625774384,
+    "explanation": "The forward diagnostic is bitwise stable, while sampled backward gradients differ even between same-route repeats. Multi-update trajectories therefore cannot be used as a bitwise publication-parity test in this non-deterministic training stack.",
+    "final_heldout_loss": {
+      "retained_a1": 7.953824996948242,
+      "candidate_b1": 7.966411113739014,
+      "candidate_b2": 7.971582412719727,
+      "retained_a2": 8.034660339355469
+    },
+    "convergence_claim": "none; 23 optimizer updates per process are only a smoke test"
+  },
+  "provenance": {
+    "implementation_commit": "b4f06fc75f4e1361022808fdd22ec7b167bf13eb",
+    "harness_commit": "293261e8a6085ba939e0f24c37bc5ae996bbe162",
+    "harness_sha256": "964b9a98e27da8b9bdec10d563c9de314b49653bf53262bf98c4f3b65eaef99f",
+    "runtime_sha256": "aec43888c2a1919aec7fff6effca40a156262e03418cf2deff7a02a5628dbf2f",
+    "checkpoint_sha256": "2760f5eb47fd0241317dfd69bd0e2d906909d948d81a5a93f0fd371944f0d2bc",
+    "packed_tokens_sha256": "0e7c735ad8794429330a23dada1a2cd26d3abe955ce4c46d31e40e161c55fd16",
+    "backward_contract_sha256": "49003a811eccd2710e41741ba1cfa121887f274021e1551c92eed80ffdd67784",
+    "retained_checked_symbol": "project_qkv_gqa_d64_paired_unified_fp4_nvfp4_rope_packed_interleaved_causal_represented_backward_perblock_qk_split_v_backward_mx_forward_out",
+    "candidate_checked_symbol": "project_qkv_gqa_d64_paired_unified_fp4_nvfp4_rope_packed_interleaved_causal_represented_backward_perblock_qk_output_shared_split_v_mx_forward_out",
+    "all_processes_saw_only_their_own_cuda_process": true,
+    "peak_allocated_gib": 135.52745580673218,
+    "peak_reserved_gib": 147.6171875,
+    "projection_artifact_authentication": "caller_declared; byte identity is authenticated but the binary is not self-attested to the source commit"
+  },
+  "raw_receipts": {
+    "retained_a1_retry2.json": "0037f643c72713ff7545f5affa6ce54e1d40073739acfd33b65e3f4c0064084a",
+    "candidate_b1.json": "c87831b4d9bc55480e6eb8b76307462ff4c7b5b5e9140a6aaee3b66268968108",
+    "candidate_b2.json": "adf952634d78aa6621ed2e2c9cb484031a0ac8337e9c83fb23a99d7bc805faff",
+    "retained_a2.json": "a02400680615b252a91e3f3326b90a19efd641a8d5c8f13f72514a4e69a286a5"
+  }
+}

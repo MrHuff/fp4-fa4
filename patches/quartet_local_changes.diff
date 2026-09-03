@@ -1,0 +1,14 @@
+diff --git a/low_bits_training/quantization/quartet_local.py b/low_bits_training/quantization/quartet_local.py
+index 1d28c694..b2de89ff 100644
+--- a/low_bits_training/quantization/quartet_local.py
++++ b/low_bits_training/quantization/quartet_local.py
+@@ -173,6 +173,9 @@ class Quartet_II_fn(torch.autograd.Function):
+         # FIXED: Ensure grad_output is BF16 for quant_had_eden
+         if grad_output.dtype != torch.bfloat16:
+             grad_output = grad_output.to(torch.bfloat16)
++        
++        if not grad_output.is_contiguous():
++            grad_output = grad_output.contiguous()
+             
+         flat_grad_output = grad_output.reshape(-1, grad_output.shape[-1])
+ 

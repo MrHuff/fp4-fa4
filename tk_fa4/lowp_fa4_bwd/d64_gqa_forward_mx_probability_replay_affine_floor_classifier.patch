@@ -1,0 +1,102 @@
+--- a/fmha_bwd_d64_gqa_aug19_exact.py
++++ b/fmha_bwd_d64_gqa_aug19_affine_floor.py
+@@ -61,6 +61,9 @@
+ 
+ 
+ TK_FORWARD_MX_PROBABILITY_REPLAY_ALL_LANE_EXACT_MATH = True
++TK_FORWARD_MX_PROBABILITY_REPLAY_AFFINE_FLOOR = (
++    "aligned_bias_2p3561437_low_corrections_v1"
++)
+ 
+ 
+ @dsl_user_op
+@@ -522,6 +525,75 @@
+     )
+ 
+ 
++@dsl_user_op
++def tk_e2m1_affine_floor_decode_f32x2(
++    x: Float32, y: Float32, *, loc=None, ip=None
++) -> Tuple[Float32, Float32]:
++    """Approximate native-EX2 E2M1 bins with a low-live affine floor.
++
++    The affine bias aligns native boundaries 2->3, 4->5, and 6->7.  Two
++    calibrated lower-bound corrections preserve 0->1 and 1->2.  All PTX
++    temporaries stay scoped inside this operation, and the selected payload
++    still uses the native E2M1 decode instruction.
++    """
++    result = llvm.inline_asm(
++        llvm.StructType.get_literal([T.i32(), T.i32()]),
++        [
++            Float32(x).ir_value(loc=loc, ip=ip),
++            Float32(y).ir_value(loc=loc, ip=ip),
++        ],
++        """{
++        .reg .pred p;
++        .reg .f32 transformed, decoded_x, decoded_y;
++        .reg .s32 code, shifted;
++        .reg .b32 packed_word, halves;
++        .reg .b8 packed, pad0, pad1, pad2;
++        .reg .b16 hx, hy;
++
++        fma.rn.f32 transformed, $2, 0f40000000, 0f4016CB0F;
++        cvt.rmi.s32.f32 code, transformed;
++        max.s32 code, code, 0;
++        min.s32 code, code, 7;
++        setp.ge.f32 p, $2, 0fBFFFFFFE;
++        @p max.s32 code, code, 1;
++        setp.ge.f32 p, $2, 0fBED47FCB;
++        @p max.s32 code, code, 2;
++        mov.b32 packed_word, code;
++
++        fma.rn.f32 transformed, $3, 0f40000000, 0f4016CB0F;
++        cvt.rmi.s32.f32 code, transformed;
++        max.s32 code, code, 0;
++        min.s32 code, code, 7;
++        setp.ge.f32 p, $3, 0fBFFFFFFE;
++        @p max.s32 code, code, 1;
++        setp.ge.f32 p, $3, 0fBED47FCB;
++        @p max.s32 code, code, 2;
++        shl.b32 shifted, code, 4;
++        or.b32 packed_word, packed_word, shifted;
++
++        mov.b32 {packed, pad0, pad1, pad2}, packed_word;
++        cvt.rn.f16x2.e2m1x2 halves, packed;
++        mov.b32 {hx, hy}, halves;
++        cvt.f32.f16 decoded_x, hx;
++        cvt.f32.f16 decoded_y, hy;
++        mov.b32 $0, decoded_x;
++        mov.b32 $1, decoded_y;
++        }""",
++        "=r,=r,f,f",
++        has_side_effects=False,
++        is_align_stack=False,
++        asm_dialect=llvm.AsmDialect.AD_ATT,
++        loc=loc,
++        ip=ip,
++    )
++    result_x = llvm.extractvalue(T.i32(), result, [0], loc=loc, ip=ip)
++    result_y = llvm.extractvalue(T.i32(), result, [1], loc=loc, ip=ip)
++    return (
++        Float32(llvm.bitcast(Float32.mlir_type, result_x, loc=loc, ip=ip)),
++        Float32(llvm.bitcast(Float32.mlir_type, result_y, loc=loc, ip=ip)),
++    )
++
++
+ current_dir = os.path.dirname(os.path.abspath(__file__))
+ sys.path.insert(0, os.path.join(current_dir, ".."))
+ from utils import fmha_helpers as fmha_utils
+@@ -3368,10 +3440,10 @@
+                             ),
+                         )
+                     )
+-                    native0 = cute.math.exp2(native_log0, fastmath=True)
+-                    native1 = cute.math.exp2(native_log1, fastmath=True)
+                     represented0, represented1 = (
+-                        tk_e2m1_rn_decode_f32x2(native0, native1)
++                        tk_e2m1_affine_floor_decode_f32x2(
++                            native_log0, native_log1
++                        )
+                     )
+                     represented0 = tk_mxfp4_zero_invalid(
+                         represented0, exponent0

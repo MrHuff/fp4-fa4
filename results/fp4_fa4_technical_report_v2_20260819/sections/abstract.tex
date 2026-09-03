@@ -1,0 +1,14 @@
+\begin{abstract}
+Blackwell's 4-bit floating-point (FP4) tensor cores do not automatically make
+attention faster because softmax conversion and on-chip dependencies dominate
+once its matrix products shrink.  We address this with \emph{Direct-P} for
+noncausal inference and a causal path that passes the forward quantization
+directly into backward.
+Direct-P maps scores directly to FP4 probabilities and reaches up to
+2.13$\times$ the bfloat16 (BF16) forward throughput on an NVIDIA GB200.
+The causal path reconstructs probabilities from saved quantized queries and
+keys and uses 8-bit floating-point (FP8) gradient operands, accelerating a
+complete single-GPU 8-billion-parameter update by up to 1.14$\times$.
+Matched distributed training retains FP8 probabilities and values; every
+tested MXFP4 probability/value training trajectory diverges.
+\end{abstract}

@@ -1,0 +1,302 @@
+{
+  "baseline_vs_split": {
+    "k_backward_e4m3": {
+      "actual_shape": [
+        1,
+        256,
+        8,
+        64
+      ],
+      "equal": true,
+      "mismatch_fraction": 0.0,
+      "mismatches": 0,
+      "reference_shape": [
+        1,
+        256,
+        8,
+        64
+      ],
+      "shape_equal": true,
+      "values": 131072
+    },
+    "k_global_scale": {
+      "actual_shape": [
+        1,
+        32
+      ],
+      "equal": true,
+      "mismatch_fraction": 0.0,
+      "mismatches": 0,
+      "reference_shape": [
+        1,
+        32
+      ],
+      "shape_equal": true,
+      "values": 32
+    },
+    "k_payload": {
+      "actual_shape": [
+        1,
+        8,
+        256,
+        32
+      ],
+      "equal": true,
+      "mismatch_fraction": 0.0,
+      "mismatches": 0,
+      "reference_shape": [
+        1,
+        8,
+        256,
+        32
+      ],
+      "shape_equal": true,
+      "values": 65536
+    },
+    "k_scales": {
+      "actual_shape": [
+        1,
+        4,
+        8,
+        512
+      ],
+      "equal": true,
+      "mismatch_fraction": 0.0,
+      "mismatches": 0,
+      "reference_shape": [
+        1,
+        4,
+        8,
+        512
+      ],
+      "shape_equal": true,
+      "values": 16384
+    },
+    "q_backward_e4m3": {
+      "actual_shape": [
+        1,
+        256,
+        32,
+        64
+      ],
+      "equal": true,
+      "mismatch_fraction": 0.0,
+      "mismatches": 0,
+      "reference_shape": [
+        1,
+        256,
+        32,
+        64
+      ],
+      "shape_equal": true,
+      "values": 524288
+    },
+    "q_global_scale": {
+      "actual_shape": [
+        1,
+        128
+      ],
+      "equal": true,
+      "mismatch_fraction": 0.0,
+      "mismatches": 0,
+      "reference_shape": [
+        1,
+        128
+      ],
+      "shape_equal": true,
+      "values": 128
+    },
+    "q_payload": {
+      "actual_shape": [
+        1,
+        32,
+        256,
+        32
+      ],
+      "equal": true,
+      "mismatch_fraction": 0.0,
+      "mismatches": 0,
+      "reference_shape": [
+        1,
+        32,
+        256,
+        32
+      ],
+      "shape_equal": true,
+      "values": 262144
+    },
+    "q_scales": {
+      "actual_shape": [
+        1,
+        2,
+        32,
+        512
+      ],
+      "equal": true,
+      "mismatch_fraction": 0.0,
+      "mismatches": 0,
+      "reference_shape": [
+        1,
+        2,
+        32,
+        512
+      ],
+      "shape_equal": true,
+      "values": 32768
+    },
+    "v_payload": {
+      "actual_shape": [
+        1,
+        8,
+        64,
+        128
+      ],
+      "equal": true,
+      "mismatch_fraction": 0.0,
+      "mismatches": 0,
+      "reference_shape": [
+        1,
+        8,
+        64,
+        128
+      ],
+      "shape_equal": true,
+      "values": 65536
+    },
+    "v_scales": {
+      "actual_shape": [
+        1,
+        2,
+        8,
+        256
+      ],
+      "equal": true,
+      "mismatch_fraction": 0.0,
+      "mismatches": 0,
+      "reference_shape": [
+        1,
+        2,
+        8,
+        256
+      ],
+      "shape_equal": true,
+      "values": 4096
+    }
+  },
+  "baseline_vs_split_backward_v": {
+    "bytes": {
+      "actual_shape": [
+        1,
+        256,
+        8,
+        64
+      ],
+      "equal": false,
+      "mismatch_fraction": 0.8020858764648438,
+      "mismatches": 105131,
+      "reference_shape": [
+        1,
+        256,
+        8,
+        64
+      ],
+      "shape_equal": true,
+      "values": 131072
+    },
+    "metrics": {
+      "cosine": 0.9939254522323608,
+      "finite": true,
+      "max_abs": 1.5,
+      "relative_l2": 0.11007165908813477
+    }
+  },
+  "checks": {
+    "backward_qk_publications_unchanged": true,
+    "direct_control_has_aligned_forward_mxv_contract": true,
+    "forward_qk_mxv_publications_unchanged": true,
+    "split_backward_v_matches_direct_accumulator_publication": true
+  },
+  "configuration": {
+    "baseline_policy": "represented_perblock_qk_and_represented_mxv",
+    "direct_control_policy": "nonrepresented_qkv",
+    "head_dim": 64,
+    "hidden": 512,
+    "k_quant_scale": 2.0,
+    "kv_heads": 8,
+    "q_heads": 32,
+    "q_quant_scale": 2.25,
+    "seed": 20260826,
+    "sequence": 256,
+    "split_policy": "represented_perblock_qk_direct_accumulator_v",
+    "v_mxfp4_scale_2d": false,
+    "v_scale_padding_compared": false,
+    "v_scale_storage_bytes_per_page": 512,
+    "v_scale_valid_bytes_per_page": 256
+  },
+  "extension": {
+    "path": "/tmp/fp4-fused-rmsnorm-nvfp4-20260826/tk_fa4/_C_b300_lowp_bwd.cpython-312-aarch64-linux-gnu.so",
+    "sha256": "abd96216925acda6042df36dcb45dbacfdab24becff6f0a379911c176c775054",
+    "split_v_symbol": "project_qkv_gqa_d64_paired_unified_fp8_e4m3_rope_packed_interleaved_causal_represented_backward_perblock_qk_split_v_backward"
+  },
+  "passed": true,
+  "schema": "experimental_split_v_publication_validator_v1",
+  "split_vs_direct_accumulator_control": {
+    "v_backward_e4m3": {
+      "actual_shape": [
+        1,
+        256,
+        8,
+        64
+      ],
+      "equal": true,
+      "mismatch_fraction": 0.0,
+      "mismatches": 0,
+      "reference_shape": [
+        1,
+        256,
+        8,
+        64
+      ],
+      "shape_equal": true,
+      "values": 131072
+    },
+    "v_payload": {
+      "actual_shape": [
+        1,
+        8,
+        64,
+        128
+      ],
+      "equal": true,
+      "mismatch_fraction": 0.0,
+      "mismatches": 0,
+      "reference_shape": [
+        1,
+        8,
+        64,
+        128
+      ],
+      "shape_equal": true,
+      "values": 65536
+    },
+    "v_scales": {
+      "actual_shape": [
+        1,
+        2,
+        8,
+        256
+      ],
+      "equal": true,
+      "mismatch_fraction": 0.0,
+      "mismatches": 0,
+      "reference_shape": [
+        1,
+        2,
+        8,
+        256
+      ],
+      "shape_equal": true,
+      "values": 4096
+    }
+  }
+}

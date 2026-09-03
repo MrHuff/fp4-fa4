@@ -1,0 +1,224 @@
+{
+  "blocking_findings": [
+    "D128 low-precision backward is about 8.3% slower than BF16 and cancels the larger MX forward saving",
+    "8B low-precision final validation loss drifts materially from BF16; MX-A/B divergence also exposes a reproducibility issue",
+    "the eight-sequence validation sample and 1.05M-token horizon are a short-run gate, not a convergence-quality verdict"
+  ],
+  "models": {
+    "1p2b_d64": {
+      "comparisons": {
+        "bf16_over_fp8_step_speedup": 1.201018542926376,
+        "bf16_over_mx_step_speedup": 1.2017078584045005,
+        "fp8_final_validation_loss_delta_vs_bf16": 0.001284480094909668,
+        "fp8_over_mx_backward_speedup": 0.9998692683851589,
+        "fp8_over_mx_forward_speedup": 1.001792879355408,
+        "fp8_over_mx_step_speedup": 1.0005739424109514,
+        "mx_final_validation_loss_delta_vs_bf16": 0.01617521047592163
+      },
+      "execution": "three routes interleaved and rotated in one process",
+      "head_dim": 64,
+      "job_status": {
+        "all_records_verified": true,
+        "failure_explanation": "submitted gate expected 512 documents; trainer correctly reported 446 unique documents after 66 exact duplicates",
+        "failure_stage": "post-run document-count assertion",
+        "kubernetes_exit_status": 1,
+        "training_complete": true
+      },
+      "layers": 16,
+      "parameter_count": 1235814400,
+      "routes": {
+        "bf16": {
+          "backward_ms": 34.33745574951172,
+          "final_validation_loss": 7.296727657318115,
+          "forward_ms": 27.76576042175293,
+          "initial_validation_loss": 12.174527645111084,
+          "last_eight_training_loss_mean": 7.521484315395355,
+          "optimizer_ms": 6.951839923858643,
+          "step_ms": 69.11262130737305,
+          "tokens_per_second": 59265.585974280395,
+          "wall_ms": 69.2107190261595
+        },
+        "fp8": {
+          "backward_ms": 32.312191009521484,
+          "final_validation_loss": 7.298012137413025,
+          "forward_ms": 18.595808029174805,
+          "initial_validation_loss": 12.163991332054138,
+          "last_eight_training_loss_mean": 7.518001317977905,
+          "optimizer_ms": 6.6175360679626465,
+          "step_ms": 57.54500770568848,
+          "tokens_per_second": 71179.0677125081,
+          "wall_ms": 57.656278484500945
+        },
+        "mx": {
+          "backward_ms": 32.316415786743164,
+          "final_validation_loss": 7.312902867794037,
+          "forward_ms": 18.562527656555176,
+          "initial_validation_loss": 12.163857579231262,
+          "last_eight_training_loss_mean": 7.5315985679626465,
+          "optimizer_ms": 6.613615989685059,
+          "step_ms": 57.51199913024902,
+          "tokens_per_second": 71219.92039824028,
+          "wall_ms": 57.615753990830854
+        }
+      }
+    },
+    "8b_d128": {
+      "comparisons": {
+        "bf16_over_fp8_step_speedup": 0.9903474817528467,
+        "bf16_over_mx_bracket_step_speedup": 0.9936322065547875,
+        "fp8_final_validation_loss_delta_vs_bf16": 0.5128326416015625,
+        "fp8_over_mx_bracket_backward_speedup": 1.0002046098374955,
+        "fp8_over_mx_bracket_forward_speedup": 1.0136248775803933,
+        "fp8_over_mx_bracket_step_speedup": 1.0033167396923421,
+        "mx_a_final_validation_loss_delta_vs_bf16": 0.7125406861305237,
+        "mx_b_final_validation_loss_delta_vs_bf16": 0.864745020866394,
+        "mx_forward_run_order_spread_ratio": 1.0149580091418247,
+        "mx_step_run_order_spread_ratio": 1.0042669355286626
+      },
+      "execution": "isolated sequential arms: bf16, mx-a, fp8, mx-b",
+      "head_dim": 128,
+      "job_status": {
+        "all_records_verified": true,
+        "kubernetes_exit_status": 0,
+        "training_complete": true
+      },
+      "layers": 32,
+      "mx_a_b_reproducibility": {
+        "final_validation_loss_delta": 0.15220433473587036,
+        "first_divergent_training_step": 1,
+        "maximum_absolute_training_loss_delta": 2.4367446899414062,
+        "mean_absolute_training_loss_delta": 0.3259798400104046
+      },
+      "mx_bracket_median": {
+        "backward_ms": 149.8772087097168,
+        "forward_ms": 65.69093704223633,
+        "optimizer_ms": 43.99638366699219,
+        "step_ms": 259.6198959350586,
+        "tokens_per_second": 15776.982537238391,
+        "wall_ms": 259.73144150339067
+      },
+      "parameter_count": 8030261248,
+      "routes": {
+        "bf16": {
+          "backward_ms": 138.3854217529297,
+          "final_validation_loss": 7.417654275894165,
+          "forward_ms": 73.12161636352539,
+          "initial_validation_loss": 12.561120390892029,
+          "last_eight_training_loss_mean": 7.596303403377533,
+          "optimizer_ms": 45.99910354614258,
+          "step_ms": 257.96669006347656,
+          "tokens_per_second": 15878.018975985302,
+          "wall_ms": 258.07320448802784
+        },
+        "fp8": {
+          "backward_ms": 149.90787506103516,
+          "final_validation_loss": 7.9304869174957275,
+          "forward_ms": 66.58596801757812,
+          "initial_validation_loss": 12.57799506187439,
+          "last_eight_training_loss_mean": 8.037626147270203,
+          "optimizer_ms": 43.99166488647461,
+          "step_ms": 260.4809875488281,
+          "tokens_per_second": 15724.756108090958,
+          "wall_ms": 260.5934899765998
+        },
+        "mx_a": {
+          "backward_ms": 149.8347396850586,
+          "final_validation_loss": 8.130194962024689,
+          "forward_ms": 65.20328140258789,
+          "initial_validation_loss": 12.573220252990723,
+          "last_eight_training_loss_mean": 8.253572702407837,
+          "optimizer_ms": 43.9958553314209,
+          "step_ms": 259.0671844482422,
+          "tokens_per_second": 15810.570561932056,
+          "wall_ms": 259.1767080302816
+        },
+        "mx_b": {
+          "backward_ms": 149.919677734375,
+          "final_validation_loss": 8.282399296760559,
+          "forward_ms": 66.17859268188477,
+          "initial_validation_loss": 12.573220252990723,
+          "last_eight_training_loss_mean": 8.187056958675385,
+          "optimizer_ms": 43.99691200256348,
+          "step_ms": 260.172607421875,
+          "tokens_per_second": 15743.394512544726,
+          "wall_ms": 260.28617497649975
+        }
+      }
+    }
+  },
+  "protocol": {
+    "batch": 1,
+    "dataset": {
+      "bytes": 21911537,
+      "corpus_metadata": {
+        "empty_rows_removed": 0,
+        "exact_duplicate_rows_removed": 66,
+        "format": "JSON Lines",
+        "source_rows": 512,
+        "unique_documents": 446
+      },
+      "description": "Dolma3 Longmino len-8-16k first 512 physical MDS rows",
+      "scope": "one Longmino bucket, not the full ten-stream Dolma mixture",
+      "sha256": "860b33924dffd53f4c20b80abbcee96e1bf09c3c313290c15ea3a6ee418269ce"
+    },
+    "gradient_clip_norm": null,
+    "hardware": {
+      "name": "NVIDIA GB200",
+      "uuid": "01355792-ef83-14f6-793b-b31a141c113a"
+    },
+    "learning_rate": 0.0001,
+    "seed": 20260818,
+    "sequence": 4096,
+    "tokenizer_sha256": "76e48799b099d43365bd24ccd8ecc5aedac831718da780552f03b0a6eb4412aa",
+    "training_tokens": 1048832,
+    "updates": 256,
+    "validation_rounds": [
+      -1,
+      63,
+      127,
+      191,
+      255
+    ],
+    "validation_tokens": 32776
+  },
+  "raw_artifact_sha256": {
+    "raw/1p2b/exit-status.txt": "ce4522f4f1c3e83b9518ef738478c785e24757e12eb92a1e21c03f2bef0d3bac",
+    "raw/1p2b/llama1p2b-matched.json": "d012cc8d2531a1d9a24c8d3e27407befdd95f37fe534e4a42c3176b104133079",
+    "raw/1p2b/runtime-preflight.json": "72c69706cbb11ea5fd1731b7341c9aa0a921fd6c3b244ea3f406429c1c4ebf25",
+    "raw/8b/bf16.json": "e27208450ab4aad99c8b10c0665a360ee01c62c47db6d1f8c672b2dcd7bfd075",
+    "raw/8b/bracket-summary.json": "224c6bd1581729866dced2c738784ba0c3c9541cec3fa5a1942c6cc75f50233d",
+    "raw/8b/dolma3-materialization-metadata.json": "0a621a5dd546cc78127a52c25551cd03083daf1712c41c6b3276df8d2e85a79a",
+    "raw/8b/exit-status.txt": "1460b87de303106f05246236c2b125edbc9cdcacb37124755c54758c49ce46e9",
+    "raw/8b/fp8.json": "45b28e26d93a9a822062fdcdad9c2e0d6d7b0a6aed8107e9c30c474fa9e4fd41",
+    "raw/8b/merged-mx-a.json": "dddff5fb599a582237d1d93adfb34fcf703d6398d0039a0113f3015c24782580",
+    "raw/8b/merged-mx-b.json": "9182c71848a5a5b1e96b39b72ab2844a83c2f78e567693035b960a3201dc2f0b",
+    "raw/8b/mx-a.json": "270dbef5d72ba0c6330d7a9a62a6cbe037ad2ea34477abedc494d6dc036300cd",
+    "raw/8b/mx-b.json": "ae40f68658fa07f36a53a91989974cbb3378f7b8a868f82e98505969111d58e1",
+    "raw/8b/runtime-preflight.json": "f0c2e955db08af44b1ffdb2b37cb5b709a066cb73dd38aed50a21de0954360f1"
+  },
+  "scale_observation": {
+    "fp8_over_mx_forward_speedup": {
+      "1p2b": 1.001792879355408,
+      "8b_bracket": 1.0136248775803933,
+      "ratio_of_speedup_factors_8b_over_1p2b": 1.0118108228445368
+    },
+    "fp8_over_mx_step_speedup": {
+      "1p2b": 1.0005739424109514,
+      "8b_bracket": 1.0033167396923421,
+      "ratio_of_speedup_factors_8b_over_1p2b": 1.0027412239766926
+    },
+    "interpretation": "directionally supports better MX scaling, but is not a pure model-size causal comparison because D64/D128, projection publication, layer count, and process protocol change together",
+    "verified_direction": "MXFP4-PV beats FP8-PV in both 8B bracket arms, while backward remains effectively equal"
+  },
+  "schema": "fa4_dolma3_causal_model_scale_gate_v1",
+  "source_commit": "cd59dda37ebf22e0d77b9c9d6851ec164b86e3af",
+  "validation": {
+    "8b_strict_merger_outputs": "matched",
+    "finite_timing_eligible_records_per_route": 256,
+    "hardware_identity": "matched",
+    "initialization_identity_within_model": "matched",
+    "lowp_backward_contract_within_model": "matched",
+    "raw_hashes": "matched",
+    "source_and_data_identity": "matched"
+  }
+}

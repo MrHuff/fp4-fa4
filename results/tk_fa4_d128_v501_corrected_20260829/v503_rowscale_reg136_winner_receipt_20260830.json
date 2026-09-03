@@ -1,0 +1,198 @@
+{
+  "schema": "tkfa4.v503_rowscale_reg136_winner.v1",
+  "created_utc": "2026-08-30T01:04:39.305395562Z",
+  "repository": {
+    "root": "/workspace/codebases/pv/fp4_matmul_monolithic_tk_20260828",
+    "head": "653295efc44828f5af0c1e083c3a475e1fdaeb18",
+    "branch": "codex/monolithic-tk-fa4-train-20260828",
+    "candidate_files_are_new_untracked_files": true
+  },
+  "shape": {
+    "batch": 2,
+    "sequence": 4096,
+    "hidden": 4096,
+    "query_heads": 32,
+    "kv_heads": 8,
+    "head_dim": 128,
+    "causal": true
+  },
+  "winner": {
+    "name": "v503_rowscale_reg136",
+    "compute_warp_setmaxnreg": 136,
+    "decision": "select_reg136",
+    "reason": "Both 136 and 144 compile to the same ptxas resource class and their paired timings are effectively tied. Reg136 preserves more of the original v490 warp-register pool headroom and had the lower no-clear paired median overhead in the direct A/B.",
+    "integration_status": "experimental_fail_closed_not_production"
+  },
+  "final_artifacts": {
+    "shared_object": {
+      "path": "/tmp/tkfa4_v503_rowscale_final_reg136_20260830/_C_sm100_gqa_tk_v503_d128_mxfp4v_rowscale_e4m3do_b2_s4096_bshd.cpython-312-aarch64-linux-gnu.so",
+      "sha256": "5e2af1d140181c344167ea2bda091970dc8fe265e3d0abd79672dd6bfd93dcf8",
+      "bytes": 5967472
+    },
+    "sources": [
+      {
+        "path": "/workspace/codebases/pv/fp4_matmul_monolithic_tk_20260828/tk_fa4/native_gqa_tk_bwd/v503_d128_gqa_mxfp4v_rowscale_e4m3do_b2_s4096_owner4_experimental_bshd.cuh",
+        "sha256": "c531761d7dc831c5d98e473dc1097881898cdae00df25763db2ffd005f53fa50"
+      },
+      {
+        "path": "/workspace/codebases/pv/fp4_matmul_monolithic_tk_20260828/tk_fa4/native_gqa_tk_bwd/v503_d128_gqa_mxfp4v_rowscale_e4m3do_b2_s4096_owner4_experimental_bshd.cu",
+        "sha256": "45df1760701012d66e939d6ad66ced6168892247203f1d1657c29786ac0997e3"
+      },
+      {
+        "path": "/workspace/codebases/pv/fp4_matmul_monolithic_tk_20260828/tk_fa4/native_gqa_tk_bwd/Makefile.v503",
+        "sha256": "f2f765c342f4cd6a078adfdd7c08d49be48e9d3ec7be07fa5200ba25ffef339d"
+      }
+    ]
+  },
+  "actual_ptxas_resources": {
+    "toolchain": "CUDA 13.0 nvcc/ptxas, sm_100a",
+    "registers_per_thread": 128,
+    "barriers": 1,
+    "stack_frame_bytes": 40,
+    "cumulative_stack_bytes": 40,
+    "spill_store_bytes": 40,
+    "spill_load_bytes": 36,
+    "static_shared_bytes": 166800,
+    "user_shared_payload_bytes": 166528,
+    "existing_v490_semaphore_bytes": 272,
+    "resource_identity_exported_by_final_module": true
+  },
+  "implementation": {
+    "v_payload": "row-major packed E2M1 [2,4096,8,64]",
+    "v_scale_pages": "E8M0 [2,32,8,512]",
+    "restage": "one-time per CTA row-max across four D32 scales, deterministic exact-power-of-two E2M1 RNE requantization",
+    "dp_mma": "unscaled tcgen05.mma.cta_group::1.kind::f8f6f4",
+    "dp_instruction_descriptor": "0x08200290",
+    "dp_formats": "A=E2M1 encoding 5, B=E4M3 encoding 0, K-major ABt, four K32 chunks",
+    "row_factor": "(2/3)*2^(common_e8m0-127), fused before probability/beta in all dP+dstat paths",
+    "tensor_issue_schedule": "v490 score/dP overlap retained",
+    "dv_route": "v490 path unchanged",
+    "eliminates_backward_e4m3_v_publication": true,
+    "still_requires_second_row_major_v_orientation": true
+  },
+  "reg136_vs_reg144_abba": {
+    "protocol": "self-conditioned same-stream CUDA-event ABBA/BAAB, 30 blocks, 60 samples/provider",
+    "reg144": {
+      "shared_object_sha256": "e1f0df6ac8151119755cdcddee377d67dea86f8fbaa916d3b5656e6f1285ed17",
+      "setmaxnreg": 144,
+      "ptxas_resource_class": "128_regs_40B_stack_40B_spill_stores_36B_spill_loads_166800B_smem",
+      "no_clear": {
+        "v501_median_us": 487.43999004364014,
+        "v503_median_us": 501.76000595092773,
+        "median_raw_delta_v503_minus_v501_us": 14.320015907287598,
+        "median_paired_block_delta_v503_minus_v501_us": 13.856016099452972
+      },
+      "reset_inclusive": {
+        "v501_median_us": 498.7199902534485,
+        "v503_median_us": 513.0239725112915,
+        "median_raw_delta_v503_minus_v501_us": 14.303982257843018,
+        "median_paired_block_delta_v503_minus_v501_us": 13.840019702911377
+      },
+      "full_receipt": {
+        "path": "/tmp/tkfa4_v503_b2_s4096_gate_20260830.json",
+        "sha256": "41b79b108b7829ae7a51b73218fcd311e5ee58177d32acc427a7006dcf36a16e"
+      }
+    },
+    "reg136": {
+      "shared_object_sha256": "19c10d387512d7169dc58012e99731e197b30ff646c00e312cd748ee7b3c0a54",
+      "setmaxnreg": 136,
+      "ptxas_resource_class": "128_regs_40B_stack_40B_spill_stores_36B_spill_loads_166800B_smem",
+      "no_clear": {
+        "v501_median_us": 487.42398619651794,
+        "v503_median_us": 501.74400210380554,
+        "median_raw_delta_v503_minus_v501_us": 14.320015907287598,
+        "median_paired_block_delta_v503_minus_v501_us": 13.28800618648529
+      },
+      "reset_inclusive": {
+        "v501_median_us": 499.7119903564453,
+        "v503_median_us": 514.0479803085327,
+        "median_raw_delta_v503_minus_v501_us": 14.335989952087402,
+        "median_paired_block_delta_v503_minus_v501_us": 14.287970960140228
+      },
+      "full_receipt": {
+        "path": "/tmp/tkfa4_v503_b2_s4096_reg136_gate_20260830.json",
+        "sha256": "0c73ae183ebf4e3e1291b6a9ff780b2c65fe2704afe8c978343b935c5d964ea2"
+      }
+    }
+  },
+  "final_artifact_gate": {
+    "protocol": "self-conditioned same-stream CUDA-event ABBA/BAAB, 30 blocks, 60 samples/provider",
+    "no_clear": {
+      "v501_median_us": 487.43999004364014,
+      "v503_median_us": 501.76000595092773,
+      "median_raw_delta_v503_minus_v501_us": 14.320015907287598,
+      "median_paired_block_delta_v503_minus_v501_us": 14.048010110855103
+    },
+    "reset_inclusive": {
+      "v501_median_us": 498.7199902534485,
+      "v503_median_us": 513.0239725112915,
+      "median_raw_delta_v503_minus_v501_us": 14.303982257843018,
+      "median_paired_block_delta_v503_minus_v501_us": 14.184005558490753
+    },
+    "correctness": {
+      "exact_zero_dout_dq_dk_dv": true,
+      "all_nonzero_gradients_finite": true,
+      "dv_bitwise_identical_to_v501": true,
+      "dv_bytes_compared": 16777216,
+      "dq_cosine_vs_v501": 0.989381920472187,
+      "dq_relative_l2_vs_v501": 0.1455689419750348,
+      "dk_cosine_vs_v501": 0.9897416157436352,
+      "dk_relative_l2_vs_v501": 0.14307564793967864
+    },
+    "receipt": {
+      "path": "/tmp/tkfa4_v503_rowscale_final_reg136_gate_20260830.json",
+      "sha256": "4c530332f47726845e1d47ed0e809ebb6c503d8d86a099275740a6490dc7b4dd"
+    }
+  },
+  "recovery_from_v502": {
+    "v502_no_clear_median_overhead_vs_v501_us": 133.05601477622986,
+    "v503_no_clear_median_overhead_vs_v501_us": 14.320015907287598,
+    "overhead_recovered_us": 118.73599886894226,
+    "v502_static_shared_bytes": 168208,
+    "v503_static_shared_bytes": 166800,
+    "static_shared_reduction_bytes": 1408,
+    "v502_receipt": {
+      "path": "/tmp/tkfa4_v502_b2_s4096_kmajor_chunk1_fenced_v3_oracle_gate_20260830.json",
+      "sha256": "548a0f3beb186074bc1f8a619847430a24a93cc625dbfded39bbff9044e25b97"
+    }
+  },
+  "aggregate_producer_plus_backward_bound": {
+    "separate_measurements": {
+      "producer_self_conditioned_mean_saving_us": 44.85280439257622,
+      "producer_bootstrap_95pct_saving_us": [44.23028374090791, 45.54740149527788],
+      "final_v503_backward_paired_median_overhead_us": 14.048010110855103,
+      "arithmetic_net_saving_us_per_layer_chain": 30.804794281721115,
+      "arithmetic_net_saving_us_across_32_layers": 985.7534170150757,
+      "producer_receipt": {
+        "path": "/tmp/tkfa4_d128_mx_v_publication_bound_20260829.json",
+        "sha256": "5167cccf322cc9adcb24b4ed26524aec2fe12ab8e0745d36ba3a80ec00fb61a8"
+      }
+    },
+    "direct_composed_measurement": {
+      "protocol": "event spans one unchecked authenticated projection plus one backward; two same-provider conditioning chains; output zeroing outside event; 12 warmups; 30 ABBA/BAAB blocks; 60 samples/provider",
+      "retained_dual_v_plus_v501_median_us": 758.2879960536957,
+      "row_mx_v_plus_v503_median_us": 724.9919772148132,
+      "median_speedup_retained_over_candidate": 1.0459260514396242,
+      "median_raw_saving_us": 33.296018838882446,
+      "median_paired_block_saving_us": 33.79197418689728,
+      "mean_paired_block_saving_us": 33.6063951253891,
+      "paired_block_saving_us_across_32_layers": 1081.343173980713,
+      "receipt": {
+        "path": "/tmp/tkfa4_v503_rowscale_final_composed_chain_gate_20260830.json",
+        "sha256": "8aae929f47bd58537bab400b5e76f897443b27db96b2ca8e2cd6152e8075888c"
+      }
+    },
+    "interpretation": "The direct composed gate is the stronger result and confirms that eliminating E4M3 backward-V publication outweighs the v503 backward penalty. This is a per-layer projection-plus-attention-backward microchain result, not a full training-step speedup."
+  },
+  "ceiling_assessment": {
+    "established": "The row-scale design removes about 118.7 us of the old v502 backward overhead and gives a repeatable net composed-chain win.",
+    "remaining_local_gap": "v503 backward remains about 14 us, or 2.9 percent, slower than v501 E4M3-V backward at this exact shape.",
+    "likely_incremental_headroom": "Register redistribution from 136 to 144 does not move the resource class or latency. Further wins require reducing row-restage/requantization work or co-designing producer layout with the backward consumer, not another setmaxnreg tweak.",
+    "not_yet_established": [
+      "training convergence of row-collapsed MXFP4 V",
+      "full 8B end-to-end step speedup",
+      "B1 or shapes other than fail-closed B2/S4096/D128/GQA",
+      "that the remaining 14 us is a hard hardware ceiling"
+    ]
+  }
+}

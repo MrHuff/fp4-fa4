@@ -1,0 +1,158 @@
+{
+  "schema": "tkfa4.d128.v503_rowscale_mxfp4_v.e2e_bracket.v1",
+  "created_utc": "2026-08-30T01:26:11Z",
+  "git": {
+    "branch": "codex/monolithic-tk-fa4-train-20260828",
+    "head": "653295efc44828f5af0c1e083c3a475e1fdaeb18",
+    "dirty": true
+  },
+  "scope": {
+    "hardware": "NVIDIA GB200 SM100",
+    "model": "llama3.1-8b",
+    "shape": "B2_S4096_L32_H4096_Hq32_Hkv8_D128",
+    "tokens": "deterministic_uniform_synthetic",
+    "seed": 20260829,
+    "learning_rate": 0.0001,
+    "loss_scale": 65536.0,
+    "warmups": 3,
+    "measured_updates": 20,
+    "protocol": "v503_A_then_v501_control_then_v503_B_same_GPU_same_checkpoint_same_cache"
+  },
+  "authenticated_artifacts": {
+    "forward_mxfp4_pv": {
+      "path": "/tmp/fa4_d128_b2_20260829/_C_tk_causal_gqa_nvfp4_mxfp4pv_b2s4096h32kv8d128_20260829.cpython-312-aarch64-linux-gnu.so",
+      "sha256": "38d709f0b2b789664dee53dc1a9edec7bb8dc5000dadb8a47989a5b8a4faeb9d",
+      "bytes": 1958376
+    },
+    "projection": {
+      "path": "/tmp/tkfa4_lowp_lstat_lift_build_20260829/_C_b300_lowp_bwd.cpython-312-aarch64-linux-gnu.so",
+      "sha256": "1b88a318ffeaea9cee81d80c2167e3bc34820c370390d2350a87a978575ac9fa",
+      "bytes": 48223048
+    },
+    "v501_e4m3_v_backward": {
+      "path": "/tmp/tkfa4_v501_d128_gqa_unified_best_route_production_bshd_build/_C_sm100_gqa_tk_v501_d128_e4m3_unified_best_route_bshd.cpython-312-aarch64-linux-gnu.so",
+      "sha256": "839c0bc55f809f6ecf6e5e31696c7f89b5a21c26559001dc6d47e80f00a5bf80",
+      "bytes": 6627392
+    },
+    "v503_rowscale_mxfp4_v_backward": {
+      "path": "/tmp/tkfa4_v503_rowscale_final_reg136_20260830/_C_sm100_gqa_tk_v503_d128_mxfp4v_rowscale_e4m3do_b2_s4096_bshd.cpython-312-aarch64-linux-gnu.so",
+      "sha256": "5e2af1d140181c344167ea2bda091970dc8fe265e3d0abd79672dd6bfd93dcf8",
+      "bytes": 5967472
+    },
+    "initial_checkpoint": {
+      "path": "/tmp/tkfa4_v501_e2e_8b_b2_20260829.3q79dF/initial.pt",
+      "sha256": "3a4a7a982ba57f733e0e9e264fdc5ef9c630f8a9d18d73eb9c2b4a5e5b38cb0b",
+      "bytes": 16060628804
+    }
+  },
+  "runs": {
+    "v503_A": {
+      "result": {
+        "path": "/tmp/tkfa4_v503_e2e_8b_b2_20260830_run1/mx_v503.json",
+        "sha256": "bef23af34765d7277d70e5332a297a8ecc59bcc592a1cdabf3f6316c1370beb5"
+      },
+      "step_p50_ms": 433.33876037597656,
+      "sustained_step_ms": 434.89487569313496,
+      "decoder_forward_p50_ms": 119.0373764038086,
+      "backward_p50_ms": 240.8701934814453,
+      "ce_forward_p50_ms": 6.535552024841309,
+      "tokens_per_second_p50": 18904.37862722549,
+      "useful_bf16_equivalent_mfu": 0.4053935821216951,
+      "step_coefficient_of_variation": 0.003751209979756981,
+      "heldout_initial": 12.598453521728516,
+      "heldout_final": 12.602775573730469,
+      "finite": true
+    },
+    "v501_control": {
+      "result": {
+        "path": "/tmp/tkfa4_v503_e2e_8b_b2_20260830_run1/mx_v501_control.json",
+        "sha256": "e6743b21c9eed6cd074d04b2f75969163f7cc55dcf26d1a396c8c161a3ba9f6e"
+      },
+      "step_p50_ms": 434.02452087402344,
+      "sustained_step_ms": 435.1730386959389,
+      "decoder_forward_p50_ms": 120.47583770751953,
+      "backward_p50_ms": 240.23385620117188,
+      "ce_forward_p50_ms": 6.281424045562744,
+      "tokens_per_second_p50": 18874.5096325508,
+      "useful_bf16_equivalent_mfu": 0.4047530586226519,
+      "step_coefficient_of_variation": 0.004745527161314478,
+      "heldout_initial": 12.598453521728516,
+      "heldout_final": 12.606914520263672,
+      "finite": true
+    },
+    "v503_B": {
+      "result": {
+        "path": "/tmp/tkfa4_v503_e2e_8b_b2_20260830_run1/mx_v503_repeat.json",
+        "sha256": "ab22c457b203d9ad9acc609aacf00cee7e3b1676b1847d5dc47ee0d3fe8c3982"
+      },
+      "step_p50_ms": 433.73948669433594,
+      "sustained_step_ms": 435.93549215001985,
+      "decoder_forward_p50_ms": 119.26526260375977,
+      "backward_p50_ms": 241.08465576171875,
+      "ce_forward_p50_ms": 6.574383974075317,
+      "tokens_per_second_p50": 18886.913115598007,
+      "useful_bf16_equivalent_mfu": 0.40501904421902857,
+      "step_coefficient_of_variation": 0.004993107932930054,
+      "heldout_initial": 12.598453521728516,
+      "heldout_final": 12.567230224609375,
+      "finite": true
+    }
+  },
+  "candidate_bracket_median": {
+    "step_p50_ms": 433.53912353515625,
+    "sustained_step_ms": 435.4151839215774,
+    "decoder_forward_p50_ms": 119.15131950378418,
+    "backward_p50_ms": 240.97742462158203,
+    "ce_forward_p50_ms": 6.554967999458313,
+    "tokens_per_second_p50": 18895.645871411747,
+    "useful_bf16_equivalent_mfu": 0.4052063131703618
+  },
+  "candidate_vs_v501_control": {
+    "step_p50_delta_ms": -0.4853973388671875,
+    "step_p50_speedup": 1.0011196159989189,
+    "sustained_step_delta_ms": 0.2421452256384915,
+    "sustained_speedup": 0.9994438750999503,
+    "decoder_forward_delta_ms": -1.3245182037353516,
+    "decoder_forward_speedup": 1.011116269708564,
+    "backward_delta_ms": 0.7435684204101562,
+    "backward_speedup": 0.9969143648141405,
+    "interpretation": "p50_step_tiny_win_but_sustained_flat_within_run_variability"
+  },
+  "oracle": {
+    "receipt": {
+      "path": "/tmp/tkfa4_v503_rowscale_exact_oracle_gate_20260830.json",
+      "sha256": "8c1d6263baca2678492cf26dc5a00499072964d6deaa65c55199c88373a15914"
+    },
+    "represented_v_vs_direct_mxfp4": {
+      "cosine": 0.9995568080734364,
+      "relative_l2": 0.02981197319179697,
+      "norm_ratio": 1.0012174326643017
+    },
+    "kernel_vs_exact_rowscale_oracle": {
+      "dq_cosine": 0.9999910558071077,
+      "dq_relative_l2": 0.00426701016246261,
+      "dk_cosine": 0.9999999689280897,
+      "dk_relative_l2": 0.00016013054699191812,
+      "dv_bitwise_unchanged": true,
+      "exact_zero_passed": true,
+      "all_finite": true
+    },
+    "isolated_latency_vs_v501": {
+      "no_clear_paired_delta_us": 13.336017727851868,
+      "reset_inclusive_paired_delta_us": 14.335997402668,
+      "v503_is_slower": true
+    }
+  },
+  "publication": {
+    "backward_e4m3_v_eliminated": true,
+    "backward_row_major_mxfp4_v_required": true,
+    "forward_feature_major_mxfp4_v_required": true,
+    "all_duplicate_v_publication_eliminated": false
+  },
+  "conclusion": {
+    "semantic_breakage_observed": false,
+    "meaningful_e2e_speedup_observed": false,
+    "short_run_numerics": "finite_but_not_convergence_evidence",
+    "decision": "keep_v503_as_experimental_ablation; retain_v501_or_fp8_for_training_until_longer_convergence_evidence"
+  }
+}

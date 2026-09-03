@@ -1,0 +1,177 @@
+\section{Executive Summary}
+
+\subsection{Terminology: projection is not the score product}
+
+Throughout this report, \emph{projection} is reserved for the learned linear
+layers
+\begin{equation}
+  Q=XW_Q^\mathsf{T},\qquad
+  K=XW_K^\mathsf{T},\qquad
+  V=XW_V^\mathsf{T}.
+  \label{eq:learned-projections-summary}
+\end{equation}
+The attention operation
+\begin{equation}
+  S=\alpha QK^\mathsf{T},\qquad \alpha=d^{-1/2},
+  \label{eq:score-contraction-summary}
+\end{equation}
+is called the \emph{score contraction} or \emph{score reconstruction}.  This
+distinction matters because the latest speedup crosses the boundary between
+the learned QKV projection and attention: it emits the representations needed
+by forward and backward while Q, K, and V are still in
+projection-epilogue registers.
+
+\subsection{What is retained}
+
+The stable accuracy-oriented route is mode
+\code{kCta2DenseLowpFp4Fp8DpPvReuseP}.  Its precision contract is summarized
+in Table~\ref{tab:retained-precision-summary}.  The phrase \emph{FP8
+$dP/dV$} describes the matrix operands; it does \emph{not} mean that the
+output gradients or TMEM accumulators are FP8.
+
+\begin{table}[htbp]
+\centering
+\caption{Retained backward precision contract.  Represented denotes the
+decoded value seen by the tensor instruction.}
+\label{tab:retained-precision-summary}
+\small
+\begin{tabularx}{\textwidth}{l l l X}
+\toprule
+Operation & A operand & B operand & Accumulation / output \\
+\midrule
+score $QK^\mathsf{T}$ & adaptive E2M1 Q & adaptive E2M1 K &
+NVFP4 block scales, three K64 commands, FP32 TMEM \\
+$dP=GV^\mathsf{T}$ & E4M3 $G$ & E4M3 V &
+FP32 TMEM; represented at a fixed $2^4$ scale \\
+$dV=P^\mathsf{T}G$ & E4M3 P & E4M3 $G$ &
+FP32 TMEM, then BF16 output \\
+$dS=P\odot(dP-r)$ & E4M3 P & FP32 $dP$, FP16 centering &
+direct E4M3 production at scale $2^{12}$ \\
+$dQ=dSK$ & E4M3 $dS$ & E2M1 K &
+mixed F8F6F4, FP32 TMEM, BF16 global reduction \\
+$dK=dS^\mathsf{T}Q$ & E4M3 $dS$ & E2M1 Q &
+mixed F8F6F4, FP32 TMEM, one BF16 store \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The route retains the complete $D_{QK}=192$ score rank.  It does not drop the
+third K64 score command.  Q/K use one robust adaptive multiplier per
+batch/head, shared by Q and K, so score reconstruction needs only the existing
+scale page.  The complete BF16 $dS$ tile is never materialized: four FP32 N32
+fragments are centered, multiplied by the already-quantized P representation,
+and converted directly to their final E4M3 consumer layouts.
+
+\subsection{Measured status}
+
+The current result has six distinct boundaries:
+
+\begin{enumerate}
+  \item \textbf{Standalone attention backward.}  Native BF16 $dQ$ publication
+  is 11.3--16.4\% faster than the copied BF16 V382 control on the measured
+  S4096--S16384 matrix.
+  \item \textbf{Adaptive mixed-dP frontier.}  A lifetime-safe specialization
+  is 2.3--2.7\% faster than adaptive FP8 dP/dV at H24, but 1.3--1.7\% slower
+  at H8 and reduces calibrated dQ/dK cosine to approximately 0.983.
+  \item \textbf{QKV projection production.}  A persistent NVFP4 learned
+  projection emits one shared forward/backward Q/K representation, transposed
+  MXFP4 V, and optional BF16 Q/K/V.  It avoids separate HBM rereads and
+  fake-quantization launches.  The legacy Q/K entry point retains its K-depth
+  dispatcher; the unified entry point fuses all publication.  Pair-native
+  full-head RoPE is applied to Q/K register fragments before every BF16 and
+  FP4 publication.
+  \item \textbf{Upstream dO production.}  One fused kernel publishes row and
+  column MXFP4 dO plus the exact softmax delta.  It is bit-exact with the split
+  quantizers and nearly halves setup time at S8192/H8.
+  \item \textbf{Projection backward.}  Fully reduced BF16 $dQ,dK,dV$ can be
+  written to one interleaved per-head buffer and consumed without three
+  standalone tensors or concatenation.  Per-head readiness inside the
+  projection K loop plus two alternating TMEM accumulators now gives a small
+  H8 win; wider heads shape-dispatch to BF16 dQ plus cuBLAS.  A separate
+  delayed-scale NVFP4 dQ handoff improves the H24 composed chain by 3.7\% at
+  approximately 0.991 dX cosine, but loses 1.9\% at H8.
+  \item \textbf{RoPE-aware composed boundary.}  Across S4096--S16384 and
+  H24--H64, the upstream-native delayed-scale route is
+  1.198--1.617$\times$ faster than BF16 for activation gradients and
+  1.166--1.424$\times$ when projection weight gradients are also charged.
+  Fusing inverse RoPE into delayed-scale NVFP4 dgrad packing is bit-exact.
+  The no-publication and BF16-republication forms save 1.70\% and 2.12\% of
+  that boundary component.  At S4096/H24/K4096 this becomes a 0.46\%
+  activation-scope and 0.60\% full-training improvement over the separate
+  inverse-transform route.
+  \item \textbf{Stacked QKV-gradient and MFU boundary.}  The normal unsignaled
+  dQ endpoint can inverse-rotate, quantize, and project stacked dQ/dK/dV in one
+  NVFP4 path.  At S4096/H24/K3072 it reaches 1.566048~ms versus 1.983296~ms
+  for BF16 (1.266$\times$), while the signaled two-lane hierarchy is slower.
+  Across five FP4-forward shapes, full-training speedup is
+  1.096--1.469$\times$ and activation speedup is 1.118--1.720$\times$.
+  A three-seed 500-step block-level proxy retains 93.2\% of BF16's absolute
+  loss improvement on average, with a separately reported FP4 forward floor.
+\end{enumerate}
+
+\subsection{Outcome of the six integration experiments}
+
+\begin{table}[htbp]
+\centering
+\caption{Keep/reject result for the six forward-style integration avenues.}
+\label{tab:six-integration-outcomes}
+\small
+\begin{tabularx}{\textwidth}{r p{.27\textwidth} X}
+\toprule
+No. & Experiment & Outcome \\
+\midrule
+1 & Unified learned QKV projection & Retain: native Q/K, pair-native fused RoPE, MXFP4 V, and optional BF16 stores from one NVFP4 GEMM. \\
+2 & One Q/K representation & Retain: forward typed tensors and backward byte tensors alias one compact allocation. \\
+3 & Represented P replay & Retain local E4M3 reuse; reject a 272 MiB forward P cache and the unstable MXFP4 P-to-dS candidate. \\
+4 & Upstream low-precision dO & Retain fused row/column/delta publication; 1.935$\times$ faster than the split setup. \\
+5 & Direct projection-gradient consumption & Retain head-pipelined BF16 consumption at H8; retain the interleaved/vendor-GEMM fallback elsewhere.  Retain compact NVFP4 as an explicit H24 experiment and the unsignaled stacked QKV NVFP4 path for activation dgrad; reject the signaled hierarchy. \\
+6 & Storage and layout reclamation & Retain projection scratch aliasing and BF16 suppression; reject compact 96-byte mixed-dP transport because it does not retire on SM100. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The latest profile is not tensor-compute bound.  At S8192/H8 the dense kernel
+has 21.0\% tensor-pipe activity, 25.6\% issue activity, 128 registers, no
+spills, and 231,484 bytes of shared memory.  The largest sampled dependency is
+the wait for score issue/production.  The 512-column TMEM allocation is full,
+so a forward-like second complete score accumulator cannot be added without
+changing ownership or draining a persistent gradient accumulator.
+
+\subsection{Status labels}
+
+To avoid turning an experimental precision ladder into a production claim,
+this report uses five labels:
+
+\begin{table}[htbp]
+\centering
+\caption{Status of the low-precision routes discussed in this report.}
+\label{tab:route-status}
+\small
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+Label & Route & Meaning \\
+\midrule
+Retained & adaptive FP4 Q/K + E4M3 $dP/dV/dS$ operands &
+stable zero-spill winner and public adaptive API \\
+Frontier & fixed-scale mixed E4M3/MXFP4 $dP$ &
+3.3--5.3\% faster than the retained route but lower $dQ/dK$ cosine and not
+the accuracy-oriented default \\
+Shape frontier & adaptive Q/K + mixed E4M3/MXFP4 $dP$ &
+lifetime-safe and faster at H24, but slower at H8 and approximately 0.983
+calibrated dQ/dK cosine \\
+Integration & compact delayed-scale NVFP4 dQ projection &
+approximately 0.991 dX cosine; 3.7\% H24 win and 1.9\% H8 regression while
+private BF16 reduction scratch remains \\
+Integration & stacked delayed-scale NVFP4 QKV projection &
+retained for activation dgrad with the normal unsignaled dQ endpoint; the
+two-lane hierarchy is accurate but slower, and training keeps BF16 QKV for
+weight gradients \\
+Experimental & pure MXFP4 $dP,dV,dS,dQ,dK$ ladder &
+represented-operand correctness established; not the selected long-sequence
+quality/performance point \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The report is therefore a snapshot of the active implementation, not a claim
+that every backward arithmetic operation is FP4.

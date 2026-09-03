@@ -1,0 +1,28 @@
+\section{Complete Fixed-Schedule Format Matrix}
+\label{app:format-matrix}
+
+The main text reports the headline fixed-schedule control because the
+retained-policy frontier is the principal result. Table~\ref{tab:all-formats}
+provides the corresponding control at every unified shape. The four TK rows
+at each shape use one transform and scheduling budget while changing only the
+QK and P/V scale formats. Native HAO NV/NV and BF16 are included as external
+controls. Timing and all three error metrics come from the same deterministic
+shape record and use the same canonical BF16 reference as the main tables.
+This matrix concerns Q/K/P/V formats inside the forward-only attention kernel;
+it neither includes learned QKV/O projections nor implies a pure-FP4
+end-to-end training route.
+
+\begin{table}[htbp]
+\centering
+\caption{Complete fixed-schedule format matrix. Each row reports latency and output
+error together; no timing is paired with accuracy from another run.}
+\label{tab:all-formats}
+\scriptsize
+\begin{tabular}{llrrrrr}
+\toprule
+Shape & Provider & Time (ms) & Speedup & Cosine & Relative-$L_2$ & RMSE \\
+\midrule
+\input{../fp4_fa4_unified_20260801/tables/full_format_rows.tex}%
+\end{tabular}
+\end{table}
+\FloatBarrier

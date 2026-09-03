@@ -1,0 +1,308 @@
+{
+  "base_harness": "/workspace/codebases/pv/fp4_matmul/results/tk_bf16_bwd_s65536h128_harness.py",
+  "base_harness_sha256": "63e19fde901d714168c663ecee7f11d65081d903541d3871c1c8b52f79431db3",
+  "bitwise_equal_raw_cast": {
+    "dk": true,
+    "dv": true
+  },
+  "calls_completed": 50,
+  "calls_requested": 50,
+  "child_route": "b300_mha_bwd_hot_cute16_candidate_dense_tmem_frontier_dkdv_pipelined_tmem_dq_double_buffer_split2_dq_first_bf16_internal",
+  "command": [
+    "results/tk_bf16_bwd_split2_bf16_fused_store_harness.py",
+    "stress",
+    "--extension",
+    "results/.artifacts/tk_bf16_bwd_split2_bf16_fused_store/_C.cpython-312-aarch64-linux-gnu.so",
+    "--seqlen",
+    "4096",
+    "--heads",
+    "1",
+    "--seed",
+    "20261337",
+    "--calls",
+    "50",
+    "--progress-every",
+    "10",
+    "--output",
+    "results/tk_bf16_bwd_split2_bf16_fused_store_s4096h1_stress50_canonical_seed20261337.json"
+  ],
+  "complete": true,
+  "correctness_pass": true,
+  "created_at_utc": "2026-07-17T01:13:30.881886+00:00",
+  "cuda_visible_devices": "1",
+  "cwd": "/workspace/codebases/pv/fp4_matmul",
+  "extension": "/workspace/codebases/pv/fp4_matmul/results/.artifacts/tk_bf16_bwd_split2_bf16_fused_store/_C.cpython-312-aarch64-linux-gnu.so",
+  "extension_sha256": "55e96426d1fe039f0028ea88a39f524c395125e932c74b71d1851d3a84b69efa",
+  "extension_size_bytes": 10442984,
+  "finite_dq_dk_dv": [
+    true,
+    true,
+    true
+  ],
+  "first_drift_dq_dk_dv": [
+    null,
+    null,
+    null
+  ],
+  "first_vs_cute": [
+    {
+      "finite": true,
+      "max_abs": 0.006910800933837891,
+      "name": "dq",
+      "rel_l2": 0.002852604491636157
+    },
+    {
+      "finite": true,
+      "max_abs": 0.0078125,
+      "name": "dk",
+      "rel_l2": 0.0031634357292205095
+    },
+    {
+      "finite": true,
+      "max_abs": 0.001953125,
+      "name": "dv",
+      "rel_l2": 0.00011135370004922152
+    }
+  ],
+  "gate_checks": {
+    "dk_dv_bitwise_raw_cast": true,
+    "finite_pass": true,
+    "input_reference_contract": true,
+    "output_contract": true,
+    "raw_parent_contract": true,
+    "reference_error_pass": true,
+    "repeat_drift_pass": true
+  },
+  "gate_pass": true,
+  "gate_scope": "correctness_and_repeatability",
+  "git_head": "fbeb8c1c0a4ff09136ab53c24a221c0324995f93",
+  "git_head_tree": "32ef516ecd50898f978c4c057c74f0266c045c13",
+  "harness": "/workspace/codebases/pv/fp4_matmul/results/tk_bf16_bwd_split2_bf16_fused_store_harness.py",
+  "harness_sha256": "4808cd12fb50ea9640282212b6f522994b11d1976482b48e2a99cfccc19d2e3f",
+  "heads": 1,
+  "input_reference_contract": {
+    "cute_exact_arity_three": true,
+    "cute_outputs": {
+      "dk": {
+        "contiguous": true,
+        "device": "cuda:0",
+        "dtype": "torch.bfloat16",
+        "finite": true,
+        "pass": true,
+        "shape": [
+          1,
+          4096,
+          1,
+          192
+        ]
+      },
+      "dq": {
+        "contiguous": true,
+        "device": "cuda:0",
+        "dtype": "torch.bfloat16",
+        "finite": true,
+        "pass": true,
+        "shape": [
+          1,
+          4096,
+          1,
+          192
+        ]
+      },
+      "dv": {
+        "contiguous": true,
+        "device": "cuda:0",
+        "dtype": "torch.bfloat16",
+        "finite": true,
+        "pass": true,
+        "shape": [
+          1,
+          4096,
+          1,
+          128
+        ]
+      }
+    },
+    "inputs": {
+      "dout": {
+        "contiguous": true,
+        "device": "cuda:0",
+        "dtype": "torch.bfloat16",
+        "finite": true,
+        "pass": true,
+        "shape": [
+          1,
+          4096,
+          1,
+          128
+        ]
+      },
+      "k": {
+        "contiguous": true,
+        "device": "cuda:0",
+        "dtype": "torch.bfloat16",
+        "finite": true,
+        "pass": true,
+        "shape": [
+          1,
+          4096,
+          1,
+          192
+        ]
+      },
+      "lse_raw": {
+        "contiguous": true,
+        "device": "cuda:0",
+        "dtype": "torch.float32",
+        "finite": true,
+        "pass": true,
+        "shape": [
+          1,
+          1,
+          4096
+        ]
+      },
+      "lse_tk": {
+        "contiguous": true,
+        "device": "cuda:0",
+        "dtype": "torch.float32",
+        "finite": true,
+        "pass": true,
+        "shape": [
+          1,
+          4096,
+          1
+        ]
+      },
+      "out": {
+        "contiguous": true,
+        "device": "cuda:0",
+        "dtype": "torch.bfloat16",
+        "finite": true,
+        "pass": true,
+        "shape": [
+          1,
+          4096,
+          1,
+          128
+        ]
+      },
+      "q": {
+        "contiguous": true,
+        "device": "cuda:0",
+        "dtype": "torch.bfloat16",
+        "finite": true,
+        "pass": true,
+        "shape": [
+          1,
+          4096,
+          1,
+          192
+        ]
+      },
+      "v": {
+        "contiguous": true,
+        "device": "cuda:0",
+        "dtype": "torch.bfloat16",
+        "finite": true,
+        "pass": true,
+        "shape": [
+          1,
+          4096,
+          1,
+          128
+        ]
+      }
+    },
+    "pass": true
+  },
+  "max_repeat_drift_dq_dk_dv": [
+    0.0,
+    0.0,
+    0.0
+  ],
+  "mode": "stress",
+  "objective_beats_cute": null,
+  "objective_evaluated": false,
+  "overall_contract_pass": null,
+  "overall_contract_scope": null,
+  "parent_route": "b300_mha_bwd_hot_cute16_candidate_dense_tmem_frontier_dkdv_pipelined_tmem_dq_double_buffer_split2_dq_first_internal",
+  "python_executable": "/workspace/codebases/poly_stuff/.venv-poly/bin/python",
+  "retention_evaluated": false,
+  "retention_pass": null,
+  "reviewed_materialization_harness": "/workspace/codebases/pv/fp4_matmul/results/tk_bf16_bwd_split2_bf16_materialize_harness.py",
+  "reviewed_materialization_harness_sha256": "62462b1a0840c344f046643b84c008a969bbec3c863a964b72e778d1f571534a",
+  "runtime": {
+    "cutlass_dsl": {
+      "environment_distribution_version": "4.5.2",
+      "environment_libs_base_distribution_version": "4.5.2",
+      "loaded_module_version": "4.4.1",
+      "local_artifact_distribution_version": "4.4.1",
+      "local_artifact_libs_base_distribution_version": "4.4.1",
+      "module_path": "/workspace/codebases/pv/fp4_matmul/results/.artifacts/python/nvidia_cutlass_dsl/python_packages/cutlass/__init__.py",
+      "module_sha256": "613dcd0ed17e5e684d6e52df46a60093319c6a282125125a706b151b34b772fb",
+      "module_version": "4.4.1",
+      "resolved_distribution_version": "4.5.2",
+      "resolved_libs_base_distribution_version": "4.5.2",
+      "vendored_artifact_distribution_version": "4.4.1",
+      "vendored_artifact_libs_base_distribution_version": "4.4.1"
+    },
+    "flash_attn_cute_interface": {
+      "module_path": "/workspace/codebases/pv/fp4_matmul/flash-attention/flash_attn/cute/interface.py",
+      "module_sha256": "f62d3cc9ba70534fa36cb3300bcf87432c957289e53ef165ad79d247820016ca",
+      "repository_head": "9743edaf3227a25f6afc4fa7be8b5e8498610553",
+      "repository_head_tree": "903da6ff2647802b00ac4962a8bcd19e3da60214",
+      "tracked_worktree_dirty": false
+    }
+  },
+  "schema_version": 2,
+  "scoped_diff_check_output": "",
+  "scoped_diff_check_pass": true,
+  "scoped_diff_sha256": "76260f2f725d4a558c385c7cb9732f7c7fee058dd2d65dba9a4645751510cba4",
+  "scoped_diff_size_bytes": 14655,
+  "scoped_paths": [
+    "tk_fa4/b300_bwd_cute16_candidate.cuh",
+    "tk_fa4/b300_bwd_cute16_kernel_candidate.cuh",
+    "tk_fa4/tk_fa4.cu",
+    "results/tk_bf16_bwd_split2_bf16_fused_store_harness.py",
+    "results/tk_bf16_bwd_broad_sweep_20260711.md"
+  ],
+  "scoped_status": [
+    " M tk_fa4/b300_bwd_cute16_candidate.cuh",
+    " M tk_fa4/b300_bwd_cute16_kernel_candidate.cuh",
+    " M tk_fa4/tk_fa4.cu",
+    "?? results/tk_bf16_bwd_split2_bf16_fused_store_harness.py"
+  ],
+  "seed": 20261337,
+  "seqlen": 4096,
+  "state": "finished",
+  "thresholds": {
+    "drift_limits": {
+      "dk": 0.0,
+      "dq": 2e-07,
+      "dv": 0.0
+    },
+    "error_limits": {
+      "dk": {
+        "max_abs": 0.05,
+        "rel_l2": 0.01
+      },
+      "dq": {
+        "max_abs": 0.05,
+        "rel_l2": 0.01
+      },
+      "dv": {
+        "max_abs": 0.02,
+        "rel_l2": 0.001
+      }
+    },
+    "timing_child_over_cute": 1.0
+  },
+  "timing_environment": {
+    "truthy_variables": [],
+    "values": {
+      "TK_FA4_CLUSTERED_DQ_TIMING": null,
+      "TK_FA4_SPLIT_TIMING": null
+    }
+  }
+}

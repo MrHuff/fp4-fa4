@@ -1,0 +1,46 @@
+{
+  "shape": {
+    "batch": 1,
+    "sequence": 4096,
+    "query_heads": 32,
+    "kv_heads": 8,
+    "head_dim": 128,
+    "hidden": 4096,
+    "causal": true
+  },
+  "retained": {
+    "dout_stages": 2,
+    "probability_format": "e4m3_fp8_lift_2^8",
+    "probability_publication": "coordinate_preserving_128b_r2s",
+    "reuse_probability_for_ds": true,
+    "projection_default": "materialized_nvfp4_qkv",
+    "accuracy_projection_option": "row_scaled_e4m3_fp8"
+  },
+  "timing_us": {
+    "lowp_backward_with_clear_runs": [384.16001200675964, 390.175998210907],
+    "bf16_backward_with_clear_runs": [491.64798855781555, 524.4479775428772],
+    "materialized_chain_runs": [516.1920189857483, 560.9279870986938],
+    "owner_chain_runs": [590.0160074234009, 625.6319880485535],
+    "bf16_component_lower_bound_runs": [783.1359803676605, 807.9039826989174],
+    "correct_shared_probability_kernel": 303.52447509765625,
+    "vector_tmem_reorder_kernel": 307.2480010986328,
+    "scalar_shared_probability_kernel": 424.823,
+    "scalar_tmem_reorder_kernel": 475.7516860961914
+  },
+  "quality": {
+    "dq_cosine": 0.997322142124176,
+    "dk_cosine": 0.9970242977142334,
+    "dv_cosine": 0.9993249773979187,
+    "dv_kernel_vs_represented_cosine": 0.9999971985816956,
+    "nvfp4_projection_cosine": 0.990454375743866,
+    "rowwise_fp8_projection_cosine": 0.9986452460289001,
+    "hadamard_nvfp4_projection_cosine": 0.9903332591056824,
+    "owner_vs_materialized_projection_cosine": 0.9999996423721313
+  },
+  "decision": {
+    "owner_native_default": false,
+    "owner_chain_gap_percent_range": [11.5, 14.3],
+    "conservative_lowp_speedup_range": [1.33, 1.36],
+    "remaining_numerical_target": "QKV projection quantization"
+  }
+}

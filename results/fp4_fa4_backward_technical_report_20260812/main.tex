@@ -1,0 +1,94 @@
+\documentclass[11pt]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{mathtools}
+\usepackage{array,booktabs,tabularx}
+\usepackage{adjustbox}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{xcolor}
+\usepackage{microtype}
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{tikz}
+\usepackage{placeins}
+\usepackage{graphcore_bwd_report}
+\usetikzlibrary{arrows.meta,positioning,fit}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.55em}
+\setlength{\emergencystretch}{2em}
+\renewcommand{\arraystretch}{1.14}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+
+\floatstyle{ruled}
+\newfloat{algorithm}{tbp}{loa}
+\floatname{algorithm}{Algorithm}
+\restylefloat{algorithm}
+
+\title{Hardware-Aware FP4 FlashAttention-4 Backward}
+\reportsubtitle{Adaptive low-precision gradients and unified QKV projection integration}
+\author{Robert Hu}
+\date{August 2026}
+\hypersetup{
+  colorlinks=true,
+  linkcolor=GraphcoreInk,
+  citecolor=GraphcoreCoralDark,
+  urlcolor=GraphcoreCoralDark,
+  pdftitle={Hardware-Aware FP4 FlashAttention-4 Backward},
+  pdfauthor={Robert Hu},
+  pdfsubject={Adaptive FP4 FlashAttention-4 backward and unified QKV projection integration on NVIDIA Blackwell},
+  pdfkeywords={FlashAttention-4, backward, FP4, FP8, NVFP4, MXFP4, Blackwell, tensor memory, projection}
+}
+
+\definecolor{scoreblue}{HTML}{2A6FBB}
+\definecolor{outputgreen}{HTML}{28865D}
+\definecolor{probred}{HTML}{C83E4D}
+\definecolor{scaleyellow}{HTML}{D99B22}
+\definecolor{inkgray}{HTML}{3C4650}
+\definecolor{lightgray}{HTML}{EDF0F2}
+\definecolor{gradientpurple}{HTML}{7452A8}
+
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\softmax}{\operatorname{softmax}}
+\newcommand{\Qfour}{Q_{\mathrm{E2M1}}}
+\newcommand{\Qeight}{Q_{\mathrm{E4M3}}}
+\newcommand{\code}[1]{\texttt{#1}}
+\newcommand{\us}{\ensuremath{\,\mu\mathrm{s}}}
+\newcommand{\tmem}{\textsc{tmem}}
+\newcommand{\smem}{\textsc{smem}}
+\newcommand{\hbm}{\textsc{hbm}}
+\newcommand{\tcgen}{\texttt{tcgen05}}
+\newcommand{\mma}{\operatorname{MMA}}
+\newcommand{\diag}{\operatorname{diag}}
+
+\begin{document}
+
+\maketitle
+\input{sections/abstract.tex}
+
+\input{sections/01_summary.tex}
+\input{sections/02_backward_equations_formats.tex}
+\input{sections/03_architecture.tex}
+\input{sections/04_retained_kernel.tex}
+\input{sections/05_projection_integration.tex}
+\input{sections/06_results.tex}
+\input{sections/07_profile.tex}
+\input{sections/08_discussion.tex}
+\input{sections/09_conclusion.tex}
+
+\bibliographystyle{plainnat}
+\bibliography{main}
+
+\appendix
+\input{appendices/a_precision_ladder.tex}
+\input{appendices/b_rejected_experiments.tex}
+\input{appendices/c_reproduction.tex}
+\input{appendices/d_layout_contract.tex}
+
+\end{document}

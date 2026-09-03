@@ -1,0 +1,214 @@
+\section{Reproduction and Evidence}
+\label{app:reproduction}
+
+\subsection{Source boundary}
+
+The retained implementation is under
+\path{tk_fa4/lowp_fa4_bwd/}.  The primary files are:
+
+\begin{itemize}
+  \item \path{lowp_fa4_bwd.cu}: bindings, operand producers, dispatch, and
+  launch contracts;
+  \item \path{b300_bwd_cute16_kernel_candidate.cuh}: copied V382 schedule,
+  low-precision modes, TMEM map, and retained handoffs;
+  \item \path{projection_fp4_epilogue.cuh}: persistent NVFP4 QKV learned
+  projection, shared Q/K publication, projection-native MXFP4 V, and the
+  single-output generic NVFP4 projection consumer;
+  \item \path{dq_projection_consumer.cuh}: head-pipelined, double-TMEM dQ
+  projection consumer;
+  \item \path{hierarchical_qkv_nvfp4_quantize.cuh}: one-/two-lane stacked
+  QKV-gradient inverse-RoPE and delayed-scale NVFP4 producer;
+  \item \path{evaluate_llama_attention_e2e.py} and
+  \path{evaluate_llama_attention_convergence.py}: composed timing/MFU and
+  multi-step trajectory harnesses;
+  \item \path{interface.py}: public adaptive operand, backward, and projection
+  APIs.
+\end{itemize}
+
+The upstream dO producer is implemented in
+\path{TK_quantisation/mxfp4_v3/tk_quantize.cu}; its default integration lives
+in \path{tk_fa4/fp4_pv_experiments.py}.
+
+The forward report at
+\path{results/fp4_fa4_technical_report_20260728/} was used as a read-only
+structure and notation reference.
+
+\subsection{Build}
+
+From \path{tk_fa4/lowp_fa4_bwd/}:
+\begin{lstlisting}[language=bash]
+make -B -j1
+\end{lstlisting}
+The build used for the reported projection integration exited with status
+zero.  The base unified no-BF16 projection specialization reports 128
+registers, two barriers, 8,592 bytes of static shared memory, and zero spills;
+the RoPE-enabled BF16-publication specializations report 168 registers, two
+barriers, the same shared-memory allocation, and zero spills.  Projection-only
+publication reports 96 registers and zero spills; the Q/K-only fused
+specialization reports 120 registers.  The generic single-output NVFP4 dQ
+consumer reports 86 registers, two barriers, and zero spills.  The adaptive
+all-E4M3 and lifetime-safe adaptive mixed backward specializations both remain
+at 128 registers without spills.
+
+From \path{TK_quantisation/mxfp4_v3/}, the upstream dO extension was also
+rebuilt with:
+\begin{lstlisting}[language=bash]
+make -B -j1
+\end{lstlisting}
+Both exact single-job builds exited with status zero.
+
+\subsection{GPU discipline and validation}
+
+All final measurements use visible GPU 0.  Before a GPU command, the device is
+checked independently:
+\begin{lstlisting}[language=bash]
+nvidia-smi --id=0 \
+  --query-gpu=utilization.gpu,memory.used \
+  --format=csv,noheader,nounits
+\end{lstlisting}
+Timing runs are sequential.  Representative validation entry points are:
+\begin{lstlisting}[language=bash]
+CUDA_VISIBLE_DEVICES=0 PYTHONPATH=../.. \
+  python3 validate_bf16_dq_path.py
+
+CUDA_VISIBLE_DEVICES=0 PYTHONPATH=../.. \
+  python3 validate_projection_fp4_epilogue.py \
+    --sequence 4096 --heads 24 --hidden 3072
+
+CUDA_VISIBLE_DEVICES=0 PYTHONPATH=../.. \
+  python3 validate_unified_qkv_projection.py \
+    --sequence 4096 --heads 24 --hidden 4096
+
+CUDA_VISIBLE_DEVICES=0 PYTHONPATH=../.. \
+  python3 validate_unified_qkv_projection_rope.py \
+    --sequence 4096 --heads 24 --hidden 3072 \
+    --warmups 4 --samples 13
+
+CUDA_VISIBLE_DEVICES=0 PYTHONPATH=../.. \
+  python3 validate_inverse_rope_nvfp4_handoff.py \
+    --sequence 4096 --heads 24 --warmups 7 --samples 31
+
+CUDA_VISIBLE_DEVICES=0 PYTHONPATH=../.. \
+  python3 validate_upstream_mxfp4_dout.py \
+    --sequence 8192 --heads 8
+
+CUDA_VISIBLE_DEVICES=0 PYTHONPATH=../.. \
+  python3 validate_dq_projection_handoff.py \
+    --sequence 8192 --heads 8 --warmups 7 --samples 31 \
+    --repeat-checks 4
+
+CUDA_VISIBLE_DEVICES=0 PYTHONPATH=../.. \
+  python3 validate_projection_dgrad_path.py
+
+CUDA_VISIBLE_DEVICES=0 PYTHONPATH=../.. \
+  python3 evaluate_compact_dq_projection.py \
+    --shapes 8192x8,4096x24 --seed 20260813 \
+    --warmups 7 --samples 31
+
+CUDA_VISIBLE_DEVICES=0 PYTHONPATH=../.. \
+  python3 evaluate_llama_attention_e2e.py --rope --scope both \
+    --shapes 4096x24x4096,8192x24x4096,4096x64x8192,\
+8192x64x8192,16384x64x8192 \
+    --seed 2026081402 --warmups 4 --samples 13 \
+    --output ../../results/llama_dense_attention_e2e_rope_broad_20260813.json
+
+CUDA_VISIBLE_DEVICES=0 PYTHONPATH=../.. \
+  python3 evaluate_llama_attention_e2e.py --rope --scope both \
+    --shapes 4096x24x3072,8192x16x2048,8192x24x4096,\
+4096x64x8192,8192x64x8192 \
+    --warmups 5 --samples 11 --peak-tflops 2500 \
+    --output ../../results/llama_dense_attention_e2e_projection_native_broad_mfu_20260814.json
+
+CUDA_VISIBLE_DEVICES=0 PYTHONPATH=../.. \
+  python3 -m tk_fa4.lowp_fa4_bwd.evaluate_llama_attention_convergence \
+    --shape 4096x24x3072 --steps 500 --learning-rate 2e-5 \
+    --relative-noise 0.2 --eval-interval 50 --seed 2026081417
+\end{lstlisting}
+
+\subsection{Primary result artifacts}
+
+\begin{table}[htbp]
+\centering
+\caption{Evidence files used by this report.}
+\label{tab:evidence-files}
+\scriptsize
+\begin{tabularx}{\textwidth}{p{.43\textwidth}X}
+\toprule
+Artifact & Contents \\
+\midrule
+\path{results/lowp_fa4_bwd_bf16dq_validation_20260812.json} &
+six-shape BF16 dQ latency, quality, interface agreement, and repeat stability \\
+\path{results/lowp_fa4_bwd_breakthrough_experiments_20260812.md} &
+BF16 dQ reduction, ceilings, profile summary, and projection-backward chain \\
+\path{results/lowp_fa4_bwd_projection_fusion_20260812.md} &
+native NVFP4 learned projection, unified QKV publication, layout validation,
+dispatch, and timing \\
+\path{results/unified_qkv_projection_rope_packedbf16_s4096h24k3072_20260813.json} &
+pair-native fused-RoPE accuracy, byte-layout checks, inverse-gradient
+roundtrip, and component timing \\
+\path{results/llama_dense_attention_e2e_rope_broad_20260813.json} &
+ten-row RoPE-aware dense decoder boundary timing and component accuracy \\
+\path{results/llama_dense_attention_e2e_projection_native_broad_mfu_20260814.json} &
+five-shape FP4-forward activation/training timing, useful FLOPs, MFU, and
+stacked-gradient accuracy \\
+\path{results/llama_attention_convergence_s4096h24_3seed_summary_20260814.json} &
+aggregate of three 500-step full-weight teacher/student trajectories; the
+three per-seed checkpoint histories are stored in the referenced files \\
+\path{results/lowp_fa4_bwd_adaptive_per_head_20260812.md} &
+robust scale rule, regimes, producer timing, and broad accuracy \\
+\path{results/lowp_fa4_bwd_adaptive_outlier_check_20260812.json} &
+full-rank sparse-outlier check \\
+\path{results/lowp_fa4_bwd_1to4_broad_eval_20260812.md} &
+fixed mixed-dP broad matrix and accuracy frontier \\
+\path{results/lowp_fa4_bwd_1to6_frontier_20260812.md} &
+preprocessing, forward-emitted V, rejected schedules, and multi-regime study \\
+\path{results/lowp_fa4_bwd_adaptive_mixed_screen_20260813.json} &
+two-shape, two-seed calibrated/unit/outlier validation of lifetime-safe
+adaptive mixed dP \\
+\path{results/lowp_fa4_bwd_compact_dq_projection_20260813.json} &
+BF16/FP8/NVFP4/MXFP4 projection quality, charged timing, and composed dQ chain \\
+\path{results/lowp_fa4_bwd_nv_mx_format_screen_20260813.md} &
+pure-backward NVFP4/MXFP4 dS and compact-Q/K combination screen \\
+\path{results/lowp_fa4_bwd_bf16dq_source_profile_20260812.ncu-rep} &
+source-correlated direct-BF16 profile \\
+\path{results/tk_fp4_bwd_v382_ladder_20260803.md} &
+initial full-FP4 represented-operand ladder \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Correctness gates}
+
+The retained result is accepted only when:
+
+\begin{enumerate}
+  \item every output is finite and has the expected shape/dtype;
+  \item all four E2M1 layouts and projection-native MXFP4 V match their
+  standalone publishers bit-for-bit, including publication from the fused
+  rotated BF16 fragment;
+  \item pair-native projection weights plus fused RoPE agree with dense
+  split-half RoPE to the stated BF16 rounding floor; inverse RoPE returns Q/K
+  gradients to the projection basis and leaves dV bit-exact;
+  \item forward and backward compact Q/K views alias one allocation;
+  \item fused dO row/column payloads match the split publishers bit-for-bit
+  and the delta agrees with its FP32 reference;
+  \item direct BF16 dQ agrees with the BF16 value underlying the FP32-return
+  route to the nondeterministic reduction floor;
+  \item repeated launches do not corrupt phase state;
+  \item wider-head direct-projection requests select the exact BF16-dQ plus
+  vendor-GEMM fallback unless the experimental topology is explicitly forced;
+  \item precomputed-scale NVFP4 publication is bit-exact with the full
+  quantizer when both receive the same device-resident global scale;
+  \item compact NVFP4 projection leaves dK/dV bit-exact and is finite before
+  timing; experimental pure-format gates are restored to zero;
+  \item the unsignaled stacked route agrees with the selected low-precision dX
+  to the stated quantization floor, while activation-only results are not
+  presented as weight-gradient-capable training steps;
+  \item convergence summaries expose both raw native validation loss and the
+  independently measured low-precision teacher floor;
+  \item the hot specialization has no local stack or spills;
+  \item timing is reported only after the corresponding correctness gate.
+\end{enumerate}
+
+The 100-call S8192/H8 repeat test remained finite.  dK and dV were
+repeat-exact; maximum dQ drift was $9.54\times10^{-7}$.

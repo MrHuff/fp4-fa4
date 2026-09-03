@@ -1,0 +1,57 @@
+\section{Discussion and Limitations}
+
+\subsection{What the retained route establishes}
+
+Stabilized NV/NV remains the higher-fidelity full-FP4 control. Its row
+reference, E4M3 scale construction, and inverse correction are expensive on
+the online path; removing them makes NV/NV distribution-dependent. NV/MX
+chooses a different compromise. Its E8M0 scale represents small N32
+probability blocks without a tensor-wide P factor and folds into the direct
+log-domain code map, at the cost of coarser scale placement.
+
+The resulting two-times-class advantage over BF16 is a kernel result, not the
+four-times peak matrix ratio. BF16 FA4 already overlaps much of its non-matrix
+work. FP4 shortens QK and PV but still loads FP32 scores, waits for K64-ready
+pairs, publishes scales, updates online state, and stores output. The fixed-P
+ceiling shows that the remaining P arithmetic alone is no longer enough to
+close that gap.
+
+The attribution is equally important. The two-query CTA, full 512-column TMEM
+layout, warp specialization, deep K/V ring, and split P publication come from
+HAO. This work contributes the mixed NV/MX representation, direct E2M1 code
+map, SFU/FMA balance, represented denominator, sampled range guard, and its
+underflow-safe evaluation.
+
+\subsection{Numerical evidence and its limits}
+
+Operator cosine and relative-$L_2$ are worse than HAO NV/FP8, while the tested
+ViT, BERT, and ViT-MAE tasks show much smaller final changes. Residual paths,
+normalization, later layers, and decision margins explain why these measures
+need not move together. They do not prove that the approximation is safe for
+every model or for training.
+
+Wan provides a harder depth test. The corrected fast route is finite through
+20 steps on calibration and held-out prompts, but its error grows more than
+HAO NV/NV and NV/FP8. Layer-wise coefficient fitting also fails to transfer
+reliably because a single-layer BF16-teacher proxy does not model interacting
+errors in an all-FP4 trajectory. Future calibration should optimize a small
+shared codebook under the end-task loss, ideally through QAT, and validate on
+fresh prompts and processes.
+
+The present suite is forward-only and noncausal. It excludes dynamic Q/K/V
+quantization, folded-scale preparation, and K/V permutation cost. It does not
+establish backward stability, causal decoding, GQA, variable-length support,
+training convergence, language-model perplexity, long-context retrieval, or
+full video-quality metrics. SageAttention3 and Attn-QAT provide the relevant
+larger evaluation templates \cite{zhang2025sageattention3,zhang2026attnqat}.
+
+\subsection{Hardware dependence}
+
+This design is specific to SM100/SM103's TMEM and scaled-FP4 instruction
+contracts. B300 improves favorable saturated shapes, but it has the same
+256-KB TMEM capacity and the tested SKU exposes fewer SMs at a slightly lower
+clock. One all-TMEM CTA still resides per SM, and broad use of its faster SFU
+does not remove the P-to-PV dependency. A GPU with another score bank, K32
+scaled PV, or direct compact-scale operands could prefer a deeper pipeline.
+Conversely, SageAttention3's SM120 result informs the numerics but not this
+TMEM schedule.

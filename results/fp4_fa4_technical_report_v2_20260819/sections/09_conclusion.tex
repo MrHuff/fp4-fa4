@@ -1,0 +1,40 @@
+\subsection{Scope and limitations}
+
+The noncausal model experiments are fixed-input inference evaluations rather
+than finetuning or pretraining studies.  The causal measurements establish
+operator, complete-sublayer, and full-update performance.  The matched
+distributed comparison supports training and validation claims only through
+the reporting cutoff in Section~\ref{sec:causal-training}; one trajectory per
+route does not estimate run-to-run variability.  The longer historical
+controls establish the FP8-versus-MXFP4 P/V format choice, but their different
+recipe prevents a paired quality comparison with BF16.  Learned projection
+precision is also a separate boundary: E4M3 is the numerical control and
+NVFP4 is the measured throughput arm.
+
+The hardware conclusions are shape-specific.  Head dimension 64 and other
+regimes require their own tile size, cooperative-thread-array ownership, and
+tensor-memory overlap strategy; they should not inherit the D128 schedule by
+analogy.
+
+\subsection{Conclusion}
+
+Direct-P makes full-FP4 forward attention useful by shortening the serial path
+between the score and value matrix products.  It maps log-softmax scores
+directly to MXFP4 codes and normalizes with the same represented probabilities
+consumed by the value product.  The result exceeds twice the BF16 forward
+throughput on favorable GB200 shapes.  The FP8 probability route remains more
+accurate, while the fixed-input model evaluations identify cases in which the
+additional Direct-P error remains small at the model output.
+
+For causal training, the forward pass supplies backward with its quantized
+Q/K payload, scales, and softmax normalizer.  Projection and gradient
+epilogues also publish the row- and column-oriented FP8 views required by the
+gradient products.  This path accelerates the complete projection-inclusive
+attention sublayer by 1.25$\times$ and a single-GPU 8B update by up to
+1.14$\times$.  The distributed controls select FP8 P/V: every tested MXFP4
+P/V trajectory diverges despite competitive short timing runs.
+
+Faster matrix arithmetic alone is therefore insufficient.  At head dimension
+128, tensor-memory ownership and operand readiness limit how much QK, softmax,
+and PV can overlap.  Low-precision attention needs a larger allocatable
+overlap window as much as it needs faster tensor cores.

@@ -1,0 +1,119 @@
+{
+  "correctness": {
+    "hao_fp8_vs_bf16_lse": {
+      "cosine": 0.9999990463256836,
+      "max_abs": 0.06441402435302734,
+      "mean_abs": 0.009594842791557312,
+      "reference_rms": 9.511162757873535,
+      "relative_l2": 0.0012730759335681796,
+      "rmse": 0.01210843212902546
+    },
+    "hao_fp8_vs_bf16_output": {
+      "cosine": 0.9898043870925903,
+      "max_abs": 0.06689453125,
+      "mean_abs": 0.002059045247733593,
+      "reference_rms": 0.018272798508405685,
+      "relative_l2": 0.14273309707641602,
+      "rmse": 0.002608133014291525
+    },
+    "hao_nvfp4_vs_bf16_lse": {
+      "cosine": 0.9999988675117493,
+      "max_abs": 1.8550119400024414,
+      "mean_abs": 1.7909400463104248,
+      "reference_rms": 9.511162757873535,
+      "relative_l2": 0.18830303847789764,
+      "rmse": 1.7909808158874512
+    },
+    "hao_nvfp4_vs_bf16_output": {
+      "cosine": 0.9816998839378357,
+      "max_abs": 0.05712890625,
+      "mean_abs": 0.0027748397551476955,
+      "reference_rms": 0.018272798508405685,
+      "relative_l2": 0.19146740436553955,
+      "rmse": 0.003498645266517997
+    }
+  },
+  "protocol": {
+    "factory": "HAO create_nvfp4_attention_tensors",
+    "provider_order": "balanced six-permutation cycle",
+    "rep_ms": 500,
+    "rounds": 6,
+    "seed": 20260814,
+    "timer": "triton.testing.do_bench median",
+    "warmup_ms": 50
+  },
+  "shape": {
+    "batch": 1,
+    "dim": 128,
+    "heads": 64,
+    "seqlen": 8192
+  },
+  "tflops": {
+    "hao_native_bf16": 1364.5917788333138,
+    "hao_native_nvfp4_fp8pv": 1568.6692491244557,
+    "hao_native_nvfp4_nvfp4pv": 1298.357690485416
+  },
+  "timing_ms": {
+    "hao_native_bf16": 1.6114879846572876,
+    "hao_native_nvfp4_fp8pv": 1.4018399715423584,
+    "hao_native_nvfp4_nvfp4pv": 1.6936960220336914
+  },
+  "timing_round_orders": [
+    [
+      "hao_native_nvfp4_fp8pv",
+      "hao_native_nvfp4_nvfp4pv",
+      "hao_native_bf16"
+    ],
+    [
+      "hao_native_nvfp4_nvfp4pv",
+      "hao_native_bf16",
+      "hao_native_nvfp4_fp8pv"
+    ],
+    [
+      "hao_native_bf16",
+      "hao_native_nvfp4_fp8pv",
+      "hao_native_nvfp4_nvfp4pv"
+    ],
+    [
+      "hao_native_bf16",
+      "hao_native_nvfp4_nvfp4pv",
+      "hao_native_nvfp4_fp8pv"
+    ],
+    [
+      "hao_native_nvfp4_nvfp4pv",
+      "hao_native_nvfp4_fp8pv",
+      "hao_native_bf16"
+    ],
+    [
+      "hao_native_nvfp4_fp8pv",
+      "hao_native_bf16",
+      "hao_native_nvfp4_nvfp4pv"
+    ]
+  ],
+  "timing_samples_ms": {
+    "hao_native_bf16": [
+      1.6025919914245605,
+      1.5974719524383545,
+      1.6203839778900146,
+      1.6285439729690552,
+      1.626688003540039,
+      1.5977280139923096
+    ],
+    "hao_native_nvfp4_fp8pv": [
+      1.3952640295028687,
+      1.4018559455871582,
+      1.4018559455871582,
+      1.4018559455871582,
+      1.401792049407959,
+      1.4018239974975586
+    ],
+    "hao_native_nvfp4_nvfp4pv": [
+      1.6843679547309875,
+      1.6845120191574097,
+      1.693727970123291,
+      1.6936960220336914,
+      1.6936960220336914,
+      1.693727970123291
+    ]
+  }
+}

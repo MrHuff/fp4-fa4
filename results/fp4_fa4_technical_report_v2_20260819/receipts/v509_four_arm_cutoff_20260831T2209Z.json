@@ -1,0 +1,101 @@
+{
+  "schema": "fp4_fa4_v509_four_arm_cutoff_v1",
+  "cutoff_utc_approx": "2026-08-31T22:09:00Z",
+  "capture_policy": "Frozen, normalized report receipt reconstructed from read-only authenticated training records; contains no credentials, service-side identifiers, or environment secrets.",
+  "evidence_scope": "Interim numerical diagnostic only. Trajectories began at different times, so last observations are neither token-aligned loss comparisons nor a throughput bracket.",
+  "source_identity": {
+    "gc_training_commit": "6782838861250b5810f14cee7ca6ebbf31baa79b",
+    "fp4_matmul_commit": "4b38f22115a7b479ced06b7e074bba9298a5a2d3",
+    "backward": "native TK v509, native NVFP4 score replay, E5M2 dO",
+    "v509_public_shape": "B1/S4096/Hq32/Hkv8/D128"
+  },
+  "shared_recipe": {
+    "model": "Llama-8B",
+    "dataset": "SlimPajama",
+    "workers": 16,
+    "gpus_per_worker": 4,
+    "ddp_world_size": 64,
+    "local_batch": 1,
+    "global_batch": 64,
+    "gradient_accumulation": 1,
+    "sequence_length": 4096,
+    "tokens_per_update": 262144,
+    "target_tokens": 100270000000,
+    "warmup_updates": 1000,
+    "loss": "standard dense BF16 cross entropy, loss-only torch.compile/Inductor"
+  },
+  "last_observations": [
+    {
+      "public_arm_label": "e4m3_projection_fp8_pv_b1",
+      "learned_projection": "E4M3",
+      "forward_pv": "FP8",
+      "update": 10381,
+      "tokens": 2721316864,
+      "loss": 2.9743,
+      "preclip_grad_norm": 0.2197,
+      "status": "stable_through_cutoff"
+    },
+    {
+      "public_arm_label": "e4m3_projection_mxfp4_pv_b1",
+      "learned_projection": "E4M3",
+      "forward_pv": "MXFP4",
+      "update": 10075,
+      "tokens": 2641100800,
+      "loss": 8.8265,
+      "preclip_grad_norm": 358400,
+      "status": "diverged"
+    },
+    {
+      "public_arm_label": "nvfp4_projection_fp8_pv_b1",
+      "learned_projection": "NVFP4",
+      "forward_pv": "FP8",
+      "update": 10884,
+      "tokens": 2853175296,
+      "loss": 3.1637,
+      "preclip_grad_norm": 0.2051,
+      "status": "stable_through_cutoff"
+    },
+    {
+      "public_arm_label": "nvfp4_projection_mxfp4_pv_b1",
+      "learned_projection": "NVFP4",
+      "forward_pv": "MXFP4",
+      "update": 11061,
+      "tokens": 2899574784,
+      "loss": 8.4801,
+      "preclip_grad_norm": 3915776,
+      "status": "diverged"
+    }
+  ],
+  "matched_early_observation": {
+    "projection": "E4M3",
+    "update": 42,
+    "fp8_loss": 9.5701,
+    "mxfp4_loss": 9.5802,
+    "fp8_preclip_grad_norm": 2.5625,
+    "mxfp4_preclip_grad_norm": 2.5625
+  },
+  "first_retained_bad_observations": [
+    {
+      "public_arm_label": "e4m3_projection_mxfp4_pv_b1",
+      "update_approx": 4020,
+      "tokens_approx": 1053818880,
+      "note": "First retained bad observation, not the exact causal onset."
+    },
+    {
+      "public_arm_label": "nvfp4_projection_mxfp4_pv_b1",
+      "update_approx": 4722,
+      "tokens_approx": 1237843968,
+      "note": "First retained bad observation, not the exact causal onset."
+    }
+  ],
+  "subsequent_observed_preclip_grad_norm_at_least": {
+    "e4m3_projection_mxfp4_pv_b1": 2470000,
+    "nvfp4_projection_mxfp4_pv_b1": 12390000
+  },
+  "claim_boundary": [
+    "Both FP8 arms were stable through this cutoff; this is not completed convergence.",
+    "Both MXFP4-PV arms diverged under different learned-projection formats and the same backward.",
+    "This factorial separator implicates forward MXFP4-PV or model state induced by it, but is not a formal single-kernel causal proof.",
+    "Instantaneous distributed throughput is excluded from matched speedup claims."
+  ]
+}

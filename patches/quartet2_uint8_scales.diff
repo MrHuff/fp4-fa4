@@ -1,0 +1,177 @@
+diff --git a/kernels/python/quartet2/linear.py b/kernels/python/quartet2/linear.py
+index bc8c87d..2e6f4fc 100644
+--- a/kernels/python/quartet2/linear.py
++++ b/kernels/python/quartet2/linear.py
+@@ -33,6 +33,12 @@ def rerotate_hadamard(hadamard_matrix):
+ 
+ @torch.library.custom_op("clover::fp4_mm", mutates_args=())
+ def _fp4_mm(x_fp4: torch.Tensor, w_fp4: torch.Tensor, x_mx: torch.Tensor, w_mx: torch.Tensor, alpha: torch.Tensor) -> torch.Tensor:
++    # Ensure scales are viewed as float8 (qutlass binding requirement)
++    # This is a zero-copy view (uint8 and float8_e4m3fn are the same byte width)
++    if x_mx.dtype != torch.float8_e4m3fn:
++        x_mx = x_mx.view(torch.float8_e4m3fn)
++    if w_mx.dtype != torch.float8_e4m3fn:
++        w_mx = w_mx.view(torch.float8_e4m3fn)
+     return qutlass.matmul_nvf4_bf16_tn(
+         x_fp4, w_fp4,
+         x_mx, w_mx,
+@@ -111,15 +117,17 @@ def _dq_fp4(x_e2m1: torch.Tensor, x_e4m3: torch.Tensor, alpha: float):
+     )
+     x_fp4_dq = grid_dq[x_e2m1_unpacked]
+ 
+-    scales_dq = x_e4m3.to(torch.float32)
++    # If scales are stored as uint8 (to avoid float8_copy kernels), reinterpret
++    scales_fp8 = x_e4m3.view(torch.float8_e4m3fn) if x_e4m3.dtype == torch.uint8 else x_e4m3
++    scales_dq = scales_fp8.to(torch.float32)
+     x_dq = (x_fp4_dq.unflatten(dim=-1, sizes=(-1, 16)) * scales_dq[..., None]).flatten(
+         start_dim=-2
+     ) * alpha
+     return x_dq.to(torch.bfloat16)
+ 
+-@torch.compile(dynamic=False)
+ def abs_max(x):
+-    return x.abs().max().to(torch.float32)
++    """Single-kernel fused abs+max (vs separate abs() + max() = 2 kernels)."""
++    return torch.amax(torch.abs(x)).to(torch.float32)
+ 
+ class Quartet_II_fn(torch.autograd.Function):
+     group_size = 16
+@@ -152,9 +160,12 @@ class Quartet_II_fn(torch.autograd.Function):
+         ctx.save_for_backward(input_fp4.fp4, input_fp4.micro_scales, input_fp4.tensor_scale,
+                               weight_fp4.fp4, weight_fp4.micro_scales, weight_fp4.tensor_scale, had)
+         with nvtx_annotate("Matmul", color="blue"):
++            # Pre-block scales to avoid separate to_blocked kernel launches
++            input_scales_blocked = to_blocked(input_fp4.micro_scales)
++            weight_scales_blocked = to_blocked(weight_fp4.micro_scales)
+             res = _fp4_mm(
+                 input_fp4.fp4, weight_fp4.fp4,
+-                to_blocked(input_fp4.micro_scales), to_blocked(weight_fp4.micro_scales),
++                input_scales_blocked, weight_scales_blocked,
+                 alpha=input_fp4.tensor_scale * weight_fp4.tensor_scale)
+ 
+         return res.reshape(ctx.batch, ctx.seq, ctx.out_dim)
+diff --git a/kernels/python/quartet2/quant.py b/kernels/python/quartet2/quant.py
+index d1886e2..944292b 100644
+--- a/kernels/python/quartet2/quant.py
++++ b/kernels/python/quartet2/quant.py
+@@ -3,24 +3,31 @@ import torch
+ from . import _quartet2
+ 
+ 
+-# torch-compile compatible wrapping
+-@torch.library.custom_op("clover::four_six", mutates_args=("o", "s", "t"))
++# torch-compile compatible wrapping - marked cudagraph_unsafe for graph partitioning
++@torch.library.custom_op("clover::four_six", mutates_args=("o", "s", "t"), tags=[torch._C.Tag.cudagraph_unsafe])
+ def _four_six_fp4_op(o: torch.Tensor, s: torch.Tensor, t: torch.Tensor, x: torch.Tensor, amax: torch.Tensor, scale_override: float) -> None:
+-    _quartet2.four_six_fp4(o, s.view(torch.uint8), t, x.detach(), amax, scale_override)
++    stream = torch.cuda.current_stream(x.device).cuda_stream
++    # s is already uint8 — no .view() copy needed
++    _quartet2.four_six_fp4(o, s, t, x.detach(), amax, scale_override, stream)
+ 
+ 
+-@torch.library.custom_op("clover::rtn", mutates_args=("o", "s", "t"))
++
++@torch.library.custom_op("clover::rtn", mutates_args=("o", "s", "t"), tags=[torch._C.Tag.cudagraph_unsafe])
+ def _rtn_fp4_op(o: torch.Tensor, s: torch.Tensor, t: torch.Tensor, x: torch.Tensor, amax: torch.Tensor, scale_override: float) -> None:
+-    _quartet2.rtn_fp4(o, s.view(torch.uint8), t, x.detach(), amax, scale_override)
++    stream = torch.cuda.current_stream(x.device).cuda_stream
++    # s is already uint8 — no .view() copy needed
++    _quartet2.rtn_fp4(o, s, t, x.detach(), amax, scale_override, stream)
++
+ 
+ 
+-@torch.library.custom_op("clover::group_transform_eden", mutates_args=("o", "s", "t", "scratch_scales", "scratch_max"))
++@torch.library.custom_op("clover::group_transform_eden", mutates_args=("o", "s", "t", "scratch_scales", "scratch_max"), tags=[torch._C.Tag.cudagraph_unsafe])
+ def _group_transform_128_eden(o: torch.Tensor, s: torch.Tensor, t: torch.Tensor,
+                               scratch_scales: torch.Tensor, scratch_max: torch.Tensor,
+                               h: torch.Tensor, x: torch.Tensor, seed: torch.Tensor, fp4_max: float, fp8_max: float, transpose: bool) -> None:
++    stream = torch.cuda.current_stream(x.device).cuda_stream
+     _quartet2.group_transform_128_eden(
+         o,
+-        s.view(torch.uint8),
++        s,  # already uint8 — no .view() copy needed
+         t,
+         scratch_scales,
+         scratch_max,
+@@ -30,14 +37,17 @@ def _group_transform_128_eden(o: torch.Tensor, s: torch.Tensor, t: torch.Tensor,
+         fp4_max=fp4_max,
+         fp8_max=fp8_max,
+         transpose=transpose,
++        stream=stream
+     )
+ 
+ 
+-@torch.library.custom_op("clover::dequant_tp_had_quant", mutates_args=("o", "s", "t", "scratch_scales", "scratch_max"))
++
++@torch.library.custom_op("clover::dequant_tp_had_quant", mutates_args=("o", "s", "t", "scratch_scales", "scratch_max"), tags=[torch._C.Tag.cudagraph_unsafe])
+ def _dequant_tp_had_quant(o: torch.Tensor, s: torch.Tensor, t: torch.Tensor,
+                           scratch_scales: torch.Tensor, scratch_max: torch.Tensor,
+                           h: torch.Tensor, x: torch.Tensor, x_group_scales: torch.Tensor, x_tensor_scale: torch.Tensor,
+                           seed: torch.Tensor, fp4_max: float, fp8_max: float) -> None:
++    stream = torch.cuda.current_stream(x.device).cuda_stream
+     _quartet2.dequant_tp_had_quant(
+         o,
+         s,
+@@ -51,16 +61,18 @@ def _dequant_tp_had_quant(o: torch.Tensor, s: torch.Tensor, t: torch.Tensor,
+         seed,
+         fp4_max=fp4_max,
+         fp8_max=fp8_max,
++        stream=stream
+     )
+ 
+ 
+ 
++
+ NVFP4Quant = namedtuple("NVFP4Quant", ["fp4", "micro_scales", "tensor_scale"])
+ 
+ 
+ def quant_fp4(x, scale_override: float, amax: torch.Tensor = None, four_over_six=False) -> NVFP4Quant:
+     q = torch.empty((x.shape[0], x.shape[1] // 2), device=x.device, dtype=torch.uint8)
+-    s = torch.empty((x.shape[0], x.shape[1] // 16), device=x.device, dtype=torch.float8_e4m3fn)
++    s = torch.empty((x.shape[0], x.shape[1] // 16), device=x.device, dtype=torch.uint8)
+     assert x.dtype == torch.bfloat16
+     assert x.is_cuda
+     assert x.is_contiguous()
+@@ -131,7 +143,7 @@ def quant_had_eden(
+         out = out.reshape(-1, out.shape[-1])
+ 
+     if group_scales is None:
+-        group_scales = torch.empty((rows, cols // 16), device=x.device, dtype=torch.float8_e4m3fn)
++        group_scales = torch.empty((rows, cols // 16), device=x.device, dtype=torch.uint8)
+     else:
+         group_scales = group_scales.reshape(-1, group_scales.shape[-1])
+ 
+@@ -209,7 +221,7 @@ def dequant_tp_had_eden(
+     assert x.dtype == torch.uint8
+     assert x.is_cuda
+     assert x.is_contiguous()
+-    assert x_group_scales.dtype == torch.float8_e4m3fn
++    assert x_group_scales.dtype in (torch.float8_e4m3fn, torch.uint8)  # accept both
+     assert x_group_scales.shape[0] == x.shape[0]
+     assert x_group_scales.shape[1] == x.shape[1] // 8
+     assert x_group_scales.is_cuda
+@@ -228,7 +240,7 @@ def dequant_tp_had_eden(
+         out = out.reshape(-1, out.shape[-1])
+ 
+     if group_scales is None:
+-        group_scales = torch.empty((rows, cols // 16), device=x.device, dtype=torch.float8_e4m3fn)
++        group_scales = torch.empty((rows, cols // 16), device=x.device, dtype=torch.uint8)
+     else:
+         group_scales = group_scales.reshape(-1, group_scales.shape[-1])
+ 
+@@ -243,13 +255,13 @@ def dequant_tp_had_eden(
+ 
+     _dequant_tp_had_quant(
+         out,
+-        group_scales.view(torch.uint8),
++        group_scales,  # already uint8 — no .view() copy needed
+         tensor_scale,
+         scratch_scales,
+         scratch_amax,
+         h,
+         x,
+-        x_group_scales.view(torch.uint8),
++        x_group_scales,  # already uint8 — no .view() copy needed
+         x_tensor_scale,
+         seed,
+         fp4_max=6.0 / scale_override,

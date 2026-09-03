@@ -1,0 +1,419 @@
+{
+  "schema": "tkfa4.native_tk_d64_late_optimization_receipt.v1",
+  "created_utc": "2026-08-29",
+  "repository": {
+    "name": "fp4_matmul_monolithic_tk_20260828",
+    "branch": "codex/monolithic-tk-fa4-train-20260828",
+    "historical_receipt_base_commit": "1ede7dc715a58ea91165997b78d420439a3585b3",
+    "workspace_head_when_written": "abd3f33104ac885434f1d6136ab5100361de51ee",
+    "dirty_worktree": true,
+    "source_hash_boundary": "Development sources may be untracked; hashes authenticate observed files and do not assert membership in workspace_head_when_written."
+  },
+  "scope": {
+    "hardware": "NVIDIA GB200 SM100",
+    "operation": "isolated causal GQA attention backward",
+    "primary_shape": "B16/S4096/Hq32/Hkv8/D64",
+    "operand_contract": "contiguous BHSD E4M3 Q/K/V/dOut represented at value scale 4.0",
+    "native_statistics_contract": "raw FP32 l_aux and delta",
+    "native_output_contract": "BF16 additive dQ/dK/dV",
+    "native_timing_boundary": "full backward wrapper including three destination clears",
+    "default_timing_protocol": "10 warmups, 51 per-sample-rotated measurements",
+    "end_to_end_transformer_claim": false
+  },
+  "claim_labels": {
+    "verified_matched_ab": "Same-process paired or rotated GPU timing under the stated native contract.",
+    "verified_same_process_diagnostic": "Same-process GPU timing with a deliberate policy or producer-ABI difference explicitly retained.",
+    "verified_sweep": "Measured fixed-grid sweep under the stated native public contract.",
+    "diagnostic_sweep": "Measured sweep of authenticated CuTe source using an in-memory route-gate surrogate where the public route did not accept the shape or policy; repository source was not edited.",
+    "cross_run_context": "Ratio or comparison assembled from separate verified runs; useful engineering context, not matched AB evidence.",
+    "static_only_rejected": "Compiled and audited statically, rejected before GPU timing; no performance claim.",
+    "inference": "Interpretation supported by measurements but not itself a direct counter measurement."
+  },
+  "selected_native_successor": {
+    "candidate": "v406",
+    "reason": "Fastest retained exact/native-EX2 candidate with matched validation, REG128/STACK0, no spills, finite outputs, and exact-zero zero-dOut behavior.",
+    "claim_label": "verified_matched_ab"
+  },
+  "verified_native_progression": [
+    {
+      "candidate": "v388",
+      "change": "split P and dS lifetimes",
+      "headline_full_median_ms": 5.795904159545898,
+      "run_role": "paired baseline for v394",
+      "claim_label": "verified_matched_ab"
+    },
+    {
+      "candidate": "v394",
+      "change": "retain P in TMEM and use true TMEM-A for dV",
+      "headline_full_median_ms": 4.762112140655518,
+      "matched_baseline": {
+        "candidate": "v388",
+        "full_median_ms": 5.795904159545898
+      },
+      "speedup_over_matched_baseline": 1.2170868699341626,
+      "claim_label": "verified_matched_ab"
+    },
+    {
+      "candidate": "v397",
+      "change": "publish each 64-column P half early and overlap dV work with dS",
+      "headline_full_median_ms": 4.441504001617432,
+      "matched_baseline": {
+        "candidate": "v394",
+        "full_median_ms": 4.760575771331787
+      },
+      "speedup_over_matched_baseline": 1.0718386766280434,
+      "contextual_speedup_over_v388": 1.304942,
+      "contextual_speedup_claim_label": "cross_run_context",
+      "claim_label": "verified_matched_ab"
+    },
+    {
+      "candidate": "v400",
+      "change": "aggregate native-EX2 clamp traversal, TMA raw statistics, asynchronous gradient publication, and v397",
+      "headline_full_median_ms": 4.1451520919799805,
+      "matched_baseline": {
+        "candidate": "v397",
+        "full_median_ms": 4.443264007568359
+      },
+      "speedup_over_matched_baseline": 1.071918209265509,
+      "contextual_speedup_over_v388": 1.398237,
+      "contextual_speedup_claim_label": "cross_run_context",
+      "claim_label": "verified_matched_ab"
+    },
+    {
+      "candidate": "v403",
+      "change": "owner-aligned score/dP/P/dS conversion",
+      "headline_full_median_ms": 4.098048210144043,
+      "matched_baseline": {
+        "candidate": "v400",
+        "full_median_ms": 4.147456169128418
+      },
+      "speedup_over_matched_baseline": 1.012056461137298,
+      "claim_label": "verified_matched_ab"
+    },
+    {
+      "candidate": "v404",
+      "change": "issue and commit dQ before dK so reducers drain dQ concurrently",
+      "headline_full_median_ms": 3.875968,
+      "matched_baseline": {
+        "candidate": "v400",
+        "full_median_ms": 4.14544
+      },
+      "speedup_over_matched_baseline": 1.0695237937980913,
+      "claim_label": "verified_matched_ab"
+    },
+    {
+      "candidate": "v406",
+      "change": "compose v403 owner alignment with v404 dQ-first scheduling",
+      "headline_full_median_ms": 3.803328,
+      "matched_baselines": [
+        {
+          "candidate": "v403",
+          "full_median_ms": 4.095392,
+          "speedup": 1.0767916940111397
+        },
+        {
+          "candidate": "v404",
+          "full_median_ms": 3.875584,
+          "speedup": 1.0189980985074125
+        }
+      ],
+      "resources": {
+        "registers": 128,
+        "stack_bytes": 0,
+        "spill_store_bytes": 0,
+        "spill_load_bytes": 0
+      },
+      "validation": {
+        "all_outputs_finite": true,
+        "zero_dout_exact_zero": true
+      },
+      "claim_label": "verified_matched_ab"
+    }
+  ],
+  "fixed_grid_scaling": {
+    "protocol": {
+      "total_tokens": 65536,
+      "ctas": 16384,
+      "fixture": "all-zero operands",
+      "x": "average causal iterations = ((sequence / 128) + 1) / 2",
+      "y": "median full-wrapper latency in ms"
+    },
+    "v406": {
+      "fit": {
+        "intercept_ms": 0.49056086425017753,
+        "slope_ms_per_average_causal_iteration": 0.20052205259417202,
+        "r_squared": 0.9999984321729679,
+        "maximum_absolute_residual_ms": 0.002421083155650483
+      },
+      "cells": [
+        {"batch": 512, "sequence": 128, "median_ms": 0.693504},
+        {"batch": 256, "sequence": 256, "median_ms": 0.79168},
+        {"batch": 128, "sequence": 512, "median_ms": 0.990176},
+        {"batch": 64, "sequence": 1024, "median_ms": 1.391776},
+        {"batch": 32, "sequence": 2048, "median_ms": 2.194336},
+        {"batch": 16, "sequence": 4096, "median_ms": 3.799904}
+      ],
+      "claim_label": "verified_sweep"
+    },
+    "cute_cd57": {
+      "native_ex2": {
+        "fit": {
+          "intercept_ms": 0.6450799509999421,
+          "slope_ms_per_average_causal_iteration": 0.18795548996860967,
+          "r_squared": 0.9999736111212644
+        },
+        "b16_s4096_median_ms_in_sweep": 3.7485439777374268
+      },
+      "public_period2": {
+        "fit": {
+          "intercept_ms": 0.6987505829664689,
+          "slope_ms_per_average_causal_iteration": 0.16049926045437443,
+          "r_squared": 0.9999308356353497
+        },
+        "b16_s4096_median_ms_in_sweep": 3.3502719402313232
+      },
+      "native_minus_period2_slope_ms": 0.027456229514235236,
+      "period2_slope_reduction_percent": 14.607835886475407,
+      "v406_minus_cute_native_slope_ms": 0.012566562625562355,
+      "claim_label": "diagnostic_sweep",
+      "route_gate_note": "Shapes above B16 used a verified in-memory shape-gate surrogate; native period 0 is also outside the public route. The authenticated source and repository files were unchanged."
+    }
+  },
+  "cute_matched_controls": [
+    {
+      "comparison": "v400 versus authenticated cd57 public period-2",
+      "v400_full_median_ms": 4.147488,
+      "cute_full_median_ms": 3.364672,
+      "v400_over_cute_ratio": 1.232657,
+      "claim_label": "verified_matched_ab"
+    },
+    {
+      "comparison": "cd57 native EX2 versus cd57 public period-2",
+      "native_ex2_full_median_ms": 3.7668159008026123,
+      "period2_full_median_ms": 3.367583990097046,
+      "period2_speedup_over_native": 1.118551433870566,
+      "policy_relative_l2_dq_dk_dv": [0.06079062074422836, 0.060971759259700775, 0.06199680641293526],
+      "claim_label": "verified_same_process_diagnostic"
+    },
+    {
+      "comparison": "v406 versus cd57 native EX2",
+      "v406_full_median_ms": 3.81056,
+      "cute_full_median_ms": 3.758176,
+      "v406_over_cute_ratio": 1.013939,
+      "residual_percent": 1.3939,
+      "claim_label": "verified_same_process_diagnostic",
+      "diagnostic_note": "CuTe native period 0 used an in-memory verifier surrogate and externally prelifted statistics; v406 retained its raw-statistics ABI."
+    }
+  ],
+  "late_candidates": [
+    {
+      "candidate": "v410",
+      "change": "retain both P halves for dS as packed FP16 while publishing dV from pre-FP16 FP32 P",
+      "resources": {
+        "registers": 128,
+        "stack_bytes": 0,
+        "local_bytes": 0,
+        "shared_bytes_cuobjdump": 117984,
+        "spill_store_bytes": 0,
+        "spill_load_bytes": 0
+      },
+      "matched_timing": {
+        "v406_full_median_ms": 3.8070080280303955,
+        "candidate_full_median_ms": 3.797760009765625,
+        "speedup_over_v406": 1.0024351244525693
+      },
+      "v406_relative_metrics": {
+        "dq": {"relative_l2": 0.004874647129327059, "cosine": 0.9999881982803345},
+        "dk": {"relative_l2": 0.005272547248750925, "cosine": 0.9999862909317017},
+        "dv": {"relative_l2": 0.0002473684144206345, "cosine": 1.0}
+      },
+      "all_outputs_finite": true,
+      "zero_dout_smoke_exact_zero": true,
+      "disposition": "measured approximation, not promoted because the 0.2435 percent gain is too small for its numerical change",
+      "claim_label": "verified_matched_ab"
+    },
+    {
+      "candidate": "v412",
+      "change": "compact v406's over-declared owner fragment without changing intended exact math",
+      "resources": {
+        "registers": 128,
+        "stack_bytes": 0,
+        "local_bytes": 0,
+        "shared_bytes_cuobjdump": 117984,
+        "spill_store_bytes": 0,
+        "spill_load_bytes": 0
+      },
+      "matched_timing": {
+        "v406_full_median_ms": 3.8070080280303955,
+        "candidate_full_median_ms": 3.8953280448913574,
+        "speedup_over_v406": 0.9773266806176204,
+        "latency_regression_percent": 2.319932508959144
+      },
+      "v406_relative_metrics": {
+        "dq": {"relative_l2": 0.000027320107619743794, "cosine": 1.0000001192092896},
+        "dk": {"relative_l2": 0.0002791374863591045, "cosine": 1.0000001192092896},
+        "dv": {"relative_l2": 0.00025864216149784625, "cosine": 0.9999998807907104}
+      },
+      "all_outputs_finite": true,
+      "zero_dout_smoke_exact_zero": true,
+      "disposition": "rejected for speed; source dead-stride compactness was not the remaining lever",
+      "claim_label": "verified_matched_ab"
+    },
+    {
+      "candidate": "v413",
+      "change": "replace even probability float2 pairs with authenticated cd57 degree-1 ALU exp2 while odd pairs retain native EX2",
+      "resources": {
+        "registers": 128,
+        "stack_bytes": 0,
+        "local_bytes": 0,
+        "shared_bytes_cuobjdump": 117984,
+        "spill_store_bytes": 0,
+        "spill_load_bytes": 0
+      },
+      "static_delta_from_v406": {
+        "native_ex2_sites": {"v406": 64, "v413": 32},
+        "normalized_instruction_sites": {"v406": 3184, "v413": 3288},
+        "utcqmma_sites_unchanged": 40,
+        "ldtm_sites_unchanged": 14,
+        "sttm_sites_unchanged": 4,
+        "warpsync_sites_unchanged": 12,
+        "bar_sync_sites_unchanged": 9,
+        "branch_sites_unchanged": 184
+      },
+      "matched_timing": {
+        "v406_full_median_ms": 3.8138558864593506,
+        "candidate_full_median_ms": 3.8932480812072754,
+        "speedup_over_v406": 0.9796077226285294,
+        "latency_regression_percent": 2.081677890079625
+      },
+      "v406_relative_metrics": {
+        "dq": {"relative_l2": 0.05387349799275398, "cosine": 0.9988059401512146, "norm_ratio": 0.9760974645614624},
+        "dk": {"relative_l2": 0.05391136184334755, "cosine": 0.9988017678260803, "norm_ratio": 0.9761899709701538},
+        "dv": {"relative_l2": 0.0546707957983017, "cosine": 0.9987741112709045, "norm_ratio": 0.9755678772926331}
+      },
+      "all_outputs_finite": true,
+      "zero_dout_exact_zero": true,
+      "disposition": "rejected for speed; the identical approximation policy lengthened the v406 critical path",
+      "claim_label": "verified_matched_ab"
+    }
+  ],
+  "static_rejections": [
+    {
+      "candidate": "v405",
+      "experiment": "full exact-FP32 P residency",
+      "threads": 512,
+      "registers": 128,
+      "stack_bytes": 96,
+      "sass_spill_store_sites": 24,
+      "sass_spill_load_sites": 24,
+      "reason": "failed no-spill gate",
+      "gpu_timing_performed": false,
+      "claim_label": "static_only_rejected"
+    },
+    {
+      "candidate": "v407",
+      "experiment": "448-thread full exact-FP32 P residency",
+      "threads": 448,
+      "registers": 128,
+      "stack_bytes": 96,
+      "sass_spill_store_sites": 24,
+      "sass_spill_load_sites": 24,
+      "reason": "failed no-spill gate and final warpgroup was incomplete for the synchronous register-allocation protocol",
+      "gpu_timing_performed": false,
+      "claim_label": "static_only_rejected"
+    },
+    {
+      "candidate": "v409",
+      "experiment": "full exact-FP32 P with 16-column dP chunks",
+      "threads": 512,
+      "registers": 128,
+      "stack_bytes": 64,
+      "spill_store_bytes": 64,
+      "spill_load_bytes": 64,
+      "reason": "chunking reduced but did not eliminate full-P register pressure",
+      "gpu_timing_performed": false,
+      "claim_label": "static_only_rejected"
+    },
+    {
+      "candidate": "v411",
+      "experiment": "compact full exact-FP32 P declaration",
+      "threads": 512,
+      "registers": 128,
+      "stack_bytes": 64,
+      "spill_store_bytes": 68,
+      "spill_load_bytes": 68,
+      "reason": "compact representation still failed the no-spill gate",
+      "gpu_timing_performed": false,
+      "claim_label": "static_only_rejected"
+    }
+  ],
+  "source_controls": {
+    "publication_scope": "The selected public lineage bundles v389, v400, v403, v404, v406, v410, v413, v414, v415, and v416. Hash-only entries for v388, v394, v397, v405, v407, v409, v411, and v412 authenticate development controls observed in the dirty experiment worktree; those rejected/intermediate sources are intentionally unbundled and are not required to build v416.",
+    "headers_sha256": {
+      "v388": {"path": "tk_fa4/native_gqa_tk_bwd/v388_d64_gqa_e4m3_split_p_ds.cuh", "sha256": "50b1c6e7cc66f5adf1280174532913cf23c83065ec74445d480863dd0d848583"},
+      "v389_period2_helper": {"path": "tk_fa4/native_gqa_tk_bwd/v389_d64_gqa_e4m3_alu_exp2_period2.cuh", "sha256": "88f66f27c523bd1aaa4b2aca8e11c703e4907e4fbeba73ab7f20e7420882d3ce"},
+      "v394": {"path": "tk_fa4/native_gqa_tk_bwd/v394_d64_gqa_e4m3_tmem_p_resident.cuh", "sha256": "cf46caed7e86c0bf117cdaad1fe194ab1244237484d1a287388d8f0d77e55ac5"},
+      "v397": {"path": "tk_fa4/native_gqa_tk_bwd/v397_d64_gqa_e4m3_tmem_p_half_overlap.cuh", "sha256": "3fd2ae479beeb0258ed254e3884e2fcff1852c0ef6639711276474b4faf45346"},
+      "v400": {"path": "tk_fa4/native_gqa_tk_bwd/v400_d64_gqa_e4m3_validated_aggregate.cuh", "sha256": "a80f1cc542bae0aab001f8724b686ce14fc478f4d661d2bc80d855ccbf164527"},
+      "v403": {"path": "tk_fa4/native_gqa_tk_bwd/v403_d64_gqa_e4m3_owner_aligned_aggregate.cuh", "sha256": "ad05a0e638f6888d1b0ef6a90154cdde51c0cb79b339f3a7ddaadeb97621d012"},
+      "v404": {"path": "tk_fa4/native_gqa_tk_bwd/v404_d64_gqa_e4m3_dq_first.cuh", "sha256": "ca6d9bb4cf175711183e77c00f8e403d203c3f3132ed6f9c032007b8c293ceb7"},
+      "v405": {"path": "tk_fa4/native_gqa_tk_bwd/v405_d64_gqa_e4m3_owner_full_p_aggregate.cuh", "sha256": "17e890514312c107dba40eb74cf545091aa6f13015636be421a0032adc252b67"},
+      "v406": {"path": "tk_fa4/native_gqa_tk_bwd/v406_d64_gqa_e4m3_owner_aligned_dq_first.cuh", "sha256": "7e4d40d56b499a63301143bdce7d5b15eb5693eec2aecdf15ebd1ddddf42a156"},
+      "v407": {"path": "tk_fa4/native_gqa_tk_bwd/v407_d64_gqa_e4m3_owner_full_p_14warps.cuh", "sha256": "05e0aa24729a9b7928f3d3c7f289a7210d94c15de527c5c9fd32fea596254480"},
+      "v409": {"path": "tk_fa4/native_gqa_tk_bwd/v409_d64_gqa_e4m3_owner_full_p_chunked_dp.cuh", "sha256": "593f66f94eb3b33a38e1cbcb1d8c59f77dcdf6b4cf6afb62bfe23df482006dfd"},
+      "v410": {"path": "tk_fa4/native_gqa_tk_bwd/v410_d64_gqa_e4m3_owner_packed_fp16_full_p_dq_first.cuh", "sha256": "261075c1e0957f5f3db871a31b37ec201225e3ed3fdcff6fb8cae898408de765"},
+      "v411": {"path": "tk_fa4/native_gqa_tk_bwd/v411_d64_gqa_e4m3_owner_compact_fp32_full_p_dq_first.cuh", "sha256": "531dfa4511c0852092cdbf10cbfcf5aea3a0a9607546b706b406556e8a60c0a7"},
+      "v412": {"path": "tk_fa4/native_gqa_tk_bwd/v412_d64_gqa_e4m3_owner_aligned_dq_first_compact_owner.cuh", "sha256": "64bc0c2089b2836ed8725d5a6caa766bae859ca9049b0c68065594258028b736"},
+      "v413": {"path": "tk_fa4/native_gqa_tk_bwd/v413_d64_gqa_e4m3_owner_aligned_dq_first_period2.cuh", "sha256": "83d91bdc1612964ce4cb67a0ff4ef0feb902f874253d9075120ed269c1db1e14"}
+    },
+    "cute_cd57": {
+      "path": "qutlass/third_party/cutlass/examples/python/CuTeDSL/blackwell/fmha_bwd_d64_gqa_precomposed_mhs7oszs.py",
+      "sha256": "cd57e3360082abe4bad7560c51a7793a4e9bfd4d16efc1259b92ce20238b99e1",
+      "qutlass_commit": "406e86fb2d7df436e94f825bcda8e59b1a7250a6",
+      "cutlass_commit": "b2ca083d2bb96c41d9b3c5a930637c641f6669bf"
+    },
+    "human_receipt": {
+      "path": "results/native_tk_d64_ptx_adaptation_20260829/README.md",
+      "sha256": "74c7ce49e6d0126003b43a845dc362c1fcd1452874582b47836baed195775245",
+      "snapshot_scope": "Final staged README after the v416 production and saturated Llama-1.2B addenda."
+    }
+  },
+  "provenance": {
+    "temporary_records": [
+      {"path": "/tmp/v394_static_and_validation_receipt.json", "sha256": "63919d647ead871b511b373ec96df0c1af4e72c759fe681bcba68389ff1b69b8"},
+      {"path": "/tmp/v397_static_and_validation_receipt.json", "sha256": "74ed2d2874308d919782b1c9840571683ee522a13d1b5dc2c2dc06073b51c8e9"},
+      {"path": "/tmp/v400_static_and_validation_receipt.json", "sha256": "7f5db1691dea8decab881665cf9543b935d68da237bcb7de9311c8d552ee6a78"},
+      {"path": "/tmp/v400_v403_b16_s4096_native_contract.json", "sha256": "029f8f9be5f3598c1c8f36a1793db82456f97e225165c83526bd1a78d2b148a5"},
+      {"path": "/tmp/v409_static_audit_20260829/receipt.json", "sha256": "7011ad12771a4e3e103c22fcdab78f2b3bc943c0997d197d8454ae05c3f00c0e"},
+      {"path": "/tmp/v410_static_audit_20260829/receipt.json", "sha256": "b5b8164dbf6877c0ea65bcbbb63901c469d18c88f518d61b068a9d262918577d"},
+      {"path": "/tmp/v411_static_audit_20260829/receipt.json", "sha256": "b4672bb0a52c987be81d1e5871a6e174c13eec78a1edb9c876eba26cfa071827"},
+      {"path": "/tmp/v406_v410_v412_gpu1_20260829.json", "sha256": "0fc53db9f667b3f92875a515f5aa0cbd4ae1a5a0c1fa17cea909b8ea6bb920ca"},
+      {"path": "/tmp/v406_v413_gpu2_20260829.json", "sha256": "f401d572bce962b79063d92b2e145563c22104408f2bbe5f4ce7519de8a8c2b0"},
+      {"path": "/tmp/cd57_exp2_policy_b16_s4096_gpu2_receipt.json", "sha256": "ef7e4cb66ef9a08870a041f50c5dc585533bc8e9c5492ce3a0f038fa5116ad76"},
+      {"path": "/tmp/cd57_constant_token_policy_sweep_gpu3_20260829.log", "sha256": "e79d9d6ae66edd5f6c1ced6698fcdd96667e2e4e32811ba638afb98379ebd309"},
+      {"path": "/tmp/v413_static_validation_timing_receipt_20260829.json", "sha256": "54e816142a4564f919ab7c98751f3729abd60a4f409ee51a5b631324daf5f569"}
+    ]
+  },
+  "conclusions": [
+    {
+      "text": "The historical 1.8x native-TK deficit is superseded: under the closest same-process native-EX2 diagnostic, v406 is 1.013939x CuTe latency.",
+      "claim_label": "verified_same_process_diagnostic"
+    },
+    {
+      "text": "D64 GQA itself is not the demonstrated cause of the former deficit; dQ publication ordering and probability-fragment scheduling were the verified dominant native schedule issues.",
+      "claim_label": "inference"
+    },
+    {
+      "text": "Full exact-FP32 P remains over the 128-register no-spill budget in the tested TK schedule; packed FP16 P is spill-free but delivered only a 1.002435x isolated gain.",
+      "claim_label": "inference"
+    },
+    {
+      "text": "CuTe's public period-2 policy reduces its recurring slope, but v413 proves that transplanting the same approximation without its scheduling context is a TK regression.",
+      "claim_label": "verified_same_process_diagnostic"
+    },
+    {
+      "text": "All results in this receipt are isolated backward-kernel evidence and do not establish end-to-end transformer training speedup.",
+      "claim_label": "verified_matched_ab"
+    }
+  ]
+}

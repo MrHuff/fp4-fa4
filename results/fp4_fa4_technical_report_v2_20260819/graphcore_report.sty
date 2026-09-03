@@ -1,0 +1,119 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{graphcore_report}[2026/07/20 Graphcore Research report styling]
+
+\RequirePackage{xcolor}
+\RequirePackage{graphicx}
+\RequirePackage{fancyhdr}
+\RequirePackage{caption}
+
+% Visual tokens taken from graphcore-research.github.io-internal.
+\definecolor{GraphcoreCoral}{HTML}{FF6F79}
+\definecolor{GraphcoreCoralDark}{HTML}{C84553}
+\definecolor{GraphcoreInk}{HTML}{1F2021}
+\definecolor{GraphcoreMuted}{HTML}{53595E}
+\definecolor{GraphcoreLine}{HTML}{E2E4E5}
+\definecolor{GraphcorePaper}{HTML}{FAF8F9}
+
+\color{GraphcoreInk}
+\setlength{\headheight}{24pt}
+\setlength{\headsep}{22pt}
+
+\fancypagestyle{graphcore}{%
+  \fancyhf{}
+  \fancyhead[L]{%
+    \raisebox{-0.7mm}{\includegraphics[height=4.2mm]{assets/graphcore-symbol.png}}%
+    \hspace{1.5mm}{\sffamily\bfseries\footnotesize GRAPHCORE RESEARCH}%
+  }
+  \fancyhead[R]{\sffamily\footnotesize\color{GraphcoreMuted}TECHNICAL REPORT}
+  \fancyfoot[L]{\sffamily\scriptsize\color{GraphcoreMuted}FP4 FlashAttention-4}
+  \fancyfoot[R]{\sffamily\scriptsize\color{GraphcoreMuted}\thepage}
+  \renewcommand{\headrulewidth}{0.4pt}
+  \renewcommand{\headrule}{\hbox to\headwidth{\color{GraphcoreLine}\leaders\hrule height \headrulewidth\hfill}}
+  \renewcommand{\footrulewidth}{0pt}
+}
+\pagestyle{graphcore}
+\makeatletter
+\let\ps@plain\ps@graphcore
+\renewcommand{\@seccntformat}[1]{%
+  \textcolor{GraphcoreCoral}{\csname the#1\endcsname}\quad}
+\renewcommand\section{%
+  \@startsection{section}{1}{\z@}%
+    {-3.2ex \@plus -1ex \@minus -.2ex}%
+    {1.4ex \@plus .2ex}%
+    {\normalfont\sffamily\Large\bfseries\color{GraphcoreInk}}}
+\renewcommand\subsection{%
+  \@startsection{subsection}{2}{\z@}%
+    {-2.8ex\@plus -1ex \@minus -.2ex}%
+    {1.1ex \@plus .2ex}%
+    {\normalfont\sffamily\large\bfseries\color{GraphcoreInk}}}
+\renewcommand\subsubsection{%
+  \@startsection{subsubsection}{3}{\z@}%
+    {-2.5ex\@plus -1ex \@minus -.2ex}%
+    {0.9ex \@plus .2ex}%
+    {\normalfont\sffamily\normalsize\bfseries\color{GraphcoreInk}}}
+\renewcommand\paragraph{%
+  \@startsection{paragraph}{4}{\z@}%
+    {2.0ex \@plus .5ex \@minus .2ex}%
+    {-0.8em}%
+    {\normalfont\sffamily\bfseries\color{GraphcoreCoralDark}}}
+\makeatother
+
+\captionsetup{
+  font=small,
+  labelfont={sf,bf,color=GraphcoreCoralDark},
+  textfont={color=GraphcoreMuted},
+  margin=0.04\textwidth
+}
+\renewcommand{\labelitemi}{\textcolor{GraphcoreCoral}{\small\textbullet}}
+\renewcommand{\labelitemii}{\textcolor{GraphcoreCoralDark}{\scriptsize\textbullet}}
+
+\makeatletter
+\newcommand{\reportsubtitle}[1]{\gdef\@reportsubtitle{#1}}
+\newcommand{\@reportsubtitle}{}
+\renewcommand{\maketitle}{%
+  \pagenumbering{roman}
+  \begin{titlepage}
+    \thispagestyle{empty}
+    \noindent
+    \begin{minipage}[c]{0.68\textwidth}
+      \includegraphics[height=13mm]{assets/graphcore-symbol.png}%
+      \hspace{3mm}{\sffamily\bfseries\large GRAPHCORE RESEARCH}
+    \end{minipage}%
+    \begin{minipage}[c]{0.32\textwidth}
+      \raggedleft\sffamily\small\color{GraphcoreMuted}TECHNICAL REPORT
+    \end{minipage}
+
+    \vspace{8mm}
+    {\color{GraphcoreCoral}\rule{\textwidth}{1.6pt}}
+    \vspace{20mm}
+
+    {\raggedright\sffamily\bfseries\fontsize{28}{34}\selectfont\color{GraphcoreInk}
+      \@title\par}
+    \vspace{8mm}
+    {\sffamily\fontsize{16}{22}\selectfont\color{GraphcoreMuted}
+      \@reportsubtitle\par}
+
+    \vfill
+    \noindent
+    \colorbox{GraphcorePaper}{%
+      \begin{minipage}{0.93\textwidth}
+        \vspace{5mm}
+        {\sffamily\bfseries\color{GraphcoreCoralDark}REPORT FOCUS}\par
+        \vspace{2mm}
+        {\sffamily\large\color{GraphcoreInk}
+          Full-FP4 forward attention, quantized causal backward, and measured
+          GB200/B300 speed--accuracy trade-offs.\par}
+        \vspace{5mm}
+      \end{minipage}}
+
+    \vfill
+    \noindent
+    {\sffamily\bfseries\color{GraphcoreInk}\@author}\par
+    \vspace{1.5mm}
+    {\sffamily\color{GraphcoreMuted}\@date}\par
+    \vspace{8mm}
+    {\color{GraphcoreCoral}\rule{42mm}{1.6pt}}
+  \end{titlepage}
+  \pagenumbering{arabic}
+}
+\makeatother

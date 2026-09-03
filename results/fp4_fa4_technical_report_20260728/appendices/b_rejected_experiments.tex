@@ -1,0 +1,179 @@
+\section{Rejected Kernel Directions}
+\label{app:rejections}
+
+\subsection{SM103 launch and EX2 controls}
+\label{app:sm103-tuning}
+
+Table~\ref{tab:b300-tuning} records the initial B300 compatibility and
+native-EX2 density sweep. It is kept outside the main result table because it
+is a tuning control, not a set of promoted policies. The 152-worker binary
+creates a partial second wave on the tested 148-SM SKU; the corrected rows use
+148 workers and vary EX2 density while holding the numerical contract fixed.
+
+\begin{table}[htbp]
+\centering
+\caption{Measured TK NV/MX tuning points on B300. Every row reports speed and
+error from the same output.}
+\label{tab:b300-tuning}
+\scriptsize
+\begin{adjustbox}{max width=\textwidth}
+\begin{tabular}{lrrrrrrr}
+\toprule
+Variant & Grid & EX2 density & Time (ms) & TFLOP/s & Cosine & Rel.-$L_2$ & RMSE \\
+\midrule
+\input{../fp4_fa4_b300_tuning_20260802/tables/b300_tuning_rows.tex}%
+\end{tabular}
+\end{adjustbox}
+\end{table}
+
+\subsection{Kernel directions}
+
+Table~\ref{tab:rejections} condenses the major negative experiments. These
+results are retained because they constrain future work; compile-time probes
+remain default-off.
+
+\begin{table}[htbp]
+\centering
+\caption{Major rejected directions. A timing tie is not promoted when it
+adds synchronization, storage, or numerical risk.}
+\label{tab:rejections}
+\begin{tabularx}{\textwidth}{p{.19\textwidth}X X}
+\toprule
+Direction & Intended benefit & Observed failure mechanism \\
+\midrule
+Half-tile QK/PV & Larger tensor work and easier overlap & Delayed first
+publication and increased live tensor-memory pressure; did not beat N32
+production with K64 consumption. \\
+
+Deeper dynamic scheduler & Exploit QK running one logical step ahead & Polls,
+proxy signals, and policy branches added control work without creating a
+legal score destination. \\
+
+Full or QK-only two-CTA & Accelerate QK and increase occupancy & Cluster-wide
+readiness and scale lifetime coordination overwhelmed QK savings; QK-only
+did not remove single-CTA P/PV ownership. \\
+
+Extra barriers or offload WG & Remove full-CTA rendezvous & Duplicate score
+loads and handoff mailboxes cost more than the hidden work; concurrent TMEM
+writes produced invalid output. \\
+
+Alternate TMEM layouts & Add a second useful score/P slot & Two 128-column
+scores plus two 128-column outputs already consume 512 columns. Scale
+compression freed fragments, not another legal 128-column bank. \\
+
+BF16/FP16 partial accumulator & Halve output columns & Local scaled-FP4 tensor
+instructions accumulate into FP32 TMEM; casting between issues did not change
+the accumulator contract. \\
+
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{Major rejected directions (continued).}
+\begin{tabularx}{\textwidth}{p{.19\textwidth}X X}
+\toprule
+Direction & Intended benefit & Observed failure mechanism \\
+\midrule
+
+Raw FP4 or coarse 2-D scales & Remove scale pages & Raw E2M1 loses the
+four-times-class block-scaled primitive. A single 32$\times$32 scale cannot
+be applied after a reduction whose block product scales vary with K. \\
+
+Direct code classifier & Eliminate packed conversion & Threshold trees,
+integer conversion, LUT access, LOP3, and PRMT packing generated more SASS
+than packed FFMA2 plus native F2FP. \\
+
+Intermediate NV/MX policy & Add an anchor without the correction warpgroup &
+At S4096/H24 it measured 0.094560\,ms, slower than \code{fast}, while its
+0.356700 relative-$L_2$ was worse than both \code{fast} and \code{accurate}.
+Its long-ViT agreement only tied \code{accurate}, leaving no Pareto value. \\
+
+Quadratic/cubic throughput path & Improve code fit & A Q0 quadratic raised
+static FFMA2 count from 128 to 160, measured 0.097888\,ms, and reduced cosine
+on its test. \\
+
+Sampled max/denominator & Shorten P preparation & Eight-of-32 samples saved
+less than 0.5\us\ with substantial error; fewer samples were unstable. \\
+
+Structured sparse PV & Increase tensor throughput & Blackwell's sparse FP4
+path uses logical K128, losing the early K64 handoff; value-aware selection
+added too many instructions. \\
+
+Tail interleaving & Pull Q3 work under Q2/PV latency & Added 1.4--3.2\us;
+the contiguous Q2-then-Q3 schedule was locally better. \\
+
+Streaming denominator & Hide exact denominator reduction & Preserved
+output exactly but slowed the clean fast build by 2.11\% and 1.83\%.
+\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The raw cases for the retired intermediate policy remain in the unified
+suite for provenance, but it is excluded from the published CSV, plots, and
+policy tables.
+
+\subsection{Quarter-local speed-of-light experiment}
+
+On the historical 0.102400\,ms NV/NV path, replacing selected quarter
+transforms with raw packing measured:
+\begin{center}
+\begin{tabular}{lrr}
+\toprule
+Transform removed & Time (ms) & Gain \\
+\midrule
+Q0 only & 0.104736 & none \\
+Q1 only & 0.102400 & none \\
+Q0+Q1 & 0.099328 & 4.064\us \\
+Q2+Q3 & 0.096416 & 7.008\us \\
+all quarters & 0.090112 & 12.288\us \\
+\bottomrule
+\end{tabular}
+\end{center}
+The pair behavior is the important finding: accelerating one N32 producer
+does not advance a K64 tensor command. The 12.288\us\ total is not the
+current NV/MX ceiling; Section~\ref{sec:current-headroom} reports the final
+2.336\us\ raw-score-pack gap.
+
+\subsection{Scale-footprint experiments}
+
+Several probes attempted to reduce scale storage by sharing scales across
+32$\times$32 blocks, folding adjacent IDs, or moving source scales through
+shared memory. Compact source storage is useful, but \tcgen\ still consumes
+an instruction-facing scale layout. A smaller source tensor therefore does
+not automatically create free tensor-memory columns. The retained folded
+K64 Q/K representation reduces loads and arithmetic; it does not claim a
+new 128-column score slot.
+
+\subsection{Joint affine-route search}
+\label{app:joint-affine}
+
+We also optimized the affine E2M1 coefficients across all non-guard layers at
+once. Exact, equal-cost binaries were screened with persistent model workers;
+the optimizer combined favorable single-layer changes and then sampled full
+categorical layer maps. This produced large apparent replay gains, but fresh
+model processes rejected every proposed production change.
+
+For Wan14B, the best regularized map changed four layers and reduced reused-
+worker mean relative-$L_2$ from 0.398533 to 0.392793 over four prompts. On a
+fresh city run it instead increased relative-$L_2$ from 0.432932 to 0.453884.
+A fresh forest run also became non-finite in guarded layer 38, but that event
+was later traced to the E8M0 denominator-underflow bug described with the main
+Wan results; it is not evidence for or against the affine map.
+For Wan1.3B, a single layer-9 change reduced reused-worker mean
+relative-$L_2$ from 0.299884 to 0.290924. Fresh coastal and snow runs both
+regressed: 0.247742 to 0.258156 and 0.230262 to 0.233996, respectively.
+
+The route constants do not change kernel latency; the rejection is purely
+numerical. Reused-pipeline ordering can move the final diffusion latent by
+more than the candidate margin and make a small ranking unstable. A
+statistically sound joint optimizer would therefore need to score each route
+across several fresh model processes and held-out prompts. That cost is not
+justified here because it cannot improve throughput and the observed numerical
+margins are below process-to-process variation. We keep the joint optimizer as
+a diagnostic and require fresh-process, unseen-prompt validation for any
+future calibration change. The production manifest retains only the global
+$(1.60,0.95)$ pair. Full search and control artifacts are in
+\path{results/fp4_fa4_wan_joint_20260806}.

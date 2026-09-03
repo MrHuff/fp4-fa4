@@ -1,0 +1,691 @@
+\section{Learned Projection Integration}
+\label{sec:projection-integration}
+
+\subsection{What projection means}
+
+Flatten batch and sequence into $M=BS$, let the model hidden width be $K$,
+and concatenate the Q/K/V weights:
+\begin{equation}
+  W_{QKV}=
+  \begin{bmatrix}W_Q\\W_K\\W_V\end{bmatrix},\qquad
+  Y_{QKV}=XW_{QKV}^{\mathsf T}=[Q\mid K\mid V].
+  \label{eq:qkv-projection}
+\end{equation}
+This is a learned GEMM with reduction dimension $K$.  It is separate from the
+attention score contraction in Equation~\ref{eq:score-contraction-summary},
+whose reduction dimension is the head dimension 192.
+
+The previous integration ceiling assumed that an upstream projection could
+somehow emit the adaptive E2M1 operands.  The current implementation makes
+that producer real: a persistent SM100 NVFP4 GEMM computes
+Equation~\ref{eq:qkv-projection} and publishes the forward-native Q/K E2M1
+payloads, the backward Q/K views, and transposed MXFP4 V directly from its
+output register fragments.  BF16 Q/K/V stores are optional rather than part
+of the low-precision contract.  Q and K have per-head depth 192; V has depth
+128.  Packed weight rows are ordered as all Q heads, all K heads, then all V
+heads.
+
+\subsection{NVFP4 learned-projection equation}
+
+For a 16-value activation block $b=(i,c)$, containing one row and columns
+$16c{:}16(c+1)$, the standalone quantizer selects one global dequantizer
+$g_X$ and one local E4M3 dequantizer $s^X_{i,c}$.  In simplified notation,
+\begin{align}
+  g_X &\approx \frac{\lVert X\rVert_\infty}{6\cdot448},\\
+  s^X_{i,c} &= Q_{\mathrm{E4M3}}\!\left(
+    \frac{\max_{16c\le k<16(c+1)}|X_{ik}|}{6g_X}
+  \right),\\
+  X^4_{ik} &= Q_{\mathrm{E2M1}}\!\left(
+    \frac{X_{ik}}{g_Xs^X_{i,c}}
+  \right),\qquad
+  \widehat X_{ik}=g_Xs^X_{i,c}X^4_{ik}.
+  \label{eq:nvfp4-projection-operand}
+\end{align}
+Activations retain this $1\times16$ rule because each token row is an
+independent sample.
+
+Learned weights instead use a transpose-consistent $16\times16$ rule.  For
+$B_{r,c}=\{(j,k):16r\le j<16(r+1),\ 16c\le k<16(c+1)\}$,
+\begin{align}
+  s^W_{r,c}
+    &=Q_{\mathrm{E4M3}}\!\left(
+      \frac{\max_{(j,k)\in B_{r,c}}|W_{jk}|}{6g_W}
+    \right),\\
+  W^4_{jk}
+    &=Q_{\mathrm{E2M1}}\!\left(
+      \frac{W_{jk}}{g_Ws^W_{r,c}}
+    \right),\qquad
+  \widehat W_{jk}=g_Ws^W_{r,c}W^4_{jk}.
+  \label{eq:nvfp4-projection-weight-2d}
+\end{align}
+The same local scale is repeated into the sixteen hardware $1\times16$
+scale records covered by $B_{r,c}$.  Consequently packing $W^{\mathsf T}$
+does not choose a second, incompatible set of scales:
+\begin{equation}
+  \mathcal Q^{2D}_{\mathrm{NV4}}(W^{\mathsf T})
+  =\Pi_{\mathsf T}\!\left(
+    \mathcal Q^{2D}_{\mathrm{NV4}}(W)
+  \right),
+  \label{eq:nvfp4-weight-transpose-consistency}
+\end{equation}
+where $\Pi_{\mathsf T}$ transposes payload blocks and their scale page.  This
+is a representation invariant for forward and dgrad, rather than a claim
+that the larger block minimizes one-shot quantization error.
+
+The persistent projection computes
+\begin{equation}
+  \widehat Y_{ij}
+  =\sum_{k=1}^{K}\widehat X_{ik}\widehat W_{jk}
+  =g_Xg_W
+   \sum_b
+   \mma_{\mathrm{E2M1}}\!\left(
+     X^4_{i,b},W^4_{j,b};s^X_{i,b},s^W_{j,b}
+   \right),
+  \label{eq:nvfp4-projection}
+\end{equation}
+accumulates in FP32 TMEM and multiplies by the two global dequantizers.  The
+implementation uses M256$\times$N256 output tiles, K256 reduction steps, a
+two-CTA cluster, and a four-stage input ring.  Each output fragment is rounded
+once to BF16 before its optional BF16 store and low-precision publication, so
+all published views share one rounding point.
+
+\subsection{Pair-native RoPE in the projection epilogue}
+
+The first composed forward/backward evaluation omitted rotary position
+embedding and therefore did not represent the Llama attention boundary.  The
+unified QKV projection now optionally applies full-head RoPE to Q and K before
+either BF16 or low-precision publication.  For $D_{QK}=192$, write the usual
+split-half rotary coordinates of one unrotated head as
+\begin{equation}
+  u=[a_0,\ldots,a_{95},b_0,\ldots,b_{95}]^{\mathsf T},
+  \qquad
+  \Pi u=[a_0,b_0,a_1,b_1,\ldots,a_{95},b_{95}]^{\mathsf T}.
+  \label{eq:rope-pair-permutation}
+\end{equation}
+The Q and K projection-weight rows are converted once to the $\Pi$ order.
+Because $\Pi$ is orthogonal and is common to Q and K,
+\begin{equation}
+  (\Pi q)^{\mathsf T}(\Pi k)=q^{\mathsf T}k,
+  \label{eq:rope-permutation-dot-invariance}
+\end{equation}
+so this storage choice does not alter the unrotated score operator.  It makes
+each rotary plane local to one adjacent BF16 pair in the projection epilogue.
+
+For token $t$ and rotary plane $p$, define
+\begin{equation}
+  R_{t,p}=
+  \begin{bmatrix}
+    c_{t,p} & -s_{t,p}\\
+    s_{t,p} &  c_{t,p}
+  \end{bmatrix},
+  \qquad
+  \widetilde u_{t,p}=R_{t,p}(\Pi u_t)_p.
+  \label{eq:pair-native-rope}
+\end{equation}
+The epilogue applies Equation~\ref{eq:pair-native-rope} to the rounded Q/K
+register fragment and then forms every consumer representation from that
+rotated fragment:
+\begin{align}
+  \widetilde Q_R&=\mathcal R_t(\Pi Q_R),
+  &C_Q&=Q_{\mathrm{E2M1}}(m^Q_h\widetilde Q_R),\\
+  \widetilde K_R&=\mathcal R_t(\Pi K_R),
+  &C_K&=Q_{\mathrm{E2M1}}(m^K_h\widetilde K_R).
+  \label{eq:projection-rope-then-quantize}
+\end{align}
+Consequently the optional BF16 Q/K tensors, forward score operands, and all
+backward Q/K byte layouts represent the same rotated operator.  V is not
+modified.  The packed implementation evaluates both coordinates with one
+BF16x2 multiply and one BF16x2 fused multiply-add; this deliberately accepts
+one additional BF16 rounding at the already-BF16 publication boundary rather
+than expanding every live pair into FP32 registers.
+
+Attention backward returns derivatives with respect to the rotated tensors.
+Before projection dgrad or weight-gradient GEMMs, each Q/K pair is mapped
+back to the pair-native projection output by
+\begin{equation}
+  d(\Pi u_t)_p=R_{t,p}^{\mathsf T}d\widetilde u_{t,p}.
+  \label{eq:inverse-rope-gradient}
+\end{equation}
+The reference implementation applies Equation~\ref{eq:inverse-rope-gradient}
+in-place to the Q and K fields of the interleaved BF16
+$[dQ\mid dK\mid dV]$ tensor; dV is bit-preserved.  A model may keep Q/K
+weights and their optimizer state in pair-native row order.  Export to a
+split-half checkpoint requires only the inverse row permutation $\Pi^{\mathsf
+T}$.
+
+A projection-dgrad specialization now fuses the same inverse map into its
+delayed-scale NVFP4 operand producer.  For a 16-value projection-input block
+$b$, it publishes
+\begin{equation}
+  C^{\nabla,4}_{t,b}
+  =Q_{\mathrm{E2M1}}\!\left(
+    \frac{\mathcal R_t^{\mathsf T}
+      [d\widetilde Q_t\mid d\widetilde K_t\mid dV_t]_b}
+         {g_\nabla s^\nabla_{t,b}}
+  \right),
+  \label{eq:inverse-rope-gradient-nvfp4-handoff}
+\end{equation}
+where $\mathcal R_t^{\mathsf T}$ acts on Q/K pairs and is the identity on V.
+The transform occurs after the attention boundary's BF16 rounding and before
+local amax selection, so its E2M1 payload and scale page are bit-exact with
+the reference sequence ``inverse RoPE, then NVFP4 quantize.''  An optional
+store republishes the inverse-rotated BF16 tile for projection weight-gradient
+consumers.  That store preserves the reference bits and is not a performance
+penalty in the measured kernel: its asynchronous BF16 publication overlaps
+the packing tail.  Both forms are retained, with republication selected when
+projection weight-gradient consumers require the inverse-rotated BF16 tile.
+
+\subsection{One Q/K payload shared by forward and backward}
+
+For a BF16-rounded Q register slice $Q_R$ and its head multiplier $m^Q_h$, the
+epilogue computes
+\begin{equation}
+  C_Q=Q_{\mathrm{E2M1}}(m^Q_hQ_R).
+  \label{eq:projection-epilogue-q}
+\end{equation}
+The same codes are rearranged into:
+\begin{align}
+  \mathcal L_{Q,\mathrm{seq}}(C_Q)
+    &\in\mathrm{uint8}^{B\times H\times192\times S},\\
+  \mathcal L_{Q,\mathrm{depth}}(C_Q)
+    &\in\mathrm{uint8}^{B\times H\times S\times96}.
+  \label{eq:q-layout-functions}
+\end{align}
+For K it independently forms $C_K=Q_{\mathrm{E2M1}}(m^K_hK_R)$ and publishes
+\begin{align}
+  \mathcal L_{K,\mathrm{aligned}}(C_K)
+    &\in\mathrm{uint8}^{B\times S\times H\times192},\\
+  \mathcal L_{K,\mathrm{depth}}(C_K)
+    &\in\mathrm{uint8}^{B\times H\times S\times96}.
+  \label{eq:k-layout-functions}
+\end{align}
+The compact tensors $\mathcal L_{Q,\mathrm{depth}}$ and
+$\mathcal L_{K,\mathrm{depth}}$ are the storage allocation, not copies made
+for backward.  Forward obtains typed E2M1 views of the same bytes while
+backward consumes uint8 views.  The forward scale hierarchy is
+\begin{align}
+  s^{Q}_{\mathrm{local}}=s^{K}_{\mathrm{local}}&=448,\\
+  g^Q_h&=\frac{1}{448m^Q_h},\qquad
+  g^K_h=\frac{1}{448m^K_h},\\
+  \widehat Q_R=g^Q_hs^Q_{\mathrm{local}}C_Q&=\frac{C_Q}{m^Q_h},\qquad
+  \widehat K_R=g^K_hs^K_{\mathrm{local}}C_K=\frac{C_K}{m^K_h}.
+  \label{eq:shared-qk-forward-reconstruction}
+\end{align}
+Thus forward and backward consume one represented Q/K operator.  There is no
+second forward payload and no conversion between the two APIs.
+
+Together with the optional BF16 Q/K store, one register slice can therefore
+emit the ordinary tensor and its consumer-specific E2M1 views.
+Aligned-U4 rows use eight E2M1 bytes followed by an eight-byte hole for every
+16 logical values.  Compact depth rows pack two E2M1 values per byte without
+those holes.
+
+The four low-precision tensors are bit-exact against the standalone
+precomputed-scale packer.  Fused and separate publication therefore have
+identical accuracy; their difference is only movement and scheduling.
+
+\subsection{Single-quantization pure-FP4 Q/K fanout}
+
+The pure-FP4 backward needs two additional compact Q/K operand views for its
+block-scaled dQ and dK instructions.  A naive unified producer first formed
+the four adaptive forward/backward views above, then quantized the same Q/K
+register fragment a second time at the pure route's fixed multiplier.  The
+aggressive specialization instead performs one fixed-scale quantization,
+\begin{equation}
+  C_X^{(16)}=Q_{\mathrm{E2M1}}(16X_R),\qquad X\in\{Q,K\},
+  \label{eq:pure-projection-single-quant}
+\end{equation}
+and fans those codes directly into every consumer layout,
+\begin{equation}
+  \mathcal B_{QK}^{\mathrm{pure}}
+  =\left\{\Pi_\ell\!\left(C_{\chi(\ell)}^{(16)}\right)\right\}_{\ell=1}^{6},
+  \qquad \chi(\ell)\in\{Q,K\}.
+  \label{eq:pure-projection-layout-fanout}
+\end{equation}
+Here the six members are the four aligned/compact score and gradient layouts
+shared with the ordinary API plus the compact dQ/dK matrix operands.  The
+layout maps $\Pi_\ell$ change byte placement only; no member requantizes the
+fragment.  The fixed representation also removes the adaptive seven-word
+head record from this specialization.  Its forward scale hierarchy is
+\begin{equation}
+  s^Q_{\mathrm{local}}=s^K_{\mathrm{local}}=448,
+  \qquad g^Q=g^K=\frac{1}{448\cdot16},
+  \label{eq:pure-projection-forward-scales}
+\end{equation}
+while the compact backward dQ/dK operands need no materialized scale tensors.
+All six payloads and the forward scale pages are bit-exact against the
+standalone fixed-scale publisher.  This is an intentionally pure-only
+contract: adaptive FP4+FP8 continues to use the robust per-head record.
+
+\subsection{Projection-native MXFP4 V}
+
+For the BF16-rounded projection fragment, define the two-dimensional tile
+$T_{u,v}=\{(t,d):32u\le t<32(u+1),\ 32v\le d<32(v+1)\}$.  The retained
+MXFP4 policy forms one E8M0 scale for the complete tile,
+\begin{align}
+  s^V_{u,v}&=Q_{\mathrm{E8M0}}\!\left(
+    \frac{\max_{(t,d)\in T_{u,v}}|V_{R,t,d}|}{6}
+  \right),\\
+  C^V_{t,d}&=Q_{\mathrm{E2M1}}\!\left(
+    \frac{V_{R,t,d}}{s^V_{u,v}}
+  \right),\qquad
+  \widehat V_{t,d}=s^V_{u,v}C^V_{t,d}.
+  \label{eq:projection-native-v}
+\end{align}
+The scale is repeated into the thirty-two hardware $1\times32$ scale records
+inside $T_{u,v}$.  The same codes and scale are then written in both the
+feature-major layout required by forward PV and the row-major layout required
+by backward dP.  Therefore
+\begin{equation}
+  \mathcal B^{V}_{\mathrm{bwd}}
+  =\Pi_{SD}\!\left(\mathcal B^{V}_{\mathrm{fwd}}\right),
+  \label{eq:mxfp4-v-transpose-consistency}
+\end{equation}
+with no independent row-scale selection after the transpose.  This removes
+the BF16 V reread and standalone row-to-column packing from forward setup and
+makes the two MXFP4 consumers observe one represented V operator.  The legacy
+$1\times32$ policy remains available only as an explicit diagnostic.
+
+The complete optional publication contract is
+\begin{equation}
+  \mathcal B_{QKV}=
+  \left\{
+    C_Q,C_K,s^Q,g^Q,s^K,g^K,C^V,s^V,
+    \mathcal L_{Q,\mathrm{seq}},\mathcal L_{K,\mathrm{aligned}},
+    m^Q_h,m^K_h
+  \right\}
+  \cup
+  \left\{Q_{\mathrm{BF16}},K_{\mathrm{BF16}},V_{\mathrm{BF16}}\right\}_{\mathrm{optional}}.
+  \label{eq:unified-qkv-bundle}
+\end{equation}
+When every downstream consumer accepts $\mathcal B_{QKV}$, disabling the
+three BF16 stores avoids $BSH(192+192+128)\cdot2=BSH\cdot1024$ bytes of
+global publication.
+
+\subsection{Scale ownership at the composed D64 boundary}
+
+The projection epilogue also publishes E4M3 Q, K, and V for attention
+backward.  These are deliberately independent of the forward FP4 multipliers
+$m^Q_h$ and $m^K_h$.  Let $\lambda=2^2=4$ be the fixed E4M3 publication
+factor and let $G=dO$ denote the loss-scaled upstream gradient.  Backward
+consumes
+\begin{equation}
+  Q'=\lambda Q,\qquad K'=\lambda K,\qquad
+  V'=\lambda V,\qquad G'=\lambda G,
+  \label{eq:d64-fixed-fp8-publication}
+\end{equation}
+and compensates the score product with
+\begin{equation}
+  \alpha'=\frac{\alpha}{\lambda^2}=\frac{\alpha}{16}.
+  \label{eq:d64-fixed-fp8-score-scale}
+\end{equation}
+The represented softmax is consequently unchanged.  Applying the chain rule
+in encoded units gives
+\begin{equation}
+  dV'=\lambda dV,\qquad dP'=\lambda^2dP,\qquad
+  dQ'=\lambda dQ,\qquad dK'=\lambda dK.
+  \label{eq:d64-fixed-fp8-gradient-units}
+\end{equation}
+If dynamic loss scaling contributes $L$, inverse RoPE and the QKV projection
+consume each attention-gradient field with $1/(\lambda L)$.  Optional
+calibration gains $c_Q,c_K,c_V$ remain field-local,
+\begin{equation}
+  \bar dQ=\frac{c_Q}{\lambda L}R^{\mathsf T}dQ',\qquad
+  \bar dK=\frac{c_K}{\lambda L}R^{\mathsf T}dK',\qquad
+  \bar dV=\frac{c_V}{\lambda L}dV'.
+  \label{eq:d64-field-local-gradient-decode}
+\end{equation}
+The default is $c_Q=c_K=c_V=1$.  A forward probability approximation does
+not implicitly own these gains: any non-unit correction must be exported by
+the topology and validated per field.  In particular, a historical common
+0.632 multiplier is not inferred from the softmax mode because it suppresses
+Q/K/V gradient norms without changing the output-projection weight gradient.
+
+\subsection{Adaptive scale production remains a contract}
+
+Outside the fixed-scale pure specialization, the fused epilogue
+\emph{consumes} the seven-word per-head scale record; it does not calculate
+Equation~\ref{eq:head-stats} from its distributed output tiles.  A true
+same-launch amax/RMS reduction would need cross-CTA completion before earlier
+Q/K tiles could be finalized, defeating the simple streaming epilogue.
+
+The current API consequently exposes three legal scale sources:
+
+\begin{enumerate}
+  \item the standalone robust Q/K reduction, used for validation;
+  \item precomputed device-resident scales from an upstream producer or
+  calibration policy;
+  \item a future learned-projection epilogue with a delayed, pipelined, or
+  model-defined scale contract.
+\end{enumerate}
+
+Current projection validation derives the record from BF16 reference Q/K
+before timing the projection hot stage.  The measured epilogue is real, but
+this detail prevents interpreting its timing as a solved same-step adaptive
+scale reduction.  An integrated model must state how $m^Q_h$ and $m^K_h$ are
+supplied.
+
+\subsection{Upstream low-precision dO contract}
+
+The backward also needs two MXFP4 orientations of the output gradient
+$G=dO$ and the softmax centering term.  For row blocks $b_r$ and transposed
+column blocks $b_c$, the producer emits
+\begin{align}
+  C^{G,r}_{i,b_r}&=Q_{\mathrm{E2M1}}
+    \!\left(G_{i,b_r}/s^{G,r}_{i,b_r}\right),\\
+  C^{G,c}_{d,b_c}&=Q_{\mathrm{E2M1}}
+    \!\left(G^{\mathsf T}_{d,b_c}/s^{G,c}_{d,b_c}\right),\\
+  \delta_i&=\sum_{d=1}^{128}O_{i,d}G_{i,d}.
+  \label{eq:upstream-dout-contract}
+\end{align}
+One fused producer reads dO once and publishes both code/scale orientations
+and $\delta$.  This is the upstream boundary used by the all-MX experiments;
+the separate row quantizer, column quantizer, and delta kernel remain only as
+a bit-exact diagnostic reference.
+
+\subsection{Probability replay boundary}
+
+Within one backward iteration, the retained route reuses the represented
+E4M3 probability produced for dV when forming dS rather than reevaluating the
+exponential.  If $C^P$ denotes that code,
+\begin{equation}
+  \widehat{dS}_{ij}=\widehat P_{ij}
+    \left(\widehat{dP}_{ij}-\delta_i\right),\qquad
+  \widehat P_{ij}=s^P_{ij}C^P_{ij}.
+  \label{eq:represented-p-replay}
+\end{equation}
+This is a local register/TMEM reuse contract, not an HBM cache.  Caching a
+complete MXFP4 probability matrix across forward and backward would require
+\begin{equation}
+  M_P=\frac{BHS^2}{2}
+      +BH\left(\frac{S}{128}\right)^2(32\cdot16)
+      \quad\text{bytes}
+  \label{eq:probability-cache-bytes}
+\end{equation}
+for payload plus scale pages.  At S8192/H8 this is approximately 272 MiB, so
+the write/read traffic overwhelms the measured local replay saving.
+
+\subsection{Reduction-width dispatch}
+
+Publication cost is controlled by projection reduction depth $K$, not by head
+count in isolation.  With only four K256 steps at K1024, one consumer
+warpgroup cannot hide BF16 rounding, E2M1 conversion, transpose, and four
+global layouts behind the tensor producer.  The separate 32-register packer
+spreads that work over a wider CTA grid.  With twelve or more K256 steps,
+publication hides under the MMA pipeline and avoiding the BF16 HBM reread is
+decisive.
+
+The legacy Q/K-only public dispatcher therefore selects
+\begin{equation}
+  \operatorname{publish}(K)=
+  \begin{cases}
+    \text{NVFP4 projection + parallel packer},&K<3072,\\
+    \text{fused register-epilogue publication},&K\ge3072.
+  \end{cases}
+  \label{eq:projection-dispatch}
+\end{equation}
+Both paths return one \code{B300AdaptiveLowpOperands} object and identical
+layout bits.
+
+The unified QKV entry point always uses the fused projection epilogue because
+V publication and optional BF16 suppression are part of the single producer
+contract.  Its projection scratch aliases the Q/K code staging region with
+the V BF16-pair staging region: they are disjoint in lifetime.  This reduces
+static scratch from 10,704 to 8,592 bytes without changing the hot backward
+kernel.
+
+\subsection{Projection backward}
+
+For the PyTorch weight convention in Equation~\ref{eq:learned-projections-summary},
+the input-gradient contribution is
+\begin{equation}
+  dX=dQW_Q+dKW_K+dVW_V.
+  \label{eq:projection-dgrad}
+\end{equation}
+The first integration writes fully reduced BF16 gradients into one per-head
+buffer ordered as $[dQ_{192},dK_{192},dV_{128}]$.  A persistent weight packing
+step stores $[W_Q,W_K,W_V]$ in the matching order.  One, two, or four
+head-contiguous GEMMs consume the buffer, selected by shape, without three
+standalone gradient tensors or an explicit concatenation.
+
+The newer dQ path joins readiness to the projection reduction loop.  Let
+$r$ index a 256-row projection tile, $h$ a head, and $o$ a causal K/V-owner
+cluster.  Each of the two CTAs in owner $o$ publishes one release increment
+only after all four reducer warps have retired their BF16 TMA reductions and
+ordered the async proxy:
+\begin{align}
+  a_{h,t} &\leftarrow a_{h,t}+1,\qquad
+  \mathrm{ready}(h,t,r)\iff a_{h,t}\ge 2(r+1),\\
+  t&\in\{2r,2r+1\}.
+  \label{eq:dq-head-arrival}
+\end{align}
+The factor $2(r+1)$ is the exact number of contributing CTAs for either
+128-row half of causal row pair $r$.  A device-scope acquire poll is placed
+immediately before the first K64 slice of each head, not before the complete
+projection tile.  The projection accumulator therefore evaluates
+\begin{equation}
+  dX_{R,C}=\sum_{h=0}^{H-1}\sum_{j=0}^{2}
+    dQ_{R,h,64j:64(j+1)}
+    W_{Q,C,h,64j:64(j+1)}^{\mathsf T},
+  \label{eq:head-pipelined-dq-projection}
+\end{equation}
+waiting for head $h$ only when its first $j=0$ slice reaches the load
+producer.  This is a reduction-topology integration: readiness is part of the
+K loop, rather than a whole-row gate in front of GEMM.
+
+Two FP32 TMEM accumulators alternate output tiles.  While the epilogue drains
+slot $p$ to BF16, the tensor warpgroup issues the next output into slot
+$p\oplus1$.  This removes the former MMA--epilogue serialization without
+allocating TMEM inside the attention kernel; the projection kernel owns all
+512 of its own TMEM columns.  The consumer remains at 80 registers with zero
+spills, and the attention specialization remains at 128 registers with zero
+spills.
+
+A bounded early grid is necessary so projection does not displace the
+attention owner grid.  For wide outputs, that bounded grid cannot expand when
+attention retires, so an experimental split computes a ready row prefix with
+the persistent consumer and a disjoint suffix with the vendor GEMM:
+\begin{equation}
+  dX=\begin{bmatrix}
+    \mathcal P_{\theta}(dQ_{0:R},W_Q)\\
+    \mathrm{GEMM}(dQ_{R:S},W_Q)
+  \end{bmatrix}.
+  \label{eq:dq-projection-tail-split}
+\end{equation}
+The two streams write disjoint rows.  At S8192/H8 the all-persistent route now
+slightly beats attention plus cuBLAS.  H16/H24/H64 still favor the ordinary
+BF16 reduction followed by the vendor GEMM, so the public entry point
+shape-dispatches to that non-regressing fallback unless the pipelined route is
+explicitly forced for profiling.
+
+\subsection{Absorbing a hierarchical dQ sum}
+
+The next experiment removes the \emph{completed} standalone dQ tensor from
+the projection contract.  Partition K/V owners by parity and define two BF16
+reduction lanes
+\begin{equation}
+  dQ^{(\ell)}=\sum_{o:\,o\bmod2=\ell}dQ^{(o)},\qquad
+  dQ=dQ^{(0)}+dQ^{(1)}.
+  \label{eq:dq-two-lane-hierarchy}
+\end{equation}
+The attention reducer publishes each owner into its compile-time-selected
+lane.  Projection then exploits linearity:
+\begin{align}
+  dX_Q
+    &=\left(dQ^{(0)}+dQ^{(1)}\right)W_Q\\
+    &=dQ^{(0)}W_Q+dQ^{(1)}W_Q.
+  \label{eq:dq-hierarchy-projection}
+\end{align}
+Both lane products accumulate into the same FP32 TMEM output.  No kernel ever
+constructs or consumes a global BF16 array equal to $dQ$.  The ordinary
+one-lane producer is a separate template instantiation, so hierarchy indexing
+does not add a modulo or branch to the retained path.
+
+The construction is numerically sound but does not improve time.  At
+S8192/H8, attention plus cuBLAS measured 0.773824~ms and the two-lane consumer
+0.805888~ms, a 32.064~$\mu$s loss, with dX cosine 0.99999422.  At S4096/H24,
+the corresponding times were 0.736000~ms and 1.063392~ms, a
+327.392~$\mu$s loss, with cosine 0.99999648.  Both projection specializations
+compile at 80 registers, two barriers, and zero spills.
+
+Equation~\ref{eq:dq-hierarchy-projection} duplicates the complete weight MMA.
+A second implementation instead formed $dQ^{(0)}+dQ^{(1)}$ in shared memory
+before one MMA.  Scalar and packed-BF16 serial folds took approximately 2.68
+and 2.33~ms.  Moving the fold to idle producer warps and using explicit
+128-bit shared transfers improved it to 0.860608~ms at S8192/H8, but remained
+slower than the two-MMA form.  The tensor-native hierarchy is therefore kept
+only as an opt-in structural diagnostic.
+
+This distinction matters: the experiment eliminates a completed BF16 dQ
+\emph{tensor}, but not BF16 global partial traffic.  The producer still emits
+the same number of values, split across two arrays, and projection pays either
+an additional weight product or an explicit fold.  A winning hierarchy must
+also change the pre-publication representation:
+\begin{equation}
+  \text{owner partials}
+  \xrightarrow{\text{on-chip grouping or compact FP8/FP4}}
+  \text{projection reduction}.
+  \label{eq:dq-winning-hierarchy-contract}
+\end{equation}
+A winning path performs Equation~\ref{eq:dq-winning-hierarchy-contract}
+without a BF16 dQ round trip.  An on-chip super-owner can reduce several K/V
+owners before one global write.
+Alternatively, compact low-precision partials can make repeated projection
+products proportional to the higher FP8/FP4 tensor rate.  Reversing the whole
+kernel to q-centric ownership completes dQ locally but transfers the global
+reduction to the combined 320 dK/dV features rather than the 192 dQ features,
+so it is not the preferred next topology.
+
+\subsection{Stacked low-precision QKV-gradient handoff}
+
+The final experiment combines the three projection-gradient fields before one
+NVFP4 projection.  Let $R_t^{\mathsf T}$ apply inverse RoPE to one Q or K
+head at token $t$.  For the two-lane diagnostic, the row presented to the
+quantizer is
+\begin{equation}
+  G_t^{(2)}=
+  \left[
+    R_t^{\mathsf T}\!\left(dQ_t^{(0)}+dQ_t^{(1)}\right)
+    \;\middle|\;
+    R_t^{\mathsf T}dK_t
+    \;\middle|\;
+    dV_t
+  \right].
+  \label{eq:stacked-qkv-gradient-row}
+\end{equation}
+The producer loads a K128 tile, assigns its two K64 halves to independent row
+groups, performs the dQ lane addition and inverse rotations in registers, and
+chooses one delayed-scale NVFP4 representation per K16 block:
+\begin{align}
+  s^G_{t,b}
+    &=Q_{\mathrm{E4M3}}\!\left(
+      \frac{\max_{k\in b}|G^{(2)}_{t,k}|}{6\bar g_G}
+    \right),\\
+  C^G_{t,k}
+    &=Q_{\mathrm{E2M1}}\!\left(
+      \frac{G^{(2)}_{t,k}}{\bar g_Gs^G_{t,b}}
+    \right),\qquad
+  \widehat G_{t,k}=\bar g_Gs^G_{t,b}C^G_{t,k}.
+  \label{eq:stacked-qkv-gradient-nvfp4}
+\end{align}
+With the correspondingly stacked persistent weight
+$W_\Sigma=[W_Q^{\mathsf T},W_K^{\mathsf T},W_V^{\mathsf T}]^{\mathsf T}$,
+one projection computes
+\begin{equation}
+  \widehat{dX}_{t,j}
+  =\bar g_Gg_W\sum_b
+    \mma_{\mathrm{E2M1}}\!\left(
+      C^G_{t,b},C^W_{j,b};s^G_{t,b},s^W_{j,b}
+    \right).
+  \label{eq:stacked-qkv-gradient-projection}
+\end{equation}
+This form avoids a completed dQ array, but enabling per-tile readiness changes
+the attention schedule.  Even a one-lane signaling control slows the attention
+kernel.  The retained activation-only variant therefore uses the ordinary
+unsignaled BF16 dQ endpoint and replaces $dQ^{(0)}+dQ^{(1)}$ in
+Equation~\ref{eq:stacked-qkv-gradient-row} by completed $dQ$.  It still fuses
+inverse RoPE, three-field layout conversion, local scaling, and packing before
+the single NVFP4 projection.  It does \emph{not} remove BF16 dQ
+materialization, and it does not provide the BF16 QKV tensor required by the
+projection weight-gradient GEMM.  The two contracts are therefore reported
+separately rather than treating the activation-only result as a complete
+training step.
+
+\subsection{Compact NVFP4 dQ handoff}
+
+A second implementation changes the representation at the final
+attention--projection boundary without changing the owner reduction.  Let
+$D=dQ_{\mathrm{complete}}$ be the private BF16 reduction scratch and let
+$\bar g_D$ be a device-resident NVFP4 decode scale supplied by calibration or
+a previous step.  For each K16 block $b$, the producer forms
+\begin{align}
+  s^D_{i,b}
+    &=Q_{\mathrm{E4M3}}\!\left(
+      \frac{\max_{k\in b}|D_{ik}|}{6\bar g_D}
+    \right),\\
+  C^D_{ik}
+    &=Q_{\mathrm{E2M1}}\!\left(
+      \frac{D_{ik}}{\bar g_Ds^D_{i,b}}
+    \right),
+  \qquad
+  \widehat D_{ik}=\bar g_Ds^D_{i,b}C^D_{ik}.
+  \label{eq:compact-dq-nvfp4}
+\end{align}
+The matrix-wide amax pass is absent from this hot path.  With a persistently
+packed projection weight
+$\widehat W_{jk}=g_Ws^W_{j,b}C^W_{jk}$, the consumer evaluates
+\begin{equation}
+  \widehat{dX}_{Q,ij}
+  =\bar g_Dg_W\sum_b
+    \mma_{\mathrm{E2M1}}\!\left(
+      C^D_{i,b},C^W_{j,b};s^D_{i,b},s^W_{j,b}
+    \right).
+  \label{eq:compact-dq-nvfp4-projection}
+\end{equation}
+The public result contains $\widehat{dX}_Q$, dK, and dV; standalone dQ is not
+returned.  The generic NVFP4 consumer uses M256$\times$N256 output tiles,
+K256 reduction steps, a two-CTA cluster, FP32 TMEM accumulation, and one BF16
+output rounding.  It compiles at 86 registers with two barriers and no spills.
+
+This is a compact \emph{final-tile} handoff, not yet a compact owner-partial
+reduction.  The unclustered attention owners still require an additive BF16
+TMA target, so $D$ exists as private scratch until the last owner completes:
+\begin{equation}
+  \{dQ^{(o)}\}_o
+  \xrightarrow{\mathrm{BF16\ TMA\ reduction}}
+  D
+  \xrightarrow{Q_{\mathrm{NV4}}}
+  (C^D,s^D,\bar g_D)
+  \xrightarrow{\mathrm{NV4\ projection}}
+  \widehat{dX}_Q.
+  \label{eq:compact-dq-current-boundary}
+\end{equation}
+It nevertheless measures whether compact projection consumption can repay its
+conversion.  Delayed scale overestimates from $1\times$ through $8\times$ the
+same-step ideal preserve approximately 0.99098 cosine because the local K16
+scales renormalize the blocks.  Underestimates clip: $0.5\times$, $0.25\times$,
+and $0.125\times$ give approximately 0.9905, 0.9849, and 0.9637 cosine.
+Consequently a conservative delayed policy is viable; a winning fused owner
+scheme must still publish tile-ready codes or quantize inside a super-owner.
+
+\subsection{The new ceiling}
+
+Unified projection publication removes three previously exposed costs:
+\begin{equation}
+  \text{BF16 Q/K/V HBM publication}
+  \rightarrow
+  \text{Q/K/V HBM reread}
+  \rightarrow
+  \text{standalone pack/transpose/quantize}.
+  \label{eq:removed-qk-roundtrip}
+\end{equation}
+It does not remove the global dQ reduction.  A timing-only attention run that
+suppressed dQ publication reached approximately 0.693 ms at S8192/H8, versus
+0.746 ms for the direct-BF16 endpoint.  The head-pipelined route now
+participates in readiness and reduction scheduling, but still reads the
+globally materialized BF16 sum.  Reaching the remaining floor requires
+projection backward to absorb the hierarchical sum before that publication,
+not merely observe it earlier.  The two-lane experiment shows more precisely
+that absorbing only the \emph{last addition} is also insufficient: owner
+grouping or compact publication must remove the BF16 producer traffic at the
+same time.

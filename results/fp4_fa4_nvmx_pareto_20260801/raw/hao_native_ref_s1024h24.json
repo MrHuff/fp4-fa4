@@ -1,0 +1,37 @@
+{
+  "correctness": {
+    "hao_fp8_vs_bf16_lse": {
+      "cosine": 0.9999982714653015,
+      "max_abs": 0.06614875793457031,
+      "mean_abs": 0.010849075391888618,
+      "rmse": 0.013732234947383404
+    },
+    "hao_fp8_vs_bf16_output": {
+      "cosine": 0.9899502992630005,
+      "max_abs": 0.0966796875,
+      "mean_abs": 0.005715798120945692,
+      "rmse": 0.007299644872546196
+    }
+  },
+  "protocol": {
+    "factory": "HAO create_nvfp4_attention_tensors",
+    "rep_ms": 5000,
+    "seed": 0,
+    "timer": "triton.testing.do_bench median",
+    "warmup_ms": 500
+  },
+  "shape": {
+    "batch": 1,
+    "dim": 128,
+    "heads": 24,
+    "seqlen": 1024
+  },
+  "tflops": {
+    "hao_native_bf16": 222.2147883197742,
+    "hao_native_nvfp4_fp8pv": 215.09250688451965
+  },
+  "timing_ms": {
+    "hao_native_bf16": 0.05798399820923805,
+    "hao_native_nvfp4_fp8pv": 0.05990400165319443
+  }
+}

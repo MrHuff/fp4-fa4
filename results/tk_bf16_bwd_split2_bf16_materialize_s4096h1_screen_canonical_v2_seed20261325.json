@@ -1,0 +1,558 @@
+{
+  "base_harness": "/workspace/codebases/pv/fp4_matmul/results/tk_bf16_bwd_s65536h128_harness.py",
+  "base_harness_sha256": "63e19fde901d714168c663ecee7f11d65081d903541d3871c1c8b52f79431db3",
+  "cast_alloc_vs_cute": [
+    {
+      "finite": true,
+      "max_abs": 0.008238554000854492,
+      "name": "dq",
+      "rel_l2": 0.0028500817716121674
+    },
+    {
+      "finite": true,
+      "max_abs": 0.015625,
+      "name": "dk",
+      "rel_l2": 0.0031739550177007914
+    },
+    {
+      "finite": true,
+      "max_abs": 0.015625,
+      "name": "dv",
+      "rel_l2": 0.000343397434335202
+    }
+  ],
+  "cast_alloc_vs_preallocated": [
+    {
+      "finite": true,
+      "max_abs": 0.0,
+      "name": "dq",
+      "rel_l2": 0.0
+    },
+    {
+      "finite": true,
+      "max_abs": 0.0,
+      "name": "dk",
+      "rel_l2": 0.0
+    },
+    {
+      "finite": true,
+      "max_abs": 0.0,
+      "name": "dv",
+      "rel_l2": 0.0
+    }
+  ],
+  "cast_dkdv_correctness_pass": true,
+  "cast_preallocated_vs_cute": [
+    {
+      "finite": true,
+      "max_abs": 0.008238554000854492,
+      "name": "dq",
+      "rel_l2": 0.0028500817716121674
+    },
+    {
+      "finite": true,
+      "max_abs": 0.015625,
+      "name": "dk",
+      "rel_l2": 0.0031739550177007914
+    },
+    {
+      "finite": true,
+      "max_abs": 0.015625,
+      "name": "dv",
+      "rel_l2": 0.000343397434335202
+    }
+  ],
+  "command": [
+    "results/tk_bf16_bwd_split2_bf16_materialize_harness.py",
+    "screen",
+    "--extension",
+    "results/.artifacts/tk_bf16_bwd_s8192h8_persistent_v_branchless/_C.cpython-312-aarch64-linux-gnu.so",
+    "--seqlen",
+    "4096",
+    "--heads",
+    "1",
+    "--seed",
+    "20261325",
+    "--output",
+    "results/tk_bf16_bwd_split2_bf16_materialize_s4096h1_screen_canonical_v2_seed20261325.json"
+  ],
+  "complete": true,
+  "correctness_pass": true,
+  "created_at_utc": "2026-07-17T00:37:02.498227+00:00",
+  "cuda_visible_devices": "1",
+  "cwd": "/workspace/codebases/pv/fp4_matmul",
+  "dq_contract_invalid": false,
+  "expected_base_harness_sha256": "63e19fde901d714168c663ecee7f11d65081d903541d3871c1c8b52f79431db3",
+  "extension": "/workspace/codebases/pv/fp4_matmul/results/.artifacts/tk_bf16_bwd_s8192h8_persistent_v_branchless/_C.cpython-312-aarch64-linux-gnu.so",
+  "extension_sha256": "46b241d0557e86c97eb411b93e71ffafa74ecaf0b798302f2532491a856f3bf9",
+  "extension_size_bytes": 10378568,
+  "full_backward_correctness_pass": true,
+  "gate_pass": true,
+  "gate_scope": "dk_dv_materialization_correctness",
+  "git_head": "d93a1ba799690017171802b20e3b898066804a8d",
+  "git_head_tree": "94ed4d4ee9cede0388fb9c8b119fa06e16e7e866",
+  "harness": "/workspace/codebases/pv/fp4_matmul/results/tk_bf16_bwd_split2_bf16_materialize_harness.py",
+  "harness_sha256": "62462b1a0840c344f046643b84c008a969bbec3c863a964b72e778d1f571534a",
+  "heads": 1,
+  "layout_gates": {
+    "allocated_matches_preallocated_bitwise": true,
+    "cast_alloc_dq_fp32_dkdv_bf16_shapes_contiguous": true,
+    "cast_preallocated_dq_fp32_dkdv_bf16_shapes_contiguous": true,
+    "cute_bf16_shapes_contiguous": true,
+    "forward_out_bf16_contiguous": true,
+    "inputs_bf16_bshd_contiguous": true,
+    "lse_raw_bhs_fp32_cuda_finite_contiguous": true,
+    "lse_tk_bsh_fp32_cuda_finite_contiguous": true,
+    "raw_fp32_shapes_contiguous": true
+  },
+  "materialization_contract": {
+    "dk": "materialized exactly once from FP32 to BF16",
+    "dq": "unchanged FP32 split-2 output",
+    "dv": "materialized exactly once from FP32 to BF16",
+    "ordering": "frontier event joins the caller stream; FP32 merge and Python casts execute on that same caller stream",
+    "primary_timing_intermediate_sync": false
+  },
+  "mode": "screen",
+  "objective_beats_cute": null,
+  "objective_evaluated": false,
+  "overall_contract_pass": null,
+  "overall_contract_scope": null,
+  "python_executable": "/workspace/codebases/poly_stuff/.venv-poly/bin/python",
+  "raw_dkdv_correctness_pass": false,
+  "raw_vs_cute": [
+    {
+      "finite": true,
+      "max_abs": 0.008238554000854492,
+      "name": "dq",
+      "rel_l2": 0.0028500817716121674
+    },
+    {
+      "finite": true,
+      "max_abs": 0.009639263153076172,
+      "name": "dk",
+      "rel_l2": 0.002861944492906332
+    },
+    {
+      "finite": true,
+      "max_abs": 0.007828235626220703,
+      "name": "dv",
+      "rel_l2": 0.0016392091056331992
+    }
+  ],
+  "retention_evaluated": false,
+  "retention_pass": null,
+  "route": "b300_mha_bwd_hot_cute16_candidate_dense_tmem_frontier_dkdv_pipelined_tmem_dq_double_buffer_split2_dq_first_internal",
+  "runtime": {
+    "cutlass_dsl": {
+      "environment_distribution_version": "4.5.2",
+      "environment_libs_base_distribution_version": "4.5.2",
+      "loaded_module_version": "4.4.1",
+      "local_artifact_distribution_version": "4.4.1",
+      "local_artifact_libs_base_distribution_version": "4.4.1",
+      "module_path": "/workspace/codebases/pv/fp4_matmul/results/.artifacts/python/nvidia_cutlass_dsl/python_packages/cutlass/__init__.py",
+      "module_sha256": "613dcd0ed17e5e684d6e52df46a60093319c6a282125125a706b151b34b772fb",
+      "module_version": "4.4.1",
+      "resolved_distribution_version": "4.5.2",
+      "resolved_libs_base_distribution_version": "4.5.2",
+      "vendored_artifact_distribution_version": "4.4.1",
+      "vendored_artifact_libs_base_distribution_version": "4.4.1"
+    },
+    "flash_attn_cute_interface": {
+      "module_path": "/workspace/codebases/pv/fp4_matmul/flash-attention/flash_attn/cute/interface.py",
+      "module_sha256": "f62d3cc9ba70534fa36cb3300bcf87432c957289e53ef165ad79d247820016ca",
+      "repository_head": "9743edaf3227a25f6afc4fa7be8b5e8498610553",
+      "repository_head_tree": "903da6ff2647802b00ac4962a8bcd19e3da60214",
+      "tracked_worktree_dirty": false
+    }
+  },
+  "schema_version": 2,
+  "scoped_diff_check_output": "",
+  "scoped_diff_check_pass": true,
+  "scoped_diff_sha256": "52978eb68fb6092f14acd6758df9b1e603dd8a899b9056535f967d21ce2bad2f",
+  "scoped_diff_size_bytes": 3735,
+  "scoped_paths": [
+    "tk_fa4/b300_bwd_cute16_candidate.cuh",
+    "tk_fa4/b300_bwd_cute16_kernel_candidate.cuh",
+    "tk_fa4/tk_fa4.cu",
+    "results/tk_bf16_bwd_split2_bf16_materialize_harness.py",
+    "results/tk_bf16_bwd_broad_sweep_20260711.md"
+  ],
+  "scoped_status": [
+    " M results/tk_bf16_bwd_broad_sweep_20260711.md",
+    "?? results/tk_bf16_bwd_split2_bf16_materialize_harness.py"
+  ],
+  "seed": 20261325,
+  "seqlen": 4096,
+  "state": "finished",
+  "tensor_contracts": {
+    "cast_alloc": {
+      "dk": {
+        "contiguous": true,
+        "device": "cuda:0",
+        "dtype": "torch.bfloat16",
+        "finite": true,
+        "shape": [
+          1,
+          4096,
+          1,
+          192
+        ],
+        "stride": [
+          786432,
+          192,
+          192,
+          1
+        ]
+      },
+      "dq": {
+        "contiguous": true,
+        "device": "cuda:0",
+        "dtype": "torch.float32",
+        "finite": true,
+        "shape": [
+          1,
+          4096,
+          1,
+          192
+        ],
+        "stride": [
+          786432,
+          192,
+          192,
+          1
+        ]
+      },
+      "dv": {
+        "contiguous": true,
+        "device": "cuda:0",
+        "dtype": "torch.bfloat16",
+        "finite": true,
+        "shape": [
+          1,
+          4096,
+          1,
+          128
+        ],
+        "stride": [
+          524288,
+          128,
+          128,
+          1
+        ]
+      }
+    },
+    "cast_preallocated": {
+      "dk": {
+        "contiguous": true,
+        "device": "cuda:0",
+        "dtype": "torch.bfloat16",
+        "finite": true,
+        "shape": [
+          1,
+          4096,
+          1,
+          192
+        ],
+        "stride": [
+          786432,
+          192,
+          192,
+          1
+        ]
+      },
+      "dq": {
+        "contiguous": true,
+        "device": "cuda:0",
+        "dtype": "torch.float32",
+        "finite": true,
+        "shape": [
+          1,
+          4096,
+          1,
+          192
+        ],
+        "stride": [
+          786432,
+          192,
+          192,
+          1
+        ]
+      },
+      "dv": {
+        "contiguous": true,
+        "device": "cuda:0",
+        "dtype": "torch.bfloat16",
+        "finite": true,
+        "shape": [
+          1,
+          4096,
+          1,
+          128
+        ],
+        "stride": [
+          524288,
+          128,
+          128,
+          1
+        ]
+      }
+    },
+    "cute": {
+      "dk": {
+        "contiguous": true,
+        "device": "cuda:0",
+        "dtype": "torch.bfloat16",
+        "finite": true,
+        "shape": [
+          1,
+          4096,
+          1,
+          192
+        ],
+        "stride": [
+          786432,
+          192,
+          192,
+          1
+        ]
+      },
+      "dq": {
+        "contiguous": true,
+        "device": "cuda:0",
+        "dtype": "torch.bfloat16",
+        "finite": true,
+        "shape": [
+          1,
+          4096,
+          1,
+          192
+        ],
+        "stride": [
+          786432,
+          192,
+          192,
+          1
+        ]
+      },
+      "dv": {
+        "contiguous": true,
+        "device": "cuda:0",
+        "dtype": "torch.bfloat16",
+        "finite": true,
+        "shape": [
+          1,
+          4096,
+          1,
+          128
+        ],
+        "stride": [
+          524288,
+          128,
+          128,
+          1
+        ]
+      }
+    },
+    "dout": {
+      "contiguous": true,
+      "device": "cuda:0",
+      "dtype": "torch.bfloat16",
+      "finite": true,
+      "shape": [
+        1,
+        4096,
+        1,
+        128
+      ],
+      "stride": [
+        524288,
+        128,
+        128,
+        1
+      ]
+    },
+    "k": {
+      "contiguous": true,
+      "device": "cuda:0",
+      "dtype": "torch.bfloat16",
+      "finite": true,
+      "shape": [
+        1,
+        4096,
+        1,
+        192
+      ],
+      "stride": [
+        786432,
+        192,
+        192,
+        1
+      ]
+    },
+    "lse_raw": {
+      "contiguous": true,
+      "device": "cuda:0",
+      "dtype": "torch.float32",
+      "finite": true,
+      "shape": [
+        1,
+        1,
+        4096
+      ],
+      "stride": [
+        4096,
+        4096,
+        1
+      ]
+    },
+    "lse_tk": {
+      "contiguous": true,
+      "device": "cuda:0",
+      "dtype": "torch.float32",
+      "finite": true,
+      "shape": [
+        1,
+        4096,
+        1
+      ],
+      "stride": [
+        4096,
+        1,
+        4096
+      ]
+    },
+    "out": {
+      "contiguous": true,
+      "device": "cuda:0",
+      "dtype": "torch.bfloat16",
+      "finite": true,
+      "shape": [
+        1,
+        4096,
+        1,
+        128
+      ],
+      "stride": [
+        524288,
+        128,
+        128,
+        1
+      ]
+    },
+    "q": {
+      "contiguous": true,
+      "device": "cuda:0",
+      "dtype": "torch.bfloat16",
+      "finite": true,
+      "shape": [
+        1,
+        4096,
+        1,
+        192
+      ],
+      "stride": [
+        786432,
+        192,
+        192,
+        1
+      ]
+    },
+    "raw": {
+      "dk": {
+        "contiguous": true,
+        "device": "cuda:0",
+        "dtype": "torch.float32",
+        "finite": true,
+        "shape": [
+          1,
+          4096,
+          1,
+          192
+        ],
+        "stride": [
+          786432,
+          192,
+          192,
+          1
+        ]
+      },
+      "dq": {
+        "contiguous": true,
+        "device": "cuda:0",
+        "dtype": "torch.float32",
+        "finite": true,
+        "shape": [
+          1,
+          4096,
+          1,
+          192
+        ],
+        "stride": [
+          786432,
+          192,
+          192,
+          1
+        ]
+      },
+      "dv": {
+        "contiguous": true,
+        "device": "cuda:0",
+        "dtype": "torch.float32",
+        "finite": true,
+        "shape": [
+          1,
+          4096,
+          1,
+          128
+        ],
+        "stride": [
+          524288,
+          128,
+          128,
+          1
+        ]
+      }
+    },
+    "v": {
+      "contiguous": true,
+      "device": "cuda:0",
+      "dtype": "torch.bfloat16",
+      "finite": true,
+      "shape": [
+        1,
+        4096,
+        1,
+        128
+      ],
+      "stride": [
+        524288,
+        128,
+        128,
+        1
+      ]
+    }
+  },
+  "thresholds": {
+    "error_limits": {
+      "dk": {
+        "max_abs": 0.05,
+        "rel_l2": 0.01
+      },
+      "dq": {
+        "max_abs": 0.05,
+        "rel_l2": 0.01
+      },
+      "dv": {
+        "max_abs": 0.02,
+        "rel_l2": 0.001
+      }
+    }
+  },
+  "timing_environment": {
+    "truthy_variables": [],
+    "values": {
+      "TK_FA4_CLUSTERED_DQ_TIMING": null,
+      "TK_FA4_SPLIT_TIMING": null
+    }
+  }
+}

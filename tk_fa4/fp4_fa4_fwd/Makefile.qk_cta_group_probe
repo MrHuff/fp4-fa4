@@ -1,0 +1,28 @@
+GPU ?= B200
+SRC := qk_cta_group_probe_candidate.cu
+EXT_SUFFIX := $(shell python3 -c "import sysconfig; print(sysconfig.get_config_var('EXT_SUFFIX'))")
+OUT ?= /tmp/_C_tk_qk_cta_group_probe$(EXT_SUFFIX)
+MODULE ?= _C_tk_qk_cta_group_probe
+CONFIG := pytorch
+CMD := true
+NVCC_THREADS ?= 2
+NVCC_SPLIT_COMPILE ?= 1
+PHYSICAL_CTAS ?= 152
+
+include ../../ThunderKittens/kernels/common.mk
+
+NVCCFLAGS += \
+	-DTK_FA4_FORWARD_ONLY_BUILD=1 \
+	-DTK_FA4_MXFP4_QK_CTA_GROUP_AB_BUILD=1 \
+	-DTK_FA4_QK_CTA_GROUP_AB_PHYSICAL_CTAS=$(PHYSICAL_CTAS) \
+	--threads $(NVCC_THREADS) \
+	--split-compile=$(NVCC_SPLIT_COMPILE) \
+	-UTORCH_EXTENSION_NAME \
+	-DTORCH_EXTENSION_NAME=$(MODULE)
+
+$(OUT): $(SRC) \
+	fwd_bf16_baseline.inc \
+	stage2_ex2_alu_helpers.cuh \
+	fwd_configs.inc \
+	fwd_device_helpers.inc \
+	fwd_mxfp4_qk_cta_group_ab_probe.inc

@@ -1,0 +1,251 @@
+{
+  "artifact_dir": "/tmp/codex-causal-forward-matrix-d4q01-s16384-20260820-v1",
+  "created_at": "2026-08-20T16:07:55.300110Z",
+  "expected_topology": {
+    "fp8": {
+      "causal": true,
+      "fixed_p_ceiling": false,
+      "pv_format": "e4m3_fp8",
+      "qk_format": "nvfp4_e4m3_block16",
+      "score_pack_ceiling": false,
+      "shiftless_fp8_mode": 0
+    },
+    "mx": {
+      "causal": true,
+      "causal_interleaved_kv": true,
+      "fixed_p_ceiling": false,
+      "mx_mode23_native_density": 4,
+      "mx_mode23_native_quarter_mask": 3,
+      "mx_stage0_affine_mask": 0,
+      "mx_stage1_affine_mask": 0,
+      "pv_format": "mxfp4_e8m0_block32",
+      "qk_format": "nvfp4_e4m3_block16",
+      "score_pack_ceiling": false
+    }
+  },
+  "git": {
+    "branch": "codex/causal-isolated-matrix-20260820",
+    "head": "3535353a2f1983ecfd9ed89d404b63403f90ea31",
+    "root": "/workspace/codebases/pv/fp4_matmul_worktrees/causal_matrix_20260820",
+    "tracked_dirty": false
+  },
+  "gpu_lock": "/tmp/fp4_fa4_causal_forward_gpu2.lock",
+  "mx_route": {
+    "causal_interleaved_kv": true,
+    "name": "d4q01",
+    "native_density": 4,
+    "native_quarter_mask": 3
+  },
+  "projection_extension": {
+    "bytes": 17423160,
+    "exists": true,
+    "path": "/workspace/codebases/pv/fp4_matmul_worktrees/causal_matrix_20260820/tk_fa4/_C_b300_lowp_bwd.cpython-312-aarch64-linux-gnu.so",
+    "sha256": "aeed2603d40290b815218cc77142ddacda0c734384429f26c0d4a6a200fbe884"
+  },
+  "python": {
+    "executable": "/workspace/codebases/poly_stuff/.venv-poly/bin/python",
+    "ext_suffix": ".cpython-312-aarch64-linux-gnu.so",
+    "include": "/usr/include/python3.12",
+    "ldversion": "3.12",
+    "libdir": "/usr/lib/aarch64-linux-gnu",
+    "pybind_includes": "-I/usr/include/python3.12 -I/usr/local/lib/python3.12/dist-packages/pybind11/include",
+    "torch_include_paths": [
+      "/usr/local/lib/python3.12/dist-packages/torch/include",
+      "/usr/local/lib/python3.12/dist-packages/torch/include/torch/csrc/api/include"
+    ],
+    "torch_library_paths": [
+      "/usr/local/lib/python3.12/dist-packages/torch/lib"
+    ],
+    "version": "3.12.3 (main, Aug 14 2025, 17:47:21) [GCC 13.3.0]"
+  },
+  "recorded_build_environment": {
+    "PYBIND_INCLUDES": "-I/usr/include/python3.12 -I/usr/local/lib/python3.12/dist-packages/pybind11/include",
+    "PYTHON_INCLUDES": "-I/usr/include/python3.12",
+    "PYTHON_LIBDIR": "-L/usr/lib/aarch64-linux-gnu",
+    "PYTHON_VERSION": "3.12",
+    "PYTORCH_INCLUDES": "-I/usr/local/lib/python3.12/dist-packages/torch/include -I/usr/local/lib/python3.12/dist-packages/torch/include/torch/csrc/api/include",
+    "PYTORCH_LIBRARY_PATHS": "/usr/local/lib/python3.12/dist-packages/torch/lib"
+  },
+  "resource_policy": {
+    "gpu_index": 2,
+    "make_jobs": 1,
+    "minimum_free_gpu_gib": 16.0,
+    "minimum_free_system_gib": 64.0,
+    "nvcc_split_compile": 1,
+    "nvcc_threads": 1,
+    "reject_existing_compute_processes": true
+  },
+  "result_dir": "/workspace/codebases/pv/fp4_matmul_worktrees/causal_matrix_20260820/results/causal_isolated_matrix_20260820/forward_matrix_d4q01_s16384",
+  "run_tag": "d4q01_s16384_20260820_v1",
+  "schema": "causal_forward_matrix_driver_v1",
+  "serialized": true,
+  "shapes": [
+    {
+      "commands": {
+        "build_fp8_exact": {
+          "argv": [
+            "/workspace/codebases/poly_stuff/.venv-poly/bin/python",
+            "/workspace/codebases/pv/fp4_matmul_worktrees/causal_matrix_20260820/tk_fa4/lowp_fa4_bwd/build_causal_gqa_fp8pv_forward.py",
+            "--sequence",
+            "16384",
+            "--q-heads",
+            "32",
+            "--kv-heads",
+            "8",
+            "--head-dim",
+            "64",
+            "--gpu",
+            "B200",
+            "--jobs",
+            "1",
+            "--nvcc-threads",
+            "1",
+            "--nvcc-split-compile",
+            "1",
+            "--probability-policy",
+            "exact",
+            "--module",
+            "_C_cfwd_fp8exact0_for_d4q01_s16384h32kv8d64_d4q01_s16384_20260820_v1",
+            "--output",
+            "/tmp/codex-causal-forward-matrix-d4q01-s16384-20260820-v1/_C_cfwd_fp8exact0_for_d4q01_s16384h32kv8d64_d4q01_s16384_20260820_v1.cpython-312-aarch64-linux-gnu.so"
+          ],
+          "artifact": "/tmp/codex-causal-forward-matrix-d4q01-s16384-20260820-v1/_C_cfwd_fp8exact0_for_d4q01_s16384h32kv8d64_d4q01_s16384_20260820_v1.cpython-312-aarch64-linux-gnu.so",
+          "cwd": "/workspace/codebases/pv/fp4_matmul_worktrees/causal_matrix_20260820",
+          "module": "_C_cfwd_fp8exact0_for_d4q01_s16384h32kv8d64_d4q01_s16384_20260820_v1",
+          "shell_rendering": "/workspace/codebases/poly_stuff/.venv-poly/bin/python /workspace/codebases/pv/fp4_matmul_worktrees/causal_matrix_20260820/tk_fa4/lowp_fa4_bwd/build_causal_gqa_fp8pv_forward.py --sequence 16384 --q-heads 32 --kv-heads 8 --head-dim 64 --gpu B200 --jobs 1 --nvcc-threads 1 --nvcc-split-compile 1 --probability-policy exact --module _C_cfwd_fp8exact0_for_d4q01_s16384h32kv8d64_d4q01_s16384_20260820_v1 --output /tmp/codex-causal-forward-matrix-d4q01-s16384-20260820-v1/_C_cfwd_fp8exact0_for_d4q01_s16384h32kv8d64_d4q01_s16384_20260820_v1.cpython-312-aarch64-linux-gnu.so",
+          "status": "pending"
+        },
+        "build_mx": {
+          "argv": [
+            "make",
+            "-B",
+            "-f",
+            "Makefile.hao_direct_fp4pv",
+            "-j1",
+            "GPU=B200",
+            "HAO_BATCH=1",
+            "HAO_SEQ_LEN=16384",
+            "HAO_HEADS=32",
+            "HAO_KV_HEADS=8",
+            "HAO_HEAD_DIM=64",
+            "HAO_NUM_SM=152",
+            "HAO_CAUSAL=1",
+            "HAO_CAUSAL_INTERLEAVED_KV=1",
+            "HAO_FP4PV_MX_POLICY=causal-accurate",
+            "HAO_FP4PV_MX_MODE23_NATIVE_DENSITY_OVERRIDE=4",
+            "HAO_FP4PV_MX_MODE23_NATIVE_QUARTER_MASK_OVERRIDE=3",
+            "HAO_EXTENSION_SYMBOLIC_BIND=1",
+            "HAO_KERNEL_SYMBOL_TAG=cfwd_mx_d4q01_i1_s16384h32kv8d64_d4q01_s16384_20260820_v1",
+            "NVCC_THREADS=1",
+            "NVCC_SPLIT_COMPILE=1",
+            "MODULE=_C_cfwd_mx_d4q01_i1_s16384h32kv8d64_d4q01_s16384_20260820_v1",
+            "OUT=/tmp/codex-causal-forward-matrix-d4q01-s16384-20260820-v1/_C_cfwd_mx_d4q01_i1_s16384h32kv8d64_d4q01_s16384_20260820_v1.cpython-312-aarch64-linux-gnu.so"
+          ],
+          "artifact": "/tmp/codex-causal-forward-matrix-d4q01-s16384-20260820-v1/_C_cfwd_mx_d4q01_i1_s16384h32kv8d64_d4q01_s16384_20260820_v1.cpython-312-aarch64-linux-gnu.so",
+          "cwd": "/workspace/codebases/pv/fp4_matmul_worktrees/causal_matrix_20260820/tk_fa4/fp4_fa4_fwd",
+          "kernel_symbol_tag": "cfwd_mx_d4q01_i1_s16384h32kv8d64_d4q01_s16384_20260820_v1",
+          "module": "_C_cfwd_mx_d4q01_i1_s16384h32kv8d64_d4q01_s16384_20260820_v1",
+          "mx_quarter_mask": 3,
+          "mx_route_name": "d4q01",
+          "shell_rendering": "make -B -f Makefile.hao_direct_fp4pv -j1 GPU=B200 HAO_BATCH=1 HAO_SEQ_LEN=16384 HAO_HEADS=32 HAO_KV_HEADS=8 HAO_HEAD_DIM=64 HAO_NUM_SM=152 HAO_CAUSAL=1 HAO_CAUSAL_INTERLEAVED_KV=1 HAO_FP4PV_MX_POLICY=causal-accurate HAO_FP4PV_MX_MODE23_NATIVE_DENSITY_OVERRIDE=4 HAO_FP4PV_MX_MODE23_NATIVE_QUARTER_MASK_OVERRIDE=3 HAO_EXTENSION_SYMBOLIC_BIND=1 HAO_KERNEL_SYMBOL_TAG=cfwd_mx_d4q01_i1_s16384h32kv8d64_d4q01_s16384_20260820_v1 NVCC_THREADS=1 NVCC_SPLIT_COMPILE=1 MODULE=_C_cfwd_mx_d4q01_i1_s16384h32kv8d64_d4q01_s16384_20260820_v1 OUT=/tmp/codex-causal-forward-matrix-d4q01-s16384-20260820-v1/_C_cfwd_mx_d4q01_i1_s16384h32kv8d64_d4q01_s16384_20260820_v1.cpython-312-aarch64-linux-gnu.so",
+          "status": "pending"
+        },
+        "run_worker": {
+          "argv": [
+            "/workspace/codebases/poly_stuff/.venv-poly/bin/python",
+            "-B",
+            "/workspace/codebases/pv/fp4_matmul_worktrees/causal_matrix_20260820/tk_fa4/lowp_fa4_bwd/benchmark_causal_forward_matrix.py",
+            "--mx-extension",
+            "/tmp/codex-causal-forward-matrix-d4q01-s16384-20260820-v1/_C_cfwd_mx_d4q01_i1_s16384h32kv8d64_d4q01_s16384_20260820_v1.cpython-312-aarch64-linux-gnu.so",
+            "--mx-module",
+            "_C_cfwd_mx_d4q01_i1_s16384h32kv8d64_d4q01_s16384_20260820_v1",
+            "--fp8-extension",
+            "/tmp/codex-causal-forward-matrix-d4q01-s16384-20260820-v1/_C_cfwd_fp8exact0_for_d4q01_s16384h32kv8d64_d4q01_s16384_20260820_v1.cpython-312-aarch64-linux-gnu.so",
+            "--fp8-module",
+            "_C_cfwd_fp8exact0_for_d4q01_s16384h32kv8d64_d4q01_s16384_20260820_v1",
+            "--sequence",
+            "16384",
+            "--q-heads",
+            "32",
+            "--kv-heads",
+            "8",
+            "--head-dim",
+            "64",
+            "--hidden",
+            "2048",
+            "--projection-format",
+            "auto",
+            "--seed",
+            "20260820",
+            "--warmups",
+            "9",
+            "--samples",
+            "41",
+            "--gpu",
+            "0",
+            "--minimum-free-gib",
+            "16.0",
+            "--causal-leakage-check",
+            "--output",
+            "/workspace/codebases/pv/fp4_matmul_worktrees/causal_matrix_20260820/results/causal_isolated_matrix_20260820/forward_matrix_d4q01_s16384/shapes/s16384_h32_kv8_d64/result.json",
+            "--projection-extension",
+            "/workspace/codebases/pv/fp4_matmul_worktrees/causal_matrix_20260820/tk_fa4/_C_b300_lowp_bwd.cpython-312-aarch64-linux-gnu.so",
+            "--projection-module",
+            "_C_b300_lowp_bwd"
+          ],
+          "cwd": "/workspace/codebases/pv/fp4_matmul_worktrees/causal_matrix_20260820",
+          "result": "/workspace/codebases/pv/fp4_matmul_worktrees/causal_matrix_20260820/results/causal_isolated_matrix_20260820/forward_matrix_d4q01_s16384/shapes/s16384_h32_kv8_d64/result.json",
+          "shell_rendering": "/workspace/codebases/poly_stuff/.venv-poly/bin/python -B /workspace/codebases/pv/fp4_matmul_worktrees/causal_matrix_20260820/tk_fa4/lowp_fa4_bwd/benchmark_causal_forward_matrix.py --mx-extension /tmp/codex-causal-forward-matrix-d4q01-s16384-20260820-v1/_C_cfwd_mx_d4q01_i1_s16384h32kv8d64_d4q01_s16384_20260820_v1.cpython-312-aarch64-linux-gnu.so --mx-module _C_cfwd_mx_d4q01_i1_s16384h32kv8d64_d4q01_s16384_20260820_v1 --fp8-extension /tmp/codex-causal-forward-matrix-d4q01-s16384-20260820-v1/_C_cfwd_fp8exact0_for_d4q01_s16384h32kv8d64_d4q01_s16384_20260820_v1.cpython-312-aarch64-linux-gnu.so --fp8-module _C_cfwd_fp8exact0_for_d4q01_s16384h32kv8d64_d4q01_s16384_20260820_v1 --sequence 16384 --q-heads 32 --kv-heads 8 --head-dim 64 --hidden 2048 --projection-format auto --seed 20260820 --warmups 9 --samples 41 --gpu 0 --minimum-free-gib 16.0 --causal-leakage-check --output /workspace/codebases/pv/fp4_matmul_worktrees/causal_matrix_20260820/results/causal_isolated_matrix_20260820/forward_matrix_d4q01_s16384/shapes/s16384_h32_kv8_d64/result.json --projection-extension /workspace/codebases/pv/fp4_matmul_worktrees/causal_matrix_20260820/tk_fa4/_C_b300_lowp_bwd.cpython-312-aarch64-linux-gnu.so --projection-module _C_b300_lowp_bwd",
+          "status": "pending"
+        }
+      },
+      "label": "s16384_h32_kv8_d64",
+      "shape": {
+        "batch": 1,
+        "gqa_ratio": 4,
+        "head_dim": 64,
+        "kv_heads": 8,
+        "q_heads": 32,
+        "sequence": 16384
+      }
+    }
+  ],
+  "sources": {
+    "driver": {
+      "bytes": 36534,
+      "exists": true,
+      "path": "/workspace/codebases/pv/fp4_matmul_worktrees/causal_matrix_20260820/tk_fa4/lowp_fa4_bwd/run_causal_forward_matrix.py",
+      "sha256": "3d90bf85c10fd1473fe0c6756667fa796574bbb8e0100a361eb9e237a9deba99"
+    },
+    "exact_builder": {
+      "bytes": 4610,
+      "exists": true,
+      "path": "/workspace/codebases/pv/fp4_matmul_worktrees/causal_matrix_20260820/tk_fa4/lowp_fa4_bwd/build_causal_gqa_fp8pv_forward.py",
+      "sha256": "a07d0b25d6154ee672a52dae09d3d5480426743f7f3a4a57986dfe447fbf7499"
+    },
+    "exact_patch": {
+      "bytes": 17298,
+      "exists": true,
+      "path": "/workspace/codebases/pv/fp4_matmul_worktrees/causal_matrix_20260820/tk_fa4/lowp_fa4_bwd/causal_gqa_fp8pv_forward.patch",
+      "sha256": "f95fe1432ca0a7031c86bcac3f59237cf60c1fa3f4892685c351ee9e4f68365a"
+    },
+    "mx_config": {
+      "bytes": 162815,
+      "exists": true,
+      "path": "/workspace/codebases/pv/fp4_matmul_worktrees/causal_matrix_20260820/tk_fa4/fp4_fa4_fwd/hao_direct_fp4pv_config.inc",
+      "sha256": "4d6b569c6b4266b9312aa58eba7eaea2317293feb42fed1441e0369a1bb9b374"
+    },
+    "mx_makefile": {
+      "bytes": 73483,
+      "exists": true,
+      "path": "/workspace/codebases/pv/fp4_matmul_worktrees/causal_matrix_20260820/tk_fa4/fp4_fa4_fwd/Makefile.hao_direct_fp4pv",
+      "sha256": "8c5081111fd22637dc148926c1a10905bb1b7fd0419dfa499608ba2ea5f42314"
+    },
+    "worker": {
+      "bytes": 39033,
+      "exists": true,
+      "path": "/workspace/codebases/pv/fp4_matmul_worktrees/causal_matrix_20260820/tk_fa4/lowp_fa4_bwd/benchmark_causal_forward_matrix.py",
+      "sha256": "31e1e98b6bb219ca425f56c6a25229ff0d8fa01a6949694d8109629e944e0bce"
+    }
+  }
+}

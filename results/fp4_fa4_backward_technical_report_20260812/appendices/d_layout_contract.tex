@@ -1,0 +1,115 @@
+\section{Operand and API Contract}
+\label{app:layout-contract}
+
+\subsection{Adaptive bundle}
+
+\begin{table}[htbp]
+\centering
+\caption{Fields in \code{B300AdaptiveLowpOperands}.}
+\label{tab:adaptive-layouts}
+\small
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+Field & Shape / dtype & Consumer \\
+\midrule
+\code{q\_fp4} & $[B,H,192,S]$ uint8 & aligned sequence-major Q for dK \\
+\code{score\_q\_fp4} & $[B,H,S,96]$ uint8 & compact Q for score/dK \\
+\code{k\_fp4} & $[B,S,H,192]$ uint8 & aligned depth K for dQ \\
+\code{score\_k\_fp4} & $[B,H,S,96]$ uint8 & compact K for score/dQ \\
+\code{qk\_scales} & $[B,H,7]$ float32 & packing, score page, dQ/dK correction \\
+\code{mixed\_v} & optional opaque tensor & reusable fixed mixed-dP V row \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Unified QKV bundle}
+
+\begin{table}[htbp]
+\centering
+\caption{Fields in \code{B300UnifiedLowpQKV}.}
+\label{tab:unified-qkv-layouts}
+\small
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+Field & Shape / dtype & Contract \\
+\midrule
+\code{q}, \code{k} & optional $[B,S,H,192]$ BF16 & ordinary publication; absent when \code{store\_bf16=False} \\
+\code{v} & optional $[B,S,H,128]$ BF16 & ordinary publication; absent when \code{store\_bf16=False} \\
+\code{backward} & \code{B300AdaptiveLowpOperands} & exact aligned and compact Q/K byte views \\
+\code{q\_forward\_scales} & $[B,S/128,3H,512]$ E4M3 & canonical local Q scale pages \\
+\code{q\_forward\_global\_scale} & $[B,H]$ FP32 & $1/(448m_h)$ \\
+\code{k\_forward\_scales} & $[B,S/64,3H,512]$ E4M3 & canonical local K scale pages \\
+\code{k\_forward\_global\_scale} & $[B,H]$ FP32 & $1/(448m_h)$ \\
+\code{v\_forward\_fp4} & $[B,H,128,S/2]$ E2M1x2 & transposed MXFP4 V payload \\
+\code{v\_forward\_scales} & $[B,H,2,S/128,32,16]$ uint8 & V E8M0 scale pages \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The typed Q/K tensors returned by \code{forward\_operands()} are views of
+\code{backward.score\_q\_fp4} and \code{backward.score\_k\_fp4}.  Their data
+pointers are identical; the API does not allocate or copy a second payload.
+
+The aligned byte containers reserve 16 bytes for every 16 logical E2M1
+values: eight packed payload bytes followed by eight zero bytes.  Compact
+depth rows reserve 96 bytes for 192 values.  The layout tensors are opaque to
+model code; consumers should pass the bundle rather than reinterpret the byte
+strides.
+
+\subsection{Public producer levels}
+
+\begin{table}[htbp]
+\centering
+\caption{Public adaptive Q/K producer interfaces.}
+\label{tab:producer-apis}
+\small
+\begin{tabularx}{\textwidth}{p{.38\textwidth}X}
+\toprule
+Interface & Contract \\
+\midrule
+\path{b300_mha_fwd_with_adaptive_lowp} &
+run attention forward while an auxiliary producer computes robust scales and
+packs Q/K \\
+\path{b300_adaptive_lowp_operands_from_scales} &
+pack BF16 Q/K with an already-available seven-word per-head record \\
+\path{b300_adaptive_lowp_operands_from_projection} &
+zero-copy validation wrapper for four layouts emitted elsewhere \\
+\path{b300_project_qk_adaptive_lowp_nvfp4} &
+run native NVFP4 learned projection and automatically choose fused or separate
+publication \\
+\path{b300_project_qkv_unified_lowp_nvfp4} &
+run one native NVFP4 QKV projection; publish shared Q/K, MXFP4 V, all backward
+Q/K views, and optionally BF16 Q/K/V \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Upstream dO bundle}
+
+The fused dO producer writes a row-major E2M1x2 tensor
+$[B,H,S,64]$, a feature-major E2M1x2 tensor $[B,H,128,S/2]$, their E8M0
+scale pages, and FP32 $\delta$ with shape $[B,H,S]$.  These tensors are an
+upstream ownership contract: backward consumes them without running another
+row quantizer, column quantizer, or dot-product kernel.
+
+\subsection{Backward endpoints}
+
+\path{b300_mha_bwd_adaptive_lowp} consumes only the retained winner route.
+Its default returns FP32 dQ for compatibility.  Setting
+\code{return\_bf16\_dq=True} returns projection-ready BF16 dQ and omits the
+widening pass.
+
+\path{b300_mha_bwd_adaptive_lowp_projection_dgrad} writes one interleaved
+BF16 $[dQ,dK,dV]$ buffer and computes Equation~\ref{eq:projection-dgrad}.
+Projection weights use PyTorch's $[\mathrm{out},\mathrm{in}]$ convention and
+are packed once in per-head $[Q_{192},K_{192},V_{128}]$ order.
+
+\subsection{Current semantic boundary}
+
+The legacy adaptive bundle still accompanies ordinary BF16 Q/K because saved
+forward values, API shape checks, and non-low-precision consumers use them.
+The unified projection can suppress BF16 Q/K/V, but doing so is legal only
+when every selected forward and backward consumer accepts the low-precision
+bundle.  The retained FP4+FP8 backward and the experimental all-MX path do not
+yet form one universal no-BF16 endpoint.  That API promotion should follow
+composed forward/backward validation rather than precede it.

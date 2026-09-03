@@ -1,0 +1,328 @@
+\section{What We Tried in Causal Training---and Why We Did Not Keep It}
+\label{app:causal-design-history}
+
+The retained method in Section~\ref{sec:causal-training} is the end of a much
+larger search.  This appendix gives the useful lessons without requiring the
+reader to follow the order in which kernels were written.  Internal version
+names appear only here and in the provenance appendix.
+
+\subsection{Projection precision and attention precision are different}
+
+The first important separation is between learned projection layers and the
+attention kernel.  QKV and output projections multiply model activations by
+learned weights; attention then consumes the resulting Q, K, and V tensors.
+Using FP4 successfully inside attention does not imply that learned weights
+and activations can use the same format.
+
+In an isolated 8B transformer block, E4M3 QKV projection had approximately
+0.0375 relative-$L_2$ error, compared with 0.1459 for NVFP4 QKV.  When the
+decoded low-precision operands were passed through exact bfloat16 attention,
+the attention-output error was already 0.3614.  The native attention kernel added only
+0.0216 relative-$L_2$ on those same represented operands.  In other words,
+most error entered before the attention kernel.  This is why the main
+experiments treat projection precision as a separate variable: E4M3 is the
+numerical control, while NVFP4 is the higher-throughput arm.  This isolated
+block does not by itself choose a final projection format.
+
+An earlier fixed-head scaling rule also failed immediately on the 8B shape.
+Replacing it with two-dimensional row-by-K16 Q/K scales reduced pre-clipping
+gradient norms from roughly 20,000 to 161--184 in the short gate and restored
+bfloat16-like behavior.  This was a representation fix, not a change to the
+matrix schedule.
+
+\subsection{Two independent backward scale failures}
+
+Backward initially produced finite tensors that were nevertheless wrong.  Two
+independent factors of 256 were involved:
+
+\begin{enumerate}
+  \item score reconstruction consumes a lifted statistic
+  $\ell_i=8-L_i\log_2(e)$, where $L_i$ is the saved natural-log LSE.  Omitting
+  $+8$ reconstructs the probability at $1/256$ of its intended scale;
+  \item the gradient-output epilogue has its own $1/256$ correction.  It is a
+  separate matrix-layout convention and must not be folded into the LSE fix.
+\end{enumerate}
+
+After those corrections, a checkpoint diagnostic exposed a different problem:
+E4M3 rounded about 97.1\% of dO values to zero.  E5M2 has fewer fraction bits
+but a wider exponent range; publishing dO in E5M2 reduced the observed zero
+fraction to about 14.4\%.  The E5M2 publisher was only 0.7--0.9\% slower than
+the E4M3 publisher in the matched gate.  This is why the final method uses two
+different FP8 formats rather than treating all 8-bit values as interchangeable.
+
+\subsection{How the native backward schedule evolved}
+
+Table~\ref{tab:causal-version-map} maps internal development labels to the
+idea each one tested.  The labels are not public method names.
+
+Some measurements apply only to predecessor schedules.  In the v501 B2 owner4
+route, dK and dV had unique writers, so only dQ required clearing at the exact
+B2/S4096 shape.  A bounded profile of that same predecessor measured 21\% warp
+occupancy, 30\% tensor activity, and 9\% external-memory activity despite 95\%
+SM activity.  The retained v509 entry point always clears its outputs; no
+equivalent performance profile exists for that final binary.  Reuse of rounded
+P, dual-layout dS publication, and early tensor-memory release remain useful
+design ideas, but predecessor counters are not evidence for final-route speed.
+
+\begin{table}[htbp]
+\centering
+\caption{Internal backward version map.}
+\label{tab:causal-version-map}
+\small
+\begin{tabularx}{\textwidth}{l p{.29\textwidth}X}
+\toprule
+Label & Main purpose & Outcome \\
+\midrule
+v416 & D64 native owner schedule & Like-for-like parity with the generated
+native-exponential reference; used in early 1.2B integration. \\
+v454/v482 & D128 B1/B2 ownership, rounded-P reuse, and early tensor-memory
+release & 1.21--1.24$\times$ faster than the matched generated reference. \\
+v501 & Corrected LSE lift, shape-specific clearing, and represented E4M3
+gradient operands & Finite short-run systems prototype and basis of the
+historical 8B bracket. \\
+v503 & Common-row MXFP4 V approximation in backward & Faster than the first
+MX attempt and tied end to end; the complete recipe failed its observed
+distributed numerical gate, but the consumer was not isolated as the cause. \\
+v506/v507 & Direct shared-MX producer and exact four-anchor consumer &
+Numerically useful controls, but too slow for the production gate. \\
+v509 & Exact forward NVFP4 score reconstruction with E5M2 dO & Retained
+quantized causal-backward implementation; exact-batch B1/B2/B4 binaries are
+validated for the Llama-style D128 shape. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+\FloatBarrier
+
+\subsection{Historical isolated backward timings}
+
+The longest matched bfloat16 sequence sweep used a generated CuTe kernel, not
+the retained implementation.  It nevertheless records how that earlier
+low-precision path scaled from 512 to 16,384 tokens.
+
+\begin{table}[htbp]
+\centering
+\caption{Historical isolated D64 causal backward on GB200.  The low-precision
+route is a generated CuTe kernel; both columns include required output clears.}
+\label{tab:d64-bf16-sweep}
+\small
+\begin{tabular}{rrrr}
+\toprule
+Sequence & Exact BF16 & Low precision & Speedup \\
+\midrule
+512   & 111.456 $\mu$s  & 102.176 $\mu$s  & 1.091$\times$ \\
+1024  & 149.504 $\mu$s  & 138.560 $\mu$s  & 1.079$\times$ \\
+2048  & 203.808 $\mu$s  & 189.632 $\mu$s  & 1.075$\times$ \\
+4096  & 347.104 $\mu$s  & 319.808 $\mu$s  & 1.085$\times$ \\
+8192  & 879.168 $\mu$s  & 770.848 $\mu$s  & 1.141$\times$ \\
+16384 & 2765.984 $\mu$s & 2621.376 $\mu$s & 1.055$\times$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+\FloatBarrier
+
+At D128, the optimized native predecessor was compared with a generated
+low-precision reference using the same represented operands.  This isolates
+scheduling improvement; it is not a low-precision-versus-BF16 comparison.
+
+\begin{table}[htbp]
+\centering
+\caption{Historical isolated D128 causal backward at S4096/Hq32/Hkv8 on
+GB200.  The native column is the v454/v482 predecessor family.}
+\label{tab:causal-backward-results}
+\small
+\begin{tabular}{lrrr}
+\toprule
+Shape & Generated reference & Native schedule & Speedup \\
+\midrule
+B1/D128 & 381.376 $\mu$s & 315.360 $\mu$s & 1.209$\times$ \\
+B2/D128, rotation A & 620.032 $\mu$s & 514.272 $\mu$s & 1.206$\times$ \\
+B2/D128, rotation B & 639.328 $\mu$s & 515.040 $\mu$s & 1.241$\times$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+\FloatBarrier
+
+\subsection{Why MXFP4 V in backward was not retained}
+
+MXFP4 P/V is attractive in forward because the isolated D128/B2 core measures
+259.072 $\mu$s, compared with 295.008 $\mu$s for FP8 P/V.  The full training
+step, however, also needs V in a layout and format suitable for dP.  The first
+MX route therefore published an MXFP4 V for forward and a second E4M3 V for
+backward, consuming most of the isolated saving before backward began.
+
+We tried to remove the second publication.  A shared-tile producer quantized
+each D32-by-S32 V tile once and wrote both physical orientations.  An exact
+four-anchor backward matched its represented oracle but took 581.632 $\mu$s,
+versus 485.376 $\mu$s for the E4M3-V control.  The faster common-row consumer
+reduced time but changed dQ/dK: cosines were about 0.989 and relative-$L_2$
+about 0.145 against the E4M3-V route.  At whole-step scale, shared MX was only
+0.194\% faster at the median and 0.102\% faster in sustained time---a tie, not
+a useful throughput result.
+
+Small S256 stochastic-rounding tests decoded MX values into E4M3 and therefore
+served only as numerical proxies; they did not exercise a packed-MX kernel or
+measure end-to-end time.  Those proxies and larger-batch checks did not change
+the final choice.  The exact MX consumer was too slow, while the complete
+approximate-consumer recipe failed the observed distributed numerical gate;
+the failure was not isolated to that consumer.  The retained training path
+therefore keeps E4M3 V views for backward and selects FP8 P/V in forward.
+
+\subsection{Historical local speed brackets}
+
+The early end-to-end brackets were valuable engineering checks, but they used
+older learned-projection formats and cut-cross-entropy (CCE), so they are not
+timings of the current dense-cross-entropy recipe.  Table
+\ref{tab:historical-local-brackets} keeps them for context.
+
+\begin{table}[htbp]
+\centering
+\caption{Historical saturated single-GPU brackets.  Each speedup is valid
+within its row group but must not be transferred to the final training recipe.}
+\label{tab:historical-local-brackets}
+\small
+\begin{tabular}{llrr}
+\toprule
+Model/shape & Attention route & Update time & Versus BF16 \\
+\midrule
+1.2B, B16/S4096 & BF16 FA4 & 673.396 ms & 1.000$\times$ \\
+ & NVFP4-QK + FP8-PV & 615.682 ms & 1.094$\times$ \\
+ & NVFP4-QK + MXFP4-PV & 614.842 ms & 1.095$\times$ \\
+\midrule
+8B, B2/S4096 & BF16 FA4 & 489.821 ms & 1.000$\times$ \\
+ & NVFP4-QK + FP8-PV & 434.014 ms & 1.129$\times$ \\
+ & NVFP4-QK + dual-published MXFP4-PV & 435.992 ms & 1.124$\times$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+\FloatBarrier
+
+The 8B FP8 and dual-published MX routes used the same backward.  Their backward
+medians differed by only 0.084 ms, while the complete MX update was 1.978 ms
+slower.  This explains the apparent paradox: an isolated MX forward kernel can
+be materially faster even though its roughly one-millisecond saving per
+32-layer model is small enough to be erased by publication and ordinary
+step-level variation.
+
+\subsection{Historical training context}
+
+The September 1 snapshot contains two FP8-P/V trajectories that remain
+non-divergent through a common 55.5-billion-token horizon.  Figure
+\ref{fig:llama8b-training-curves} includes an older bfloat16 causal-FA4 run as
+a sanity reference.  At that horizon, the one-billion-token exponential
+moving-average losses are 2.534 for E4M3 projections with FP8 P/V, 2.542 for
+NVFP4 projections with FP8 P/V, and 2.756 for the historical bfloat16 run.
+These coordinates cannot be interpreted as relative model quality: the
+bfloat16 run used a different topology, global batch, sample order, and
+history-sampling density.
+
+\begin{figure}[H]
+\centering
+\reportplot[0.27\textheight]{figures/llama8b_training_curves.pdf}
+\caption{Historical 8-billion-parameter training context through the common
+55.5-billion-token horizon.  Thin lines show downsampled training loss and
+thick lines show a causal exponential moving average with a one-billion-token
+half-life.  The FP8-P/V arms use 64-way replicated data parallelism with
+global batch 64.  The bfloat16 reference uses 32-way fully sharded data
+parallelism with global batch 32; it is not a paired control.}
+\label{fig:llama8b-training-curves}
+\end{figure}
+
+\subsection{What the distributed failures established}
+
+The first long distributed MX run combined learned NVFP4 projections, CCE,
+and the common-row MX backward, so its failure did not identify a single
+cause.  At a matched checkpoint it had loss 7.0805 versus 6.5887 for FP8 and a
+pre-clipping gradient norm of 157,696 versus 6.41.  It later exceeded 1.5
+million despite gradient clipping.
+
+The final four-arm diagnostic removed that ambiguity by crossing learned
+projection format with forward P/V format while holding the backward fixed.
+All four curves remain close through update 300 (78.6 million tokens).  The
+MXFP4 arms visibly separate near update 400 (104.9 million tokens) and are
+unambiguously split by update 500 (131.1 million tokens): loss is 7.97 for
+both MXFP4 arms, compared with 5.41 for their FP8 controls.  Both MX routes
+continue to fail under different learned-projection formats, whereas both FP8
+routes remain non-divergent through the snapshot.  Thus forward MXFP4 P/V, or
+the model state it induces, is the common separator.  This is strong
+factorial evidence, but not a formal proof that one kernel instruction causes
+divergence.
+
+\begin{table}[htbp]
+\centering
+\caption{Initial frozen rolling-log cutoff, retained for provenance.  Jobs
+began at different times, so these are status observations rather than
+aligned loss or throughput comparisons.}
+\label{tab:v509-four-arm-cutoff}
+\small
+\begin{tabular}{llrrrrl}
+\toprule
+Projections & Forward P/V & Update & Tokens & Loss & Grad norm & Status \\
+\midrule
+E4M3  & FP8   & 10,381 & 2.721B & 2.9743 & 0.2197 & working at cutoff \\
+E4M3  & MXFP4 & 10,075 & 2.641B & 8.8265 & 358,400 & diverged \\
+NVFP4 & FP8   & 10,884 & 2.853B & 3.1637 & 0.2051 & working at cutoff \\
+NVFP4 & MXFP4 & 11,061 & 2.900B & 8.4801 & 3,915,776 & diverged \\
+\bottomrule
+\end{tabular}
+\end{table}
+\FloatBarrier
+
+The old rolling-log receipt first retained bad observations near update 4020
+(1.054B tokens) for E4M3+MX and update 4722 (1.238B tokens) for NVFP4+MX.
+The complete histories in Figure~\ref{fig:llama8b-mxfp4-divergence} show that
+these were truncation markers, not onset estimates.  At the common
+55.5-billion-token horizon, the one-billion-token moving-average losses are
+8.94 and 8.18 for E4M3+MX and NVFP4+MX, compared with 2.53 and 2.54 for their
+FP8 controls; the MX gradient norms repeatedly reach the millions.  The
+redacted receipts and job identities are listed in
+Appendix~\ref{app:causal-training-provenance}.
+
+A later B4 campaign supported the same route selection at a larger effective
+batch.  The NVFP4-projection/MXFP4-PV arm diverged shortly after its initially
+matched region.  A second arm changed the learned projections to E4M3 while
+retaining MXFP4 P/V; it also developed repeated, finite gradient explosions
+and was cancelled at update 2550.  Its last completed held-out validation was
+7.4481 at update 2384.  The matched bfloat16 and
+NVFP4-projection/FP8-PV trajectories remained stable.  The two failed runs
+change projection precision but retain MXFP4 P/V, making the P/V
+representation the common factor.  This does not prove that MXFP4 is
+fundamentally unsuitable or show whether forward quantization, the saved V
+payload, or its backward use is responsible.  We therefore show the current
+B4 failure separately in Figure~\ref{fig:llama8b-b4-mxfp4-failure} rather than
+mixing it into the healthy matched-training plot.
+
+\begin{figure}[p]
+\centering
+\reportplot[0.34\textheight]{figures/llama8b_b4_mxfp4_failure.pdf}
+\caption{Matched B4 MXFP4-P/V failure diagnostic.  This arm uses E4M3 learned
+projections, NVFP4 Q/K inside attention, and MXFP4 P/V.  The top panel shows
+training and held-out validation loss; the lower panel shows the pre-clipping
+gradient norm.  The run was cancelled after update 2550 and is excluded from
+the healthy-route throughput comparison.}
+\label{fig:llama8b-b4-mxfp4-failure}
+\end{figure}
+
+\begin{figure}[p]
+\centering
+\reportplot[0.34\textheight]{figures/llama8b_mxfp4_divergence.pdf}
+\caption{Separated diagnostic for the two diverging MXFP4-P/V arms.  The top
+panel shows loss; the lower panel shows the maximum pre-clipping gradient norm
+within each 100-update display bin on a logarithmic scale.  The two FP8
+control arms are muted and use the corresponding projection formats.  The
+inset expands the first 0.55 billion tokens and qualitatively marks the
+interval between approximately 0.08 and 0.14 billion tokens in which the
+curves first separate.}
+\label{fig:llama8b-mxfp4-divergence}
+\end{figure}
+\FloatBarrier
+
+\subsection{Evidence boundary}
+
+The local brackets measure the retained backward, the complete attention
+sublayer, and a full 8B update.  The distributed histories show that the FP8
+route remains non-divergent and continues descending over the observed window,
+while the MXFP4 route does not.  The same-recipe B4 bfloat16 control provides
+same-update held-out validation and throughput through the reporting cutoff.
+Because there is one trajectory per route, these data do not support
+run-to-run variability or statistical-equivalence claims.  Input stalls and
+checkpoint windows remain in the reported throughput distribution.

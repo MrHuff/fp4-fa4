@@ -1,0 +1,118 @@
+{
+  "schema": "tkfa4.d128_e4m3_projection_canary.v1",
+  "date_utc": "2026-08-30",
+  "status": "correctness_canary_not_final_end_to_end_evidence",
+  "configuration": {
+    "model_preset": "llama3.1-8b",
+    "layers": 1,
+    "batch": 2,
+    "sequence": 4096,
+    "q_heads": 32,
+    "kv_heads": 8,
+    "head_dim": 128,
+    "seed": 20260830,
+    "warmups": 1,
+    "measured_samples": 2,
+    "learned_qkv_forward": "e4m3",
+    "learned_o_forward": "e4m3",
+    "attention_qk": "nvfp4_per_row_k16",
+    "attention_backward_qkv_do": "e4m3",
+    "o_input_gradient": "nvfp4_asymmetric_retained_path",
+    "o_weight_gradient": "bf16_torch_mm",
+    "loss": "dense_standard_cross_entropy"
+  },
+  "routes": {
+    "fp8_pv": {
+      "all_updates_finite": true,
+      "initial_logits_vs_bf16": {
+        "cosine": 0.9799875617027283,
+        "relative_l2": 0.20027205348014832
+      },
+      "attention_projection_gradient_cosine_range": [
+        0.9413029551506042,
+        0.9512368440628052
+      ],
+      "bf16_step_median_ms": 42.448320388793945,
+      "lowp_step_median_ms": 39.521345138549805,
+      "one_layer_speedup_over_run_local_bf16": 1.074060618128838,
+      "full_abi_validation_complete": true,
+      "live_validated_forward_workspace_count": 1,
+      "successful_full_abi_validation_count": 1,
+      "raw_receipt_path": "/tmp/d128-e4m3-qkv-e4m3-o-fp8pv-one-layer-20260830-v2.json",
+      "raw_receipt_sha256": "770895aa1ae271babb1f0085d0cdd74248384e645a9aae242f82be5e9bed617e"
+    },
+    "mxfp4_pv": {
+      "all_updates_finite": true,
+      "initial_logits_vs_bf16": {
+        "cosine": 0.9556044340133667,
+        "relative_l2": 0.298580527305603
+      },
+      "attention_projection_gradient_cosine_range": [
+        0.9101794362068176,
+        0.9320923686027527
+      ],
+      "bf16_step_median_ms": 42.7675838470459,
+      "lowp_step_median_ms": 40.85603141784668,
+      "one_layer_speedup_over_run_local_bf16": 1.0467875210308415,
+      "full_abi_validation_complete": true,
+      "live_validated_forward_workspace_count": 1,
+      "successful_full_abi_validation_count": 1,
+      "raw_receipt_path": "/tmp/d128-e4m3-qkv-e4m3-o-mxfp4pv-one-layer-20260830-v2.json",
+      "raw_receipt_sha256": "7590f535061b1354d5ab56bbc7d7c5ff1730dfe618e3165fd0920defe9890962"
+    }
+  },
+  "artifacts": {
+    "projection_and_output_extension": {
+      "sha256": "325657f55f5bc158922776e0d1d38ae4efd41ad0d069b94775b280557f539ef0",
+      "bytes": 49092552
+    },
+    "clean_source_rebuild": {
+      "sha256": "91fa599551945bd23889553e983805930b8d95b8ed69c49758db27233a40fdfa",
+      "bytes": 49088592,
+      "difference_from_canary_artifact": "removes_rejected_unused_d128_represented_backward_qk_instantiations",
+      "required_e4m3_projection_symbols_present": true,
+      "generic_e4m3_projection_smoke": {
+        "shape_mnk": [
+          256,
+          256,
+          128
+        ],
+        "finite": true,
+        "cosine_vs_bf16": 0.9993374347686768,
+        "relative_l2_vs_bf16": 0.03639892116189003
+      },
+      "d128_fp8_pv_one_layer_reauthentication": {
+        "all_updates_finite": true,
+        "initial_logits_cosine_vs_bf16": 0.9799875617027283,
+        "initial_logits_relative_l2_vs_bf16": 0.20027205348014832,
+        "attention_projection_gradient_cosine_range": [
+          0.9413029551506042,
+          0.9512368440628052
+        ],
+        "full_abi_validation_complete": true,
+        "live_validated_forward_workspace_count": 1,
+        "successful_full_abi_validation_count": 1,
+        "raw_receipt_path": "/tmp/d128-e4m3-qkv-e4m3-o-fp8pv-one-layer-clean-20260830.json",
+        "raw_receipt_sha256": "63c6cde43952be3f03361066fbc89f952da1e94a8e43c713ff9219238c318745"
+      }
+    },
+    "fp8_pv_forward_extension": {
+      "sha256": "8c3ca848c6524347b99a69cb24b80c86d680b83e84c2e49c6e39be8b16118aba",
+      "bytes": 1817144
+    },
+    "mxfp4_pv_forward_extension": {
+      "sha256": "38d709f0b2b789664dee53dc1a9edec7bb8dc5000dadb8a47989a5b8a4faeb9d",
+      "bytes": 1958376
+    },
+    "native_tk_v501_backward_extension": {
+      "sha256": "839c0bc55f809f6ecf6e5e31696c7f89b5a21c26559001dc6d47e80f00a5bf80",
+      "bytes": 6627392
+    }
+  },
+  "claim_boundary": [
+    "This is a one-layer deterministic synthetic-token correctness canary.",
+    "The E4M3 O path allocates functional operands and is not the final fused performance implementation.",
+    "The two-sample timing medians are not a full-model speed claim and are not inserted into the paper.",
+    "Matched short real-data training and full-model saturated measurements remain pending."
+  ]
+}

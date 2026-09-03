@@ -1,0 +1,436 @@
+{
+  "schema_version": 1,
+  "audit": {
+    "date_utc": "2026-08-29",
+    "scope": "Native ThunderKittens D128 causal-GQA backward provenance and matched benchmark",
+    "active_worktree": "/workspace/codebases/pv/fp4_matmul_monolithic_tk_20260828",
+    "branch": "codex/monolithic-tk-fa4-train-20260828",
+    "head": "6530af2551984154bc5d97f6b76eb37c9dca1af8",
+    "mutations": "The audit executed isolated kernels on physical GPU 2 and one failed build directed to /tmp. No kernel source, successful binary, GPU job, or cluster state was changed; only this README.md and summary.json receipt were added."
+  },
+  "verdict": {
+    "optimized_native_tk_sm100_d128_causal_gqa_recovered": false,
+    "remembered_approximately_1p3x_backend": "CuTe DSL low precision versus CuTe DSL exact BF16",
+    "legacy_native_status": "Correct generic BF16 fallback, noncompetitive",
+    "immediate_recommendation": "Use CuTe DSL for D128 causal-GQA backward",
+    "native_future_work": "New D128 kernel port; not activation of a lost optimized implementation"
+  },
+  "definitions": {
+    "native_tk": "CUDA/C++ source directly programming ThunderKittens types and operations",
+    "cute_dsl": "CUTLASS CuTe DSL BlackwellFusedMultiHeadAttentionBackward, including project-local patched/compiled variants"
+  },
+  "legacy_native_sm100": {
+    "source_root": "/workspace/codebases/pv/fp4_matmul/tk_fa4/deprecated",
+    "lineage": {
+      "introduced": {
+        "commit": "b293bddce9f24c7de3479be218bd96c2861b6857",
+        "date_utc": "2026-03-26",
+        "subject": "Add unified SM100 BF16 backward pipeline"
+      },
+      "last_pre_reset_optimization": {
+        "commit": "9ba509255dc459ffd2b45615c80077a2c596485f",
+        "date_utc": "2026-03-29",
+        "subject": "Checkpoint dense hot clustered backward fixes"
+      },
+      "moved_to_deprecated": {
+        "commit": "a0c2ed3db65bfbfa305160d3f06ac193e4c51703",
+        "date_utc": "2026-03-30",
+        "subject": "Reset tk_fa4 around exact B300 attention"
+      }
+    },
+    "source_artifacts": [
+      {
+        "path": "tk_fa4/deprecated/fa4_bwd_unified_sm100.cuh",
+        "sha256": "6a1c696c57c082d4b24f6688094ed36ea6185f59aafedc2bd711ff30a3da11d8"
+      },
+      {
+        "path": "tk_fa4/deprecated/fa4_bwd_dkdv_sm100.cuh",
+        "sha256": "826c744db5b385809685d988e094530e76bcdc674cfdf0759a2923275e79c35b"
+      },
+      {
+        "path": "tk_fa4/deprecated/fa4_bwd_dq_sm100.cuh",
+        "sha256": "dbb638ef9305b7bd80810eb8ccf53ab5f4ee42f2ba1a7af16b3f4ed01d40ce8e"
+      },
+      {
+        "path": "tk_fa4/deprecated/tk_fa4.cu",
+        "sha256": "5331e13fffd693205a93f7179777ea7d1076b10ad3752db275e140c142606b5f"
+      },
+      {
+        "path": "tk_fa4/deprecated/Makefile",
+        "sha256": "034ec05e270efc595046d0e8f21a00e7094b56a10eeee65362dd684919df69b1"
+      }
+    ],
+    "benchmarked_binary": {
+      "path": "/workspace/codebases/pv/fp4_matmul/tk_fa4/deprecated/_C_legacy.cpython-312-aarch64-linux-gnu.so",
+      "size_bytes": 6690984,
+      "sha256": "68631d4d0435cc78bd04fef8f589e27af2894ff865574681a6c09b9070cd57c2"
+    },
+    "same_source_active_worktree_binary_not_benchmarked": {
+      "path": "/workspace/codebases/pv/fp4_matmul_monolithic_tk_20260828/tk_fa4/deprecated/_C_legacy.cpython-312-aarch64-linux-gnu.so",
+      "size_bytes": 6690880,
+      "sha256": "063b6be0a231434f0bfb5938dda5ceea5b000d0224f8b80a3fd4b6177126075f"
+    },
+    "optimized_gate_contract": {
+      "head_dim": 128,
+      "causal": false,
+      "q_heads_equal_kv_heads": true,
+      "actual_sequence_equals_padded_sequence": true,
+      "clustered_sequence_multiple": 256,
+      "wg_hot_sequence_multiple": 128,
+      "llama_d128_causal_gqa_matches": false
+    },
+    "generic_public_boundary_operations": [
+      "allocate_or_initialize_delta_dq_accum_and_semaphore",
+      "O_times_dO_preprocess",
+      "generic_KV_head_grid_main_kernel",
+      "dQ_partial_reduction",
+      "gradient_postprocess"
+    ]
+  },
+  "fresh_matched_benchmark": {
+    "classification": "fresh measurement",
+    "device": {
+      "physical_cuda_visible_device": 2,
+      "logical_device": 0,
+      "name": "NVIDIA GB200",
+      "compute_capability": "10.0"
+    },
+    "software": {
+      "python": "3.12.3",
+      "torch": "2.9.0a0+145a3a7bda.nv25.10",
+      "torch_cuda": "13.0"
+    },
+    "shape": {
+      "batch": 1,
+      "sequence": 4096,
+      "q_heads": 32,
+      "kv_heads": 8,
+      "head_dim": 128,
+      "causal": true,
+      "dtype": "bfloat16"
+    },
+    "seed": 20260829,
+    "random_input_multiplier": 0.25,
+    "method": {
+      "shared_forward_state": "Exact CuTe BF16 forward output and LSE",
+      "shared_inputs": "Same Q, K, V, and dOut",
+      "native_layout_conversion_timed": false,
+      "boundary": "Public backward extension boundary",
+      "warmup_calls_per_backend": 5,
+      "samples_per_backend": 20,
+      "timing": "One synchronized CUDA event pair per sample",
+      "exact_command": "README.md#exact-executed-benchmark-command"
+    },
+    "native_environment": {
+      "TK_FA4_BWD_MODE": "ref",
+      "TK_FA4_BWD_WG_HOT": "0",
+      "TK_FA4_BWD_DENSE_HOT": "0"
+    },
+    "native_timing_ms": {
+      "median": 6.578432083129883,
+      "mean": 6.575798368453979,
+      "minimum": 6.527135848999023,
+      "maximum": 6.614463806152344,
+      "samples": [
+        6.614463806152344,
+        6.574272155761719,
+        6.598239898681641,
+        6.589407920837402,
+        6.565311908721924,
+        6.565279960632324,
+        6.612415790557861,
+        6.5859198570251465,
+        6.582592010498047,
+        6.536479949951172,
+        6.5924482345581055,
+        6.5845441818237305,
+        6.560319900512695,
+        6.570943832397461,
+        6.599391937255859,
+        6.544832229614258,
+        6.527135848999023,
+        6.607423782348633,
+        6.567584037780762,
+        6.536960124969482
+      ]
+    },
+    "cute_exact_bf16_timing_ms": {
+      "median": 0.4795040041208267,
+      "mean": 0.48036480098962786,
+      "minimum": 0.4713279902935028,
+      "maximum": 0.5001919865608215,
+      "samples": [
+        0.47971200942993164,
+        0.485152006149292,
+        0.4792959988117218,
+        0.4822080135345459,
+        0.4880959987640381,
+        0.4803839921951294,
+        0.4765760004520416,
+        0.5001919865608215,
+        0.4869759976863861,
+        0.47811201214790344,
+        0.47519999742507935,
+        0.4753279983997345,
+        0.4822080135345459,
+        0.4723840057849884,
+        0.47727999091148376,
+        0.47152000665664673,
+        0.4755200147628784,
+        0.48028799891471863,
+        0.48953598737716675,
+        0.4713279902935028
+      ]
+    },
+    "latency_ratio_native_over_cute": 13.719243273456026,
+    "correctness_native_vs_cute": {
+      "dq": {
+        "finite": true,
+        "cosine": 0.9999958872795105,
+        "relative_l2": 0.002890670904889703,
+        "maximum_absolute_difference": 0.00025272369384765625
+      },
+      "dk": {
+        "finite": true,
+        "cosine": 0.999995768070221,
+        "relative_l2": 0.0028798384591937065,
+        "maximum_absolute_difference": 0.00025787949562072754
+      },
+      "dv": {
+        "finite": true,
+        "cosine": 0.9999985694885254,
+        "relative_l2": 0.0016670790500938892,
+        "maximum_absolute_difference": 0.0038695335388183594
+      }
+    },
+    "interpretation_limit": "Public-boundary isolated backward result, not full model-step speedup and not a main-kernel-only profile"
+  },
+  "cute_exact_control": {
+    "flash_attention_commit": "9743edaf3227a25f6afc4fa7be8b5e8498610553",
+    "core_files": [
+      {
+        "path": "flash_attn/cute/flash_bwd_sm100.py",
+        "sha256": "9907efd53656c7f3fca52ea9d3e5c170382ab5d4edcb67d6b34772d6c4b0fccb",
+        "worktree_modified": false
+      },
+      {
+        "path": "flash_attn/cute/flash_bwd_preprocess.py",
+        "sha256": "c07eebda83bb86d3a7a6a98b954a0371967742c5c373d3869db479370a5f0a04",
+        "worktree_modified": false
+      },
+      {
+        "path": "flash_attn/cute/flash_bwd_postprocess.py",
+        "sha256": "07578e12f94cec0941f8751ff415c258633a6a2e17f779897ba985015b48f025",
+        "worktree_modified": false
+      }
+    ],
+    "public_interface": {
+      "path": "flash_attn/cute/interface.py",
+      "sha256": "13a1edbd711ae29141fceb69c54a8a93bc18384511792cebf3ee433ff220cd75",
+      "worktree_modified": true,
+      "note": "Modified for unrelated low-precision routes; benchmark invoked the exact BF16 route"
+    }
+  },
+  "preserved_cute_d128_results": [
+    {
+      "path": "results/tk_fa4_d128_gqa_20260814.md",
+      "commit": "3d13d8bafc66ab1517b8d5ffb69dcdcfe2f4b880",
+      "sha256": "301eb73f5e86a92ec0c2bef352a243623770c385a321cf07d8030b43eb9e4d51",
+      "backend": "CuTe event timing",
+      "shape": "B1 S4096 Hq32 Hkv8 D128 causal",
+      "exact_bf16_us": 651.635,
+      "low_precision_us": 496.655,
+      "speedup": 1.3120475984335203
+    },
+    {
+      "path": "results/tk_fa4_gqa_d128_chain_20260814.md",
+      "commit": "a5b43340e6f14310b5b70eba6435310558b36ea0",
+      "sha256": "c25d207a8880a43adfeddd4e5375fdcd8791575da81bcf54899ee61d7fd7a492",
+      "backend": "CuTe backward consuming projection-native statistics",
+      "shape": "B1 S4096 Hq32 Hkv8 D128 causal",
+      "exact_bf16_us": 489.856,
+      "low_precision_us": 320.64,
+      "speedup": 1.5277445109780439
+    },
+    {
+      "path": "results/tk_fa4_compact_dq_gqa_20260814.md",
+      "commit": "91b6efdc1297f6d2fe7e2f69bceb1026fc3d6c3e",
+      "sha256": "bd96dd32dae84e74efa10e7c599cc7a739d662940f9d0f650fd1dbb64baa5367",
+      "backend": "CuTe event timing",
+      "shape": "B1 S4096 Hq32 Hkv8 D128 causal",
+      "exact_bf16_us": 651.366,
+      "low_precision_us": 419.391,
+      "speedup": 1.5531234575849266
+    }
+  ],
+  "authenticated_cute_harnesses": [
+    {
+      "path": "tk_fa4/lowp_fa4_bwd/profile_gqa_d128_chain.py",
+      "sha256": "c4ff4d5b159b71886abe47c5cdd8e0b67ae3cd75e766d0a862b68851b082cf68",
+      "evidence": "Instantiates BlackwellFusedMultiHeadAttentionBackward and calls cute.compile"
+    },
+    {
+      "path": "tk_fa4/lowp_fa4_bwd/tune_d64_gqa_cute.py",
+      "sha256": "ef7b0154196059945245f841c3c2c5c2b7577333456600a8e6455a9550f47de7",
+      "evidence": "Patches the CUTLASS CuTe backward class"
+    }
+  ],
+  "invalid_native_probe": {
+    "classification": "rejected experiment",
+    "worktree": "/workspace/codebases/pv/fp4_matmul_tcgen_probe_20260828",
+    "base_commit": "e7ed20b2ea7e5c9eada37e8ce8b13c7815fd57dd",
+    "command": "CUDA_VISIBLE_DEVICES=2 python3 probe_wg_hot_causal_gqa.py",
+    "working_directory": "/workspace/codebases/pv/fp4_matmul_tcgen_probe_20260828/tk_fa4/deprecated",
+    "shape": {
+      "batch": 1,
+      "sequence": 128,
+      "q_heads": 32,
+      "kv_heads": 8,
+      "head_dim": 128,
+      "causal": true
+    },
+    "artifacts": [
+      {
+        "path": "tk_fa4/deprecated/fa4_bwd_unified_sm100.cuh",
+        "state": "modified_uncommitted",
+        "sha256": "bfc3cc42ba0a8825f9a8516582a2f0be2a0645440f59a5400b6b5e891fff8c79"
+      },
+      {
+        "path": "tk_fa4/deprecated/probe_wg_hot_causal_gqa.py",
+        "state": "untracked",
+        "size_bytes": 5182,
+        "sha256": "355db38197b840ebeb59ccbaf98943682f511563074008ec5218ee81aa153c9f"
+      },
+      {
+        "path": "tk_fa4/deprecated/_C_legacy.cpython-312-aarch64-linux-gnu.so",
+        "size_bytes": 6822040,
+        "sha256": "8a87f70e329dc49ddecd29c0ca98d131fd20439e3570b84a72feab58d20717f3"
+      }
+    ],
+    "runs": [
+      {
+        "median_ms": 0.15030399709939957,
+        "dq": {
+          "finite": true,
+          "relative_l2": 26.427202224731445,
+          "cosine": 0.01603417843580246,
+          "maximum_absolute_difference": 53.09675979614258
+        },
+        "dk": {
+          "finite": false,
+          "relative_l2": null,
+          "cosine": null,
+          "maximum_absolute_difference": null
+        },
+        "dv": {
+          "finite": false,
+          "relative_l2": null,
+          "cosine": null,
+          "maximum_absolute_difference": null
+        },
+        "zero_dout": {
+          "dq_finite": true,
+          "dq_max_abs": 53.7077522277832,
+          "dk_finite": true,
+          "dk_max_abs": 0.0,
+          "dv_finite": false,
+          "dv_max_abs": null
+        }
+      },
+      {
+        "median_ms": 0.15479999780654907,
+        "dq": {
+          "finite": true,
+          "relative_l2": 26.42738914489746,
+          "cosine": 0.01602182164788246,
+          "maximum_absolute_difference": 53.09675979614258
+        },
+        "dk": {
+          "finite": true,
+          "relative_l2": 0.8289105892181396,
+          "cosine": 0.6760726571083069,
+          "maximum_absolute_difference": 4.036584377288818
+        },
+        "dv": {
+          "finite": false,
+          "relative_l2": null,
+          "cosine": null,
+          "maximum_absolute_difference": null
+        },
+        "zero_dout": {
+          "dq_finite": true,
+          "dq_max_abs": 53.7077522277832,
+          "dk_finite": true,
+          "dk_max_abs": 0.0,
+          "dv_finite": false,
+          "dv_max_abs": null
+        }
+      }
+    ],
+    "timing_publishable": false,
+    "reason": "Catastrophic correctness failure and nonfinite outputs"
+  },
+  "hopper_d128_gqa_port_candidate": {
+    "classification": "port candidate",
+    "source": "ThunderKittens/kernels/attention/mha_h100/mha_h100.cu",
+    "thunderkittens_commit": "9ee85b4afcdea1478b4dda8bb01f8907ab7edb0b",
+    "source_last_change_commit": "e463ed89e2f7cc145022404e80faade95a126f09",
+    "source_sha256": "4f1f76cbd21487c09845e22e666d4a53a7060ac87ec076053a7d8664bb2efd3e",
+    "makefile_sha256": "64e9fc9d2646cc1ad2cd541da43d2c9c920350f4e4632681587eb552d9ecbf91",
+    "source_supports_d128": true,
+    "source_supports_integral_gqa_ratio": true,
+    "source_target": "H100",
+    "sm100_build_command": "PATH=/tmp/fp4_fa4_native_tk_b16_20260828/venv/bin:$PATH make GPU=B200 OUT=/tmp/tk_mha_d128_gqa_sm100_probe.so -C ThunderKittens/kernels/attention/mha_h100",
+    "sm100_build_exit_code": 2,
+    "compile_error_count": 10,
+    "missing_blackwell_group_apis": [
+      "mma_async_wait",
+      "mma_commit_group"
+    ],
+    "output_binary_created": false,
+    "port_requirement": "Replace Hopper WGMMA synchronization and ownership with Blackwell tcgen05, TMEM, and barrier semantics"
+  },
+  "closest_native_template": {
+    "name": "V383 D64 GQA E4M3 query-parallel",
+    "head_dim": 64,
+    "d128_candidate": false,
+    "tracked": false,
+    "sources": [
+      {
+        "path": "tk_fa4/native_gqa_tk_bwd/v383_d64_gqa_e4m3_query_parallel.cu",
+        "sha256": "b034338f68ce2a1c730842c78d4b69a674eff6155eaddd9ed13f798e76f34896"
+      },
+      {
+        "path": "tk_fa4/native_gqa_tk_bwd/v383_d64_gqa_e4m3_query_parallel.cuh",
+        "sha256": "7d371835c55a2ddf63f85d09de5ba9fda6214e06fd2937b454c2bde0e279b220"
+      }
+    ],
+    "artifact": {
+      "path": "/tmp/tkfa4_v383_d64_gqa_query_parallel_build/_C_b300_gqa_tk_v383_d64_e4m3_query_parallel.cpython-312-aarch64-linux-gnu.so",
+      "size_bytes": 1959984,
+      "sha256": "3dd368508ebd51ac6f1ec1212fba4d4576418d1abf02e9b60fdd13b446866c15"
+    },
+    "validation_log": {
+      "path": "/tmp/tkfa4_v383_d64_gqa_query_parallel_build/validation_attempt8_final_clean.log",
+      "sha256": "59c8434db4b3f972683d478ae4e035c09e9799db1845b16ec58380b5eb4e0dee"
+    },
+    "b1_correctness": {
+      "dq_relative_l2": 0.07275653630495071,
+      "dq_cosine": 0.9973497986793518,
+      "dk_relative_l2": 0.0741448774933815,
+      "dk_cosine": 0.9972478151321411,
+      "dv_relative_l2": 0.00267064874060452,
+      "dv_cosine": 0.9999964833259583
+    },
+    "b16_s4096_median_ms": 7.4115519523620605,
+    "matched_cute_timing_available": false,
+    "use": "Scheduling and ownership design template only"
+  },
+  "recommendation": [
+    "Use CuTe DSL for production and publication D128 causal-GQA backward now",
+    "Attribute preserved 1.3x-class D128 results to CuTe low precision versus CuTe exact BF16",
+    "Do not promote or time-claim the invalid August 28 native causal-GQA probe",
+    "For native work, port V383 ownership to D128 or port Hopper D128 to Blackwell tcgen05/TMEM/barriers",
+    "Require zero-dOut, exact-BF16 correctness, isolated public-boundary timing, and model-level validation before dispatch"
+  ]
+}

@@ -1,0 +1,454 @@
+--- hao_direct_config.inc
++++ hao_direct_config.inc
+@@ -23,9 +23,23 @@
+ #ifndef TK_HAO_DIRECT_HEADS
+ #define TK_HAO_DIRECT_HEADS 24
+ #endif
++#ifndef TK_HAO_DIRECT_KV_HEADS
++#define TK_HAO_DIRECT_KV_HEADS TK_HAO_DIRECT_HEADS
++#endif
+ #ifndef TK_HAO_DIRECT_BATCH
+ #define TK_HAO_DIRECT_BATCH 1
+ #endif
++#ifndef TK_HAO_DIRECT_CAUSAL
++#define TK_HAO_DIRECT_CAUSAL 0
++#endif
++#ifndef TK_HAO_DIRECT_CAUSAL_PAIR_QUARTER_MASK
++#define TK_HAO_DIRECT_CAUSAL_PAIR_QUARTER_MASK 0
++#endif
++#ifndef TK_HAO_DIRECT_CAUSAL_INTERLEAVED_KV
++// The exact-FP8 port predates the optional interleaved causal score-fragment
++// mapping.  Preserve its original contiguous mapping unless a build opts in.
++#define TK_HAO_DIRECT_CAUSAL_INTERLEAVED_KV 0
++#endif
+ #ifndef TK_HAO_DIRECT_KV_STAGES
+ // HAO's tuned GB200 schedule uses one additional KV slot at D64, where the
+ // smaller payload fits in shared memory. D128 is intentionally capped at 4.
+@@ -107,8 +121,28 @@
+ // native EX2 pairs as the selected full-FP4 policy does.
+ #define TK_HAO_DIRECT_FP8PV_SHIFTLESS_MODE 0
+ #endif
++#ifndef TK_HAO_DIRECT_FP8PV_CUBIC_QUARTER_MASK
++// Modes 3/4 use cubic probability reconstruction for every quarter.  Modes
++// 1/2 keep the historical Q0-only policy.  An explicit mask lets the causal
++// GQA port measure the useful intermediate rungs without changing those
++// established mode meanings.
++#if TK_HAO_DIRECT_FP8PV_SHIFTLESS_MODE >= 3
++#define TK_HAO_DIRECT_FP8PV_CUBIC_QUARTER_MASK 0xf
++#else
++#define TK_HAO_DIRECT_FP8PV_CUBIC_QUARTER_MASK 0x1
++#endif
++#endif
++#ifndef TK_HAO_DIRECT_FP8PV_AFFINE_A
++#define TK_HAO_DIRECT_FP8PV_AFFINE_A 1.62330034f
++#endif
++#ifndef TK_HAO_DIRECT_FP8PV_AFFINE_B
++#define TK_HAO_DIRECT_FP8PV_AFFINE_B 0.92083546f
++#endif
+ #ifndef TK_HAO_DIRECT_ROUTE_NAME
+-#if TK_HAO_DIRECT_QK_SCALE_MODE == 0
++#if TK_HAO_DIRECT_CAUSAL && TK_HAO_DIRECT_QK_SCALE_MODE == 0
++#define TK_HAO_DIRECT_ROUTE_NAME \
++    "real_fwd_tk_hao_direct_causal_gqa_nvfp4_fp8pv"
++#elif TK_HAO_DIRECT_QK_SCALE_MODE == 0
+ #define TK_HAO_DIRECT_ROUTE_NAME \
+     "real_fwd_tk_hao_direct_nvfp4_fp8pv"
+ #else
+@@ -127,9 +161,14 @@
+     static constexpr int QK_SCALE_ROWS =
+         HAO_DIRECT_NVFP4_QK ? QK_SCALE_CHUNKS : 1;
+     static constexpr bool HAO_DIRECT_FP8_PV = true;
++    static constexpr bool HAO_DIRECT_MXFP4_PV = false;
++    // The fused projection publishes its backward E4M3 V operand at 4x.
++    // Decode that same tensor in the forward epilogue without a conversion
++    // or an additional V publication.
++    static constexpr bool HAO_DIRECT_NV_V_GLOBAL_DECODE = true;
+     static constexpr bool HAO_DIRECT_MX_DUAL_LSE_DENOM = false;
+     static constexpr bool HAO_DIRECT_MX_STABLE_LSE_LOGSUM = false;
+     static constexpr bool HAO_DIRECT_MX_ALTERNATE_LSE_STAT = false;
+     static constexpr bool HAO_DIRECT_FIXED_P_CEILING =
+         TK_HAO_DIRECT_FP8PV_FIXED_P_CEILING;
+     static constexpr bool HAO_DIRECT_SCORE_PACK_CEILING =
+@@ -139,9 +178,21 @@
+         TK_HAO_DIRECT_FP8PV_TWO_CHUNK_PIPELINE;
+     static constexpr int HAO_DIRECT_SHIFTLESS_MODE =
+         TK_HAO_DIRECT_FP8PV_SHIFTLESS_MODE;
++    static constexpr int HAO_DIRECT_CUBIC_QUARTER_MASK =
++        TK_HAO_DIRECT_FP8PV_CUBIC_QUARTER_MASK;
++    static constexpr float HAO_DIRECT_AFFINE_A =
++        TK_HAO_DIRECT_FP8PV_AFFINE_A;
++    static constexpr float HAO_DIRECT_AFFINE_B =
++        TK_HAO_DIRECT_FP8PV_AFFINE_B;
+     static constexpr bool HAO_DIRECT_SHIFTLESS =
+         HAO_DIRECT_SHIFTLESS_MODE != 0;
+-    static constexpr bool HAO_DIRECT_NONCAUSAL = true;
++    static constexpr bool HAO_DIRECT_CAUSAL = TK_HAO_DIRECT_CAUSAL;
++    // Adjacent query stages share a triangular key loop. Stage 0 still sees
++    // one fully future tile, so use absolute-coordinate causal masking.
++    static constexpr bool HAO_DIRECT_CAUSAL_DIAGONAL_MASK = false;
++    static constexpr bool HAO_DIRECT_CAUSAL_INTERLEAVED_KV =
++        HAO_DIRECT_CAUSAL && TK_HAO_DIRECT_CAUSAL_INTERLEAVED_KV;
++    static constexpr bool HAO_DIRECT_NONCAUSAL = !HAO_DIRECT_CAUSAL;
+     static constexpr bool UPSTREAM_NATIVE_NONCAUSAL =
+         HAO_DIRECT_NONCAUSAL;
+     static constexpr int TOTAL_WGS = 4;
+@@ -170,6 +221,8 @@
+         TK_HAO_DIRECT_EX2_EMU_MASK;
+     static constexpr int N_TILES = TK_HAO_DIRECT_SEQ_LEN / 128;
+     static constexpr int HEADS = TK_HAO_DIRECT_HEADS;
++    static constexpr int KV_HEADS = TK_HAO_DIRECT_KV_HEADS;
++    static constexpr int QUERIES_PER_KV_HEAD = HEADS / KV_HEADS;
+     static constexpr int BATCH = TK_HAO_DIRECT_BATCH;
+     static constexpr int LOGICAL_JOBS =
+         BATCH * HEADS * N_TILES / QUERY_STAGES;
+@@ -180,8 +233,13 @@
+
+ static_assert(hao_direct_config::HAO_DIRECT_PIPELINE);
+ static_assert(
++    hao_direct_config::HEADS % hao_direct_config::KV_HEADS == 0);
++static_assert(
+     hao_direct_config::HAO_DIRECT_NVFP4_QK !=
+     hao_direct_config::HAO_DIRECT_MXFP4_QK);
++static_assert(
++    hao_direct_config::HAO_DIRECT_CUBIC_QUARTER_MASK >= 0 &&
++    hao_direct_config::HAO_DIRECT_CUBIC_QUARTER_MASK <= 0xf);
+ static_assert(hao_direct_config::ONLINE_FULL_K_TILE);
+ static_assert(hao_direct_config::CLUSTER_SIZE == 1);
+ static_assert(
+--- hao_direct_kernel.inc
++++ hao_direct_kernel.inc
+@@ -96,6 +96,7 @@
+     k_sc_gl k_sc;
+     k_sg_gl k_sg;
+     v_fp8_gl v_fp8;
++    float v_global_decode = 0.25f;
+     o_gl o;
+     lse_gl lse;
+     int disable_lse_store = 0;
+@@ -105,7 +106,8 @@
+ __device__ __forceinline__ float qk_scale_log2(
+     const globals_fp8pv_hao_direct<C> &g,
+     int b,
+-    int h
++    int q_head,
++    int kv_head
+ ) {
+     static_assert(C::Dqk == 64 || C::Dqk == 128);
+     constexpr float LOG2E_OVER_SQRT_D =
+@@ -115,8 +117,8 @@
+     float q_scale = 0.0f;
+     float k_scale = 0.0f;
+     if (warp::laneid() == 0) {
+-        q_scale = g.q_sg[{b, h, 0, 0}];
+-        k_scale = g.k_sg[{b, h, 0, 0}];
++        q_scale = g.q_sg[{b, q_head, 0, 0}];
++        k_scale = g.k_sg[{b, kv_head, 0, 0}];
+     }
+     q_scale = __shfl_sync(0xffffffffu, q_scale, 0);
+     k_scale = __shfl_sync(0xffffffffu, k_scale, 0);
+@@ -127,6 +129,7 @@
+ struct hao_direct_task {
+     int batch;
+     int head;
++    int kv_head;
+     int pair;
+     int qtile0;
+     int qtile1;
+@@ -142,8 +145,23 @@
+     const int local =
+         logical_job % (C::HEADS * PAIRS_PER_BATCH);
+     const int head = local % C::HEADS;
+-    const int pair = local / C::HEADS;
+-    return {batch, head, pair, pair * 2, pair * 2 + 1};
++    int pair = local / C::HEADS;
++    if constexpr (C::HAO_DIRECT_CAUSAL) {
++        // Start with the longest triangular jobs so the persistent grid does
++        // not finish on a sparse wave containing only large query tiles.
++        pair = PAIRS_PER_BATCH - 1 - pair;
++    }
++    const int kv_head = head / C::QUERIES_PER_KV_HEAD;
++    return {batch, head, kv_head, pair, pair * 2, pair * 2 + 1};
++}
++
++template <typename C>
++__device__ __forceinline__ int hao_direct_key_tiles(
++    const hao_direct_task<C> &task
++) {
++    // Two adjacent query stages share the producer/issuer pipeline. Stage 0
++    // masks the last tile completely; stage 1 consumes its causal diagonal.
++    return C::HAO_DIRECT_CAUSAL ? task.qtile1 + 1 : C::N_TILES;
+ }
+
+ template <typename C>
+@@ -494,8 +512,8 @@
+     constexpr float CUBIC_B = 0.28625049f;
+     constexpr float CUBIC_C = 0.63145205f;
+     constexpr float CUBIC_D = 0.99202336f;
+-    constexpr float AFFINE_A = 1.62330034f;
+-    constexpr float AFFINE_B = 0.92083546f;
++    constexpr float AFFINE_A = C::HAO_DIRECT_AFFINE_A;
++    constexpr float AFFINE_B = C::HAO_DIRECT_AFFINE_B;
+     const float absolute_scale =
+         hao_direct_exp2_native_scalar(quarter_max * scale_log2);
+     const float2 relative_scale = {scale_log2, scale_log2};
+@@ -528,8 +546,7 @@
+             values[Pair] = fp4pv_stage2_exp2_pair<
+                 16, 0, Quarter * 16 + Pair>(absolute_log);
+         } else if constexpr (
+-            Quarter == 0 ||
+-            C::HAO_DIRECT_SHIFTLESS_MODE >= 3) {
++            C::HAO_DIRECT_CUBIC_QUARTER_MASK & (1 << Quarter)) {
+             const float2 relative_log = __ffma2_rn(
+                 values[Pair], relative_scale, relative_bias);
+             float2 approximation = __ffma2_rn(
+@@ -962,13 +979,13 @@
+                     dim::ROW, cache_policy::NORMAL>(
+                     kv_payload[slot].k,
+                     g.k,
+-                    {task.batch, task.head, n, 0},
++                    {task.batch, task.kv_head, n, 0},
+                     kv_full[slot]);
+                 tma::load_async<
+                     dim::ROW, cache_policy::NORMAL>(
+                     kv_scale[slot].k,
+                     g.k_sc,
+-                    {task.batch, 2 * n, task.head, 0},
++                    {task.batch, 2 * n, task.kv_head, 0},
+                     kv_full[slot]);
+             }
+             ++kv_producer_item;
+@@ -987,7 +1004,7 @@
+                     dim::ROW, cache_policy::NORMAL>(
+                     kv_payload[slot].v,
+                     g.v_fp8,
+-                    {task.batch, task.head, 0, n},
++                    {task.batch, task.kv_head, 0, n},
+                     kv_full[slot]);
+             }
+             ++kv_producer_item;
+@@ -1022,13 +1039,14 @@
+              logical_job += int(gridDim.x)) {
+             const hao_direct_task task =
+                 hao_direct_decode_task<C>(logical_job);
++            const int key_tiles = hao_direct_key_tiles<C>(task);
+             load_q(task, 0, task.qtile0);
+             load_k(task, 0);
+             load_q(task, 1, task.qtile1);
+             q_producer_phase ^= 1;
+             load_v(task, 0);
+             #pragma unroll 1
+-            for (int n = 1; n < C::N_TILES; ++n) {
++            for (int n = 1; n < key_tiles; ++n) {
+                 load_k(task, n);
+                 load_v(task, n);
+             }
+@@ -1132,6 +1150,9 @@
+         for (int logical_job = int(blockIdx.x);
+              logical_job < C::LOGICAL_JOBS;
+              logical_job += int(gridDim.x)) {
++            const hao_direct_task task =
++                hao_direct_decode_task<C>(logical_job);
++            const int key_tiles = hao_direct_key_tiles<C>(task);
+             if (leader) {
+                 hao_direct_wait(q_full[0], q_consumer_phase);
+             }
+@@ -1153,7 +1174,7 @@
+             sfqk_phase ^= 1;
+
+             #pragma unroll 1
+-            for (int n = 0; n + 1 < C::N_TILES; ++n) {
++            for (int n = 0; n + 1 < key_tiles; ++n) {
+                 const int v_slot =
+                     wait_kv_item(kv_consumer_item);
+                 issue_pv.template operator()<0>(
+@@ -1192,12 +1213,12 @@
+             const int final_v_slot =
+                 wait_kv_item(kv_consumer_item);
+             issue_pv.template operator()<0>(
+-                final_v_slot, C::N_TILES != 1);
++                final_v_slot, key_tiles != 1);
+             if (leader) {
+                 detail::tcgen05::commit<1>(output_full[0]);
+             }
+             issue_pv.template operator()<1>(
+-                final_v_slot, C::N_TILES != 1);
++                final_v_slot, key_tiles != 1);
+             if (leader) {
+                 detail::tcgen05::commit<1>(output_full[1]);
+                 detail::tcgen05::commit<1>(
+@@ -1237,6 +1258,7 @@
+              logical_job += int(gridDim.x)) {
+             const hao_direct_task task =
+                 hao_direct_decode_task<C>(logical_job);
++            const int key_tiles = hao_direct_key_tiles<C>(task);
+
+             hao_direct_wait(
+                 softmax_corr_full[0],
+@@ -1250,7 +1272,7 @@
+             softmax_consumer_phase ^= 1;
+
+             #pragma unroll 1
+-            for (int n = 0; n + 1 < C::N_TILES; ++n) {
++            for (int n = 0; n + 1 < key_tiles; ++n) {
+                 #pragma unroll
+                 for (int stage = 0; stage < 2; ++stage) {
+                     hao_direct_wait(
+@@ -1324,7 +1346,8 @@
+                         task.head,
+                         row_max_smem[0],
+                         row_sum_smem[0],
+-                        row_group);
++                        row_group,
++                        task.kv_head);
+                 } else {
+                     upstream_store_output_row_group_owned_fp8<C>(
+                         output1,
+@@ -1335,7 +1358,8 @@
+                         task.head,
+                         row_max_smem[1],
+                         row_sum_smem[1],
+-                        row_group);
++                        row_group,
++                        task.kv_head);
+                 }
+                 if (warp::elect_leader()) {
+                     arrive(corr_epi_full[stage]);
+--- hao_direct_softmax_reader.inc
++++ hao_direct_softmax_reader.inc
+@@ -25,8 +25,10 @@
+             hao_direct_decode_task<C>(logical_job);
+         const int query_tile =
+             Stage == 0 ? task.qtile0 : task.qtile1;
++        const int key_tiles = hao_direct_key_tiles<C>(task);
+         const float scale_log2 =
+-            qk_scale_log2(g, task.batch, task.head);
++            qk_scale_log2(
++                g, task.batch, task.head, task.kv_head);
+         auto &row_max_owned = row_max_smem[Stage];
+         auto &row_sum_owned = row_sum_smem[Stage];
+         auto &correction_owned = correction_smem[Stage];
+@@ -44,7 +46,7 @@
+         float row_sum = 0.0f;
+
+         #pragma unroll 1
+-        for (int n = 0; n < C::N_TILES; ++n) {
++        for (int n = 0; n < key_tiles; ++n) {
+             hao_direct_wait(score_full[Stage], score_phase);
+             tensor_after_thread_sync();
+             const uint32_t score_row_base =
+--- hao_direct_host.inc
++++ hao_direct_host.inc
+@@ -23,11 +23,13 @@
+     out["route"] = TK_HAO_DIRECT_ROUTE_NAME;
+     out["batch"] = hao_direct_config::BATCH;
+     out["heads"] = hao_direct_config::HEADS;
++    out["kv_heads"] = hao_direct_config::KV_HEADS;
+     // This FP8-PV kernel always uses the original contiguous causal score
+     // mapping.  Export that negative capability explicitly so authenticated
+     // callers can fail closed instead of treating a missing field as false.
+     out["causal_interleaved_kv"] = false;
+     out["seqlen"] = hao_direct_config::N_TILES * 128;
++    out["causal"] = hao_direct_config::HAO_DIRECT_CAUSAL;
+     out["dqk"] = hao_direct_config::Dqk;
+     out["dvo"] = hao_direct_config::Dvo;
+     out["logical_jobs"] = s.logical_jobs;
+@@ -55,6 +57,10 @@
+         hao_direct_config::HAO_DIRECT_TWO_CHUNK_PIPELINE;
+     out["shiftless_fp8_mode"] =
+         hao_direct_config::HAO_DIRECT_SHIFTLESS_MODE;
++    out["cubic_quarter_mask"] =
++        hao_direct_config::HAO_DIRECT_CUBIC_QUARTER_MASK;
++    out["affine_a"] = hao_direct_config::HAO_DIRECT_AFFINE_A;
++    out["affine_b"] = hao_direct_config::HAO_DIRECT_AFFINE_B;
+     out["softmax_regs"] = hao_direct_config::SOFTMAX_REGS;
+     out["correction_regs"] =
+         hao_direct_config::CORRECTION_REGS;
+@@ -117,11 +123,16 @@
+             Q.size(1) == C::HEADS &&
+             Q.size(2) == C::N_TILES * 128 &&
+             Q.size(3) == C::Dqk / 2);
+-    TORCH_CHECK(K.sizes() == Q.sizes());
++    TORCH_CHECK(
++        K.dim() == 4 &&
++            K.size(0) == C::BATCH &&
++            K.size(1) == C::KV_HEADS &&
++            K.size(2) == C::N_TILES * 128 &&
++            K.size(3) == C::Dqk / 2);
+     TORCH_CHECK(
+         V_fp8.dim() == 4 &&
+             V_fp8.size(0) == C::BATCH &&
+-            V_fp8.size(1) == C::HEADS &&
++            V_fp8.size(1) == C::KV_HEADS &&
+             V_fp8.size(2) == C::Dvo &&
+             V_fp8.size(3) == C::N_TILES * 128);
+     TORCH_CHECK(
+@@ -413,19 +413,20 @@
+                         K_sc,
+                         C::BATCH,
+                         C::N_TILES * 2,
+-                        C::HEADS * C::QK_SCALE_ROWS,
++                        C::KV_HEADS * C::QK_SCALE_ROWS,
+                         "K_sc"); }),
+             hao_direct_fp8pv_cached_gl<5, typename G::k_sg_gl>(
+                 device,
+                 K_sg.data_ptr(),
+                 [&] { return tensor_to_bh_scalar_gl<
+                     typename G::k_sg_gl>(
+-                        K_sg, C::BATCH, C::HEADS, "K_sg"); }),
++                        K_sg, C::BATCH, C::KV_HEADS, "K_sg"); }),
+             hao_direct_fp8pv_cached_gl<6, typename G::v_fp8_gl>(
+                 device,
+                 V_fp8.data_ptr(),
+                 [&] { return kittens::py::tensor_to_gl<
+                     typename G::v_fp8_gl>(V_fp8); }),
++            0.25f,
+             hao_direct_fp8pv_cached_gl<7, typename G::o_gl>(
+                 device,
+                 O.data_ptr(),
+--- Makefile.hao_direct
++++ Makefile.hao_direct
+@@ -8,10 +8,12 @@
+ NVCC_SPLIT_COMPILE ?= 2
+ HAO_SEQ_LEN ?= 4096
+ HAO_HEADS ?= 24
++HAO_KV_HEADS ?= $(HAO_HEADS)
+ HAO_BATCH ?= 1
++HAO_CAUSAL ?= 0
+ # Generic extensions retain the runtime route guard and per-launch CUDA
+ # attribute setup. Shape/route-specialized candidate builders opt in below.
+ HAO_FIXED_ROUTE_FASTPATH ?= 0
+ HAO_HEAD_DIM ?= 128
+ HAO_KV_STAGES ?= $(if $(filter 64,$(HAO_HEAD_DIM)),5,4)
+ HAO_RETAIN_Q2 ?= 1
+@@ -31,6 +33,9 @@
+ HAO_FP8PV_EARLY_Q3 ?= 0
+ HAO_FP8PV_TWO_CHUNK_PIPELINE ?= 0
+ HAO_FP8PV_SHIFTLESS_MODE ?= 0
++HAO_FP8PV_CUBIC_QUARTER_MASK ?= $(if $(filter 3 4,$(HAO_FP8PV_SHIFTLESS_MODE)),15,1)
++HAO_FP8PV_AFFINE_A ?= 1.62330034f
++HAO_FP8PV_AFFINE_B ?= 0.92083546f
+ include ../../ThunderKittens/kernels/common.mk
+ NVCCFLAGS += -DTK_FA4_FORWARD_ONLY_BUILD \
+   -DTK_FA4_UPSTREAM_OWNED_TWO_STAGE_ONLY_BUILD=1 \
+@@ -38,8 +43,11 @@
+   -DTK_FA4_ENABLE_MXFP4_FWD_PCHAIN_STAMPS=0 \
+   -DTK_HAO_DIRECT_SEQ_LEN=$(HAO_SEQ_LEN) \
+   -DTK_HAO_DIRECT_HEADS=$(HAO_HEADS) \
++  -DTK_HAO_DIRECT_KV_HEADS=$(HAO_KV_HEADS) \
+   -DTK_HAO_DIRECT_BATCH=$(HAO_BATCH) \
++  -DTK_HAO_DIRECT_CAUSAL=$(HAO_CAUSAL) \
++  -DTK_HAO_DIRECT_CAUSAL_PAIR_QUARTER_MASK=0 \
+   -DTK_HAO_DIRECT_FIXED_ROUTE_FASTPATH=$(HAO_FIXED_ROUTE_FASTPATH) \
+   -DTK_HAO_DIRECT_HEAD_DIM=$(HAO_HEAD_DIM) \
+   -DTK_HAO_DIRECT_KV_STAGES=$(HAO_KV_STAGES) \
+   -DTK_HAO_DIRECT_P_FIRST_CHUNKS=$(HAO_FP8PV_P_FIRST_CHUNKS) \
+@@ -57,6 +65,9 @@
+   -DTK_HAO_DIRECT_FP8PV_EARLY_Q3=$(HAO_FP8PV_EARLY_Q3) \
+   -DTK_HAO_DIRECT_FP8PV_TWO_CHUNK_PIPELINE=$(HAO_FP8PV_TWO_CHUNK_PIPELINE) \
+   -DTK_HAO_DIRECT_FP8PV_SHIFTLESS_MODE=$(HAO_FP8PV_SHIFTLESS_MODE) \
++  -DTK_HAO_DIRECT_FP8PV_CUBIC_QUARTER_MASK=$(HAO_FP8PV_CUBIC_QUARTER_MASK) \
++  -DTK_HAO_DIRECT_FP8PV_AFFINE_A=$(HAO_FP8PV_AFFINE_A) \
++  -DTK_HAO_DIRECT_FP8PV_AFFINE_B=$(HAO_FP8PV_AFFINE_B) \
+   --threads $(NVCC_THREADS) --split-compile=$(NVCC_SPLIT_COMPILE) \
+   -UTORCH_EXTENSION_NAME \
+   -DTORCH_EXTENSION_NAME=$(MODULE)

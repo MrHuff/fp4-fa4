@@ -1,0 +1,140 @@
+--- a/fmha_bwd.py
++++ b/fmha_bwd.py
+@@ -1374,6 +1374,8 @@
+                 cute.make_layout(self.gqa_reduce_vector),
+             )
+             dk_out[None, idx_d_vec].store(dk_acc.to(self.output_dtype))
++            if cutlass.const_expr(self.element_dtype == Float8E4M3FN):
++                dv_acc *= Float32(1.0 / 256.0)
+             dv_out[None, idx_d_vec].store(dv_acc.to(self.output_dtype))
+
+     @cute.kernel
+@@ -1879,6 +1881,9 @@
+     ):
+         tidx, tidy, tidz = cute.arch.thread_idx()
+         bidx, bidy, bidz = cute.arch.block_idx()
++        gradient_scale = scale_softmax
++        if cutlass.const_expr(self.element_dtype == Float8E4M3FN):
++            gradient_scale *= Float32(1.0 / self.fp8_ds_lift)
+
+         seqlen = count
+
+@@ -1913,7 +1918,7 @@
+                     thr_step,
+                 ):
+                     dQ_acc_frg = dQ_acc_bhs[None, idx_d].load().to(self.acc_dtype)
+-                    dQ_acc_frg = scale_softmax * dQ_acc_frg
++                    dQ_acc_frg = gradient_scale * dQ_acc_frg
+                     dQ_bhs[None, idx_d].store(dQ_acc_frg.to(self.output_dtype))
+
+         if cutlass.const_expr(self.fuse_gqa_reduce):
+@@ -1990,6 +1995,10 @@
+                     dk_out[None, idx_d_vec].store(
+                         dk_acc.to(self.output_dtype)
+                     )
++                    if cutlass.const_expr(
++                        self.element_dtype == Float8E4M3FN
++                    ):
++                        dv_acc *= Float32(1.0 / 256.0)
+                     dv_out[None, idx_d_vec].store(
+                         dv_acc.to(self.output_dtype)
+                     )
+@@ -2831,8 +2840,13 @@
+                     tTR_rST[i] = cute.math.exp2(tTR_rST[i], fastmath=True)
+                     tTR_rST[i + 1] = cute.math.exp2(tTR_rST[i + 1], fastmath=True)
+
+-            # convert fp32 P to fp16 P which will be used in the PdO
+-            tRT_rST = self.quantize(tTR_rST, 4)
++            # Normalized probabilities are O(1/S) and underflow in E4M3 at
++            # long sequence lengths.  Lift only the tensor-core dV operand;
++            # the FP32 probability fragment below remains unscaled for dS.
++            p_dv_lift = Float32(1.0)
++            if cutlass.const_expr(self.element_dtype == Float8E4M3FN):
++                p_dv_lift = Float32(256.0)
++            tRT_rST = self.quantize(tTR_rST, 4, p_dv_lift)
+
+             tRT_rST_reshaped = cute.make_tensor(
+                 tRT_rST.iterator, cute.make_layout(tRT_cST.shape)
+@@ -2895,10 +2909,9 @@
+                 if cutlass.const_expr(
+                     self.element_dtype == Float8E4M3FN and self.reuse_quantized_p
+                 ):
+-                    # P has already been rounded to the value consumed by
+-                    # dV.  Reuse that compact fragment for dS so the full
+-                    # FP32 probability tile dies before the dP wait instead
+-                    # of spilling across it.
++                    # Reuse the rounded dV probability after rescaling its
++                    # 2^8 lift to the selected adaptive dS lift.
++                    # This keeps the existing 2^4-lifted dP contract intact.
+                     p_vec = p_fp8_fragments[None, i // 4].load().to(
+                         self.acc_dtype
+                     )
+@@ -2911,8 +2924,16 @@
+                 tTR_rdPT[i], tTR_rdPT[i + 1] = cute.arch.mul_packed_f32x2(
+                     (tTR_rdPT[i], tTR_rdPT[i + 1]), p_pair
+                 )
+-            # convert fp32 dS to fp16 dS which will be used in the computation of dK and DQ
+-            tTR_rdST = self.quantize(tTR_rdPT, 4)
++            # The FP8 path needs 2^8 more range than the native 2^4 dP
++            # scaling supplies.  Reusing lifted P already contains that
++            # factor; the full-FP32 P route applies it only at conversion.
++            ds_operand_lift = Float32(1.0)
++            if cutlass.const_expr(
++                self.element_dtype == Float8E4M3FN
++                and not self.reuse_quantized_p
++            ):
++                ds_operand_lift = Float32(self.fp8_ds_lift)
++            tTR_rdST = self.quantize(tTR_rdPT, 4, ds_operand_lift)
+
+             # Release dP
+             cute.arch.fence_view_async_tmem_load()
+@@ -2989,6 +3010,9 @@
+     ):
+         tidx, tidy, tidz = cute.arch.thread_idx()
+         warp_idx = cute.arch.make_warp_uniform(cute.arch.warp_idx())
++        gradient_scale = scale_softmax
++        if cutlass.const_expr(self.element_dtype == Float8E4M3FN):
++            gradient_scale *= Float32(1.0 / self.fp8_ds_lift)
+         Q, K, D, HB = problem_shape
+         blk_coord_q, blk_coord_k, blk_coord_d, blk_coord_batch = blk_coord
+
+@@ -3075,7 +3099,7 @@
+                     or self.owner_quantize_dq
+                 ):
+                     tTR_store_dQ = self.convert_scaled_output(
+-                        tTR_rdQ, 4, scale_softmax
++                        tTR_rdQ, 4, gradient_scale
+                     )
+                 else:
+                     tTR_store_dQ = self.convert_output(tTR_rdQ, 4)
+@@ -3553,6 +3577,7 @@
+         self,
+         input: cute.Tensor,
+         frg_cnt: Int32,
++        scale: Float32,
+     ) -> cute.Tensor:
+         tidx, tidy, tidz = cute.arch.thread_idx()
+         output = cute.make_rmem_tensor(input.shape, self.element_dtype)
+@@ -3561,7 +3586,9 @@
+         output_frg = cute.make_tensor(output.iterator, t_frg.layout)
+         for i in cutlass.range(frg_tile, unroll_full=True):
+             frg_vec = t_frg[None, i].load()
+-            output_frg[None, i].store(frg_vec.to(self.element_dtype))
++            output_frg[None, i].store(
++                (scale * frg_vec).to(self.element_dtype)
++            )
+         return output
+
+     @cute.jit
+@@ -3744,8 +3771,11 @@
+
+         cute.copy(tiled_t2r_dK, tTR_tdK, tTR_rdK)
+
++        gradient_scale = scale_softmax
++        if cutlass.const_expr(self.element_dtype == Float8E4M3FN):
++            gradient_scale *= Float32(1.0 / self.fp8_ds_lift)
+         for i in cutlass.range(cute.size(tTR_rdK), unroll_full=True):
+-            tTR_rdK[i] = scale_softmax * tTR_rdK[i]
++            tTR_rdK[i] = gradient_scale * tTR_rdK[i]
+
+         self.store(tTR_gdK, tTR_rdK, tTR_cdK, (K, D))

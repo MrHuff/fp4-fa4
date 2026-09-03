@@ -1,0 +1,44 @@
+{
+  "schema": "tk_fp4_fa4_wan_paired_v1",
+  "model": "Wan-AI/Wan2.1-T2V-1.3B-Diffusers",
+  "scope": "Wan video self-attention only; text cross-attention and all other operations remain BF16",
+  "prompt": "A red vintage car drives along a winding coastal road at sunset, with ocean waves below and natural camera motion.",
+  "negative_prompt": null,
+  "generation": {
+    "height": 512,
+    "width": 768,
+    "num_frames": 17,
+    "steps": 4,
+    "guidance_scale": 5.0,
+    "seed": 20260805,
+    "output_type": "latent",
+    "key_centering": "none"
+  },
+  "model_attention_shape": {
+    "layers": 30,
+    "heads": 12,
+    "head_dim": 128,
+    "sequence_length": 7680
+  },
+  "providers": {
+    "bf16": {
+      "elapsed_seconds": 0.9731428688392043,
+      "output": {
+        "all_finite": true,
+        "finite_count": 491520,
+        "nonfinite_count": 0,
+        "minimum": -3.1339852809906006,
+        "maximum": 2.8069028854370117,
+        "max_abs": 3.1339852809906006
+      },
+      "status": "complete",
+      "tensor_path": "results/fp4_fa4_wan_20260805/wan21_1p3b_s7680_fast_a32_l27_a128_l28_29_step4_bf16.pt"
+    },
+    "tk": {
+      "status": "failed",
+      "error_type": "FloatingPointError",
+      "error": "FP4 attention produced a non-finite row at sample=0, layer=27, batch=0, head=11, row=26; exact_score_min=-78.646912, exact_score_max=205.808472, exact_logsumexp=206.087204, query_row_rms=3.803783, query_row_max_abs=16.875000, key_head_rms=5.805619, key_head_max_abs=42.500000, value_head_rms=1.308733, value_head_max_abs=5.812500"
+    }
+  },
+  "comparisons": {}
+}

@@ -1,0 +1,191 @@
+{
+  "protocol": {
+    "block": "same N32 block for both scale formats",
+    "distribution": "Q,K,V iid N(0,1); softmax(QK^T/sqrt(D))",
+    "mx_scale": "best-L2 adjacent E8M0 power of two",
+    "normalization": "represented E2M1 payload renormalized by represented row sum",
+    "nv_scale": "ideal amax/6 encoded as E4M3, with stated global encode factor",
+    "scope": "format representability diagnostic; not a kernel timing",
+    "seed": 20260814
+  },
+  "schema": "tk_fp4_probability_format_range_v1",
+  "shapes": [
+    {
+      "dim": 128,
+      "formats": [
+        {
+          "format": "NVFP4 G=1",
+          "minimum_nonzero_scale": 0.001953125,
+          "output_error": {
+            "cosine": 0.7008187770843506,
+            "relative_l2": 1.6854416131973267,
+            "rmse": 0.08726538717746735
+          },
+          "probability_error": {
+            "cosine": 0.7035395503044128,
+            "relative_l2": 1.7151563167572021,
+            "rmse": 0.002738398499786854
+          },
+          "zero_payload_fraction": 0.8318290710449219,
+          "zero_scale_block_fraction": 0.706298828125,
+          "zeroed_probability_mass": 0.6837731003761292
+        },
+        {
+          "format": "NVFP4 G=448",
+          "minimum_nonzero_scale": 0.00020926340948790312,
+          "output_error": {
+            "cosine": 0.993854284286499,
+            "relative_l2": 0.1136869490146637,
+            "rmse": 0.005886252969503403
+          },
+          "probability_error": {
+            "cosine": 0.9937470555305481,
+            "relative_l2": 0.11440786719322205,
+            "rmse": 0.00018266226106788963
+          },
+          "zero_payload_fraction": 0.15541839599609375,
+          "zero_scale_block_fraction": 0.0,
+          "zeroed_probability_mass": 0.029314376413822174
+        },
+        {
+          "format": "MXFP4",
+          "minimum_nonzero_scale": 0.000244140625,
+          "output_error": {
+            "cosine": 0.9898464679718018,
+            "relative_l2": 0.1449442058801651,
+            "rmse": 0.007504628039896488
+          },
+          "probability_error": {
+            "cosine": 0.9896482229232788,
+            "relative_l2": 0.14638009667396545,
+            "rmse": 0.00023370874987449497
+          },
+          "zero_payload_fraction": 0.18868255615234375,
+          "zero_scale_block_fraction": 0.0,
+          "zeroed_probability_mass": 0.0401778370141983
+        }
+      ],
+      "heads": 4,
+      "query_rows": 64,
+      "seqlen": 1024
+    },
+    {
+      "dim": 128,
+      "formats": [
+        {
+          "format": "NVFP4 G=1",
+          "minimum_nonzero_scale": 0.001953125,
+          "output_error": {
+            "cosine": 0.21732832491397858,
+            "relative_l2": 13.87689208984375,
+            "rmse": 0.35756513476371765
+          },
+          "probability_error": {
+            "cosine": 0.2106621116399765,
+            "relative_l2": 13.815642356872559,
+            "rmse": 0.005574938841164112
+          },
+          "zero_payload_fraction": 0.9994382858276367,
+          "zero_scale_block_fraction": 0.996063232421875,
+          "zeroed_probability_mass": 0.9943318367004395
+        },
+        {
+          "format": "NVFP4 G=448",
+          "minimum_nonzero_scale": 4.3596541217993945e-05,
+          "output_error": {
+            "cosine": 0.9937469363212585,
+            "relative_l2": 0.1145821362733841,
+            "rmse": 0.002952431794255972
+          },
+          "probability_error": {
+            "cosine": 0.9937771558761597,
+            "relative_l2": 0.11409084498882294,
+            "rmse": 4.603835623129271e-05
+          },
+          "zero_payload_fraction": 0.15645408630371094,
+          "zero_scale_block_fraction": 0.0,
+          "zeroed_probability_mass": 0.029759641736745834
+        },
+        {
+          "format": "MXFP4",
+          "minimum_nonzero_scale": 6.103515625e-05,
+          "output_error": {
+            "cosine": 0.9893382787704468,
+            "relative_l2": 0.14871621131896973,
+            "rmse": 0.003831962589174509
+          },
+          "probability_error": {
+            "cosine": 0.9895344972610474,
+            "relative_l2": 0.1472092568874359,
+            "rmse": 5.940242044744082e-05
+          },
+          "zero_payload_fraction": 0.18975543975830078,
+          "zero_scale_block_fraction": 0.0,
+          "zeroed_probability_mass": 0.04049413278698921
+        }
+      ],
+      "heads": 4,
+      "query_rows": 64,
+      "seqlen": 4096
+    },
+    {
+      "dim": 128,
+      "formats": [
+        {
+          "format": "NVFP4 G=1",
+          "minimum_nonzero_scale": 0.001953125,
+          "output_error": {
+            "cosine": 0.09677422046661377,
+            "relative_l2": 12.38923168182373,
+            "rmse": 0.22946661710739136
+          },
+          "probability_error": {
+            "cosine": 0.10379281640052795,
+            "relative_l2": 12.467307090759277,
+            "rmse": 0.0025313773658126593
+          },
+          "zero_payload_fraction": 0.9999771118164062,
+          "zero_scale_block_fraction": 0.9996337890625,
+          "zeroed_probability_mass": 0.9992843866348267
+        },
+        {
+          "format": "NVFP4 G=448",
+          "minimum_nonzero_scale": 2.1798270608996972e-05,
+          "output_error": {
+            "cosine": 0.9938405752182007,
+            "relative_l2": 0.11366003006696701,
+            "rmse": 0.002105149207636714
+          },
+          "probability_error": {
+            "cosine": 0.9937243461608887,
+            "relative_l2": 0.11472505331039429,
+            "rmse": 2.3293916456168517e-05
+          },
+          "zero_payload_fraction": 0.1606130599975586,
+          "zero_scale_block_fraction": 0.0,
+          "zeroed_probability_mass": 0.030690765008330345
+        },
+        {
+          "format": "MXFP4",
+          "minimum_nonzero_scale": 3.0517578125e-05,
+          "output_error": {
+            "cosine": 0.9896600246429443,
+            "relative_l2": 0.1462365835905075,
+            "rmse": 0.002708514453843236
+          },
+          "probability_error": {
+            "cosine": 0.9895232915878296,
+            "relative_l2": 0.1473182588815689,
+            "rmse": 2.991168003063649e-05
+          },
+          "zero_payload_fraction": 0.19418859481811523,
+          "zero_scale_block_fraction": 0.0,
+          "zeroed_probability_mass": 0.041630446910858154
+        }
+      ],
+      "heads": 4,
+      "query_rows": 64,
+      "seqlen": 8192
+    }
+  ]
+}

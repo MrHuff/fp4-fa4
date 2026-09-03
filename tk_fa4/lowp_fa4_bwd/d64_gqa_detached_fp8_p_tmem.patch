@@ -1,0 +1,99 @@
+--- a/fmha_bwd.py
++++ b/fmha_bwd.py
+@@ -409,6 +409,14 @@
+         self.owner_quantize_kv = False
+         self.reverse_query_tiles = False
+         self.head_fast_raster = False
++        # Optional D64-only experiment.  FP8 P is published in the otherwise
++        # unused TMEM tail so score retirement no longer waits for P
++        # publication.  Other dtypes and head dimensions retain score aliasing.
++        self.detached_fp8_p_tmem = (
++            element_dtype == Float8E4M3FN
++            and acc_dtype == Float32
++            and mma_tiler == (128, 128, 64)
++        )
+         self.use_precomputed_stats = False
+         self.skip_stats_preprocess = False
+         # The reference GQA topology serializes every query head that shares a
+@@ -525,0 +534,11 @@
++        self.tmem_P_operand_offset = self.tmem_S_offset
++        if self.detached_fp8_p_tmem:
++            # D64 uses [0, 384) for dK/dV/dP-dQ/S.  Move P forward by the
++            # 128-column FP32 score width before recasting the iterator to
++            # FP8.  The 128x128 FP8 payload itself occupies 32 columns.
++            self.tmem_P_operand_offset += mma_tiler[0]
++            p_tmem_cols = mma_tiler[0] * element_dtype.width // 32
++            assert (
++                self.tmem_P_operand_offset + p_tmem_cols
++                <= self.tmem_alloc_cols
++            ), "detached FP8 P exceeds the SM100 TMEM allocation"
+@@ -1580,7 +1599,13 @@
+         # (MMA, MMA_M, MMA_K, STAGE)
+         tdVrP = PdO_tiled_mma.make_fragment_A(tP)
+         tdVrP = tdVrP[None, None, None, 0]
+-        tdVrP_iter = cute.recast_ptr(tSTtST.iterator, dtype=self.element_dtype)
++        # Offset in the FP32 accumulator iterator's physical-column
++        # coordinate system before recasting.  Adding 128 after the FP8
++        # recast would advance only 32 physical TMEM columns.
++        tdVrP_acc_iter = tSTtST.iterator + (
++            self.tmem_P_operand_offset - self.tmem_S_offset
++        )
++        tdVrP_iter = cute.recast_ptr(tdVrP_acc_iter, dtype=self.element_dtype)
+         tdVrP = cute.make_tensor(tdVrP_iter, tdVrP.layout)
+         # (MMA, MMA_N, MMA_K, STAGE)
+         tdVrdOT = PdO_tiled_mma.make_fragment_B(sdOT)
+@@ -2943,6 +2967,10 @@
+         while iter_count > 0:
+-            # Wait for S and P
++            # Wait for S.  The detached route delays the P-slot acquire until
++            # publication, allowing softmax to overlap the preceding dV read.
+             mma_compute_S_pipeline.consumer_wait(mma_compute_S_consumer_state)
+-            compute_mma_P_pipeline.producer_acquire(compute_mma_P_producer_state)
++            if cutlass.const_expr(not self.detached_fp8_p_tmem):
++                compute_mma_P_pipeline.producer_acquire(
++                    compute_mma_P_producer_state
++                )
+             # Wait for LSE
+             load_compute_LSE_pipeline.consumer_wait(load_compute_LSE_consumer_state)
+@@ -3055,3 +3084,20 @@
+             cute.arch.fence_view_async_tmem_load()
+-            self.compute_sync_barrier.arrive_and_wait()
+-            cute.arch.fence_view_async_tmem_load()
++            if cutlass.const_expr(self.detached_fp8_p_tmem):
++                # The score and P ranges are disjoint.  Retire S/LSE before
++                # waiting for the prior dV consumer to release the one P slot.
++                mma_compute_S_pipeline.consumer_release(
++                    mma_compute_S_consumer_state
++                )
++                mma_compute_S_consumer_state.advance()
++                load_compute_LSE_pipeline.consumer_release(
++                    load_compute_LSE_consumer_state
++                )
++                load_compute_LSE_consumer_state.advance()
++                compute_mma_P_pipeline.producer_acquire(
++                    compute_mma_P_producer_state
++                )
++            else:
++                # The legacy layout overwrites score TMEM with P.  Preserve
++                # its all-compute-warp rendezvous and second load fence.
++                self.compute_sync_barrier.arrive_and_wait()
++                cute.arch.fence_view_async_tmem_load()
+@@ -3067,7 +3113,11 @@
+-            # Release S
+-            mma_compute_S_pipeline.consumer_release(mma_compute_S_consumer_state)
+-            mma_compute_S_consumer_state.advance()
+-
+-            # Release LSE
+-            load_compute_LSE_pipeline.consumer_release(load_compute_LSE_consumer_state)
+-            load_compute_LSE_consumer_state.advance()
++            if cutlass.const_expr(not self.detached_fp8_p_tmem):
++                # Release S and LSE after the aliasing P store on the legacy
++                # path.  The detached path released both before P acquire.
++                mma_compute_S_pipeline.consumer_release(
++                    mma_compute_S_consumer_state
++                )
++                mma_compute_S_consumer_state.advance()
++                load_compute_LSE_pipeline.consumer_release(
++                    load_compute_LSE_consumer_state
++                )
++                load_compute_LSE_consumer_state.advance()

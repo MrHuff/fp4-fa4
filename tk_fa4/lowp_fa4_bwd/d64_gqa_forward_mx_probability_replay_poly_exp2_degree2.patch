@@ -1,0 +1,21 @@
+--- a/fmha_bwd_d64_gqa_aug19_exact.py
++++ b/fmha_bwd_d64_gqa_aug19_replay_poly_exp2_degree2.py
+@@ -64,0 +65,3 @@
++TK_FORWARD_MX_PROBABILITY_REPLAY_POLY_EXP2_DEGREE2 = True
++
++
+@@ -3368,8 +3371,12 @@
+                             ),
+                         )
+                     )
+-                    native0 = cute.math.exp2(native_log0, fastmath=True)
+-                    native1 = cute.math.exp2(native_log1, fastmath=True)
++                    # Preserve forward scale selection, native E2M1
++                    # conversion/decode, invalid-zero handling, and row
++                    # normalization; approximate only this per-score EX2.
++                    native0, native1 = tk_exp2_alu_degree2_f32x2(
++                        native_log0, native_log1
++                    )
+                     represented0, represented1 = (
+                         tk_e2m1_rn_decode_f32x2(native0, native1)
+                     )

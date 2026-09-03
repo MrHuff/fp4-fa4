@@ -1,0 +1,132 @@
+--- a/fmha_bwd.py
++++ b/fmha_bwd.py
+@@ -1584,6 +1584,9 @@
+         tSTtST = KQ_tiled_mma.make_fragment_C(tSTtST_shape)
+         # (MMA, MMA_M, MMA_N)
+         tSTtST = cute.make_tensor(tSTtST.iterator + self.tmem_S_offset, tSTtST.layout)
++        tScS = KQ_tiled_mma.get_slice(0).partition_C(
++            cute.make_identity_tensor(cute.select(self.KQ_mma_tiler, mode=[0, 1]))
++        )
+
+         # (MMA, MMA_M, MMA_K, STAGE)
+         tdVrP = PdO_tiled_mma.make_fragment_A(tP)
+@@ -1768,6 +1771,7 @@
+                 cute.arch.warpgroup_reg_alloc(self.num_regs_compute)
+
+                 self.compute(
++                    tScS,
+                     tSTtST,
+                     tdPTtdPT,
+                     tdVrP,
+@@ -2831,6 +2835,7 @@
+     @cute.jit
+     def compute(
+         self,
++        tScS: cute.Tensor,
+         tSTtST: cute.Tensor,
+         tdPTtdPT: cute.Tensor,
+         tdVrP: cute.Tensor,
+@@ -2901,15 +2906,37 @@
+         )
+         tmem_store_atom = cute.make_copy_atom(
+-            tcgen05.copy.St32x32bOp(tcgen05.copy.Repetition(8)),
++            tcgen05.copy.St32x32bOp(tcgen05.copy.Repetition(4)),
+-            self.element_dtype,
++            self.acc_dtype,
+         )
+
++        tSTtST_staged = tSTtST
+         tSTtST = tSTtST[(None, None), 0, 0]
+         tdPTtdPT = tdPTtdPT[(None, None), 0, 0]
+
+         cST = cute.make_identity_tensor(cute.select(self.KQ_mma_tiler, mode=[0, 1]))
+         cdPT = cute.make_identity_tensor(cute.select(self.VdO_mma_tiler, mode=[0, 1]))
+
++        # View four packed FP8 values as one 32-bit TMEM carrier.  This is the
++        # logical P coordinate system used by the direct register-to-TMEM copy.
++        p_carrier_cols = self.tile_shape_Q // 32 * self.element_dtype.width
++        tP_carrier = cute.composition(
++            tSTtST_staged,
++            (
++                cute.make_layout((self.tile_shape_K, p_carrier_cols)),
++                1,
++                1,
++            ),
++        )
++        tP_carrier = cute.make_tensor(tSTtST_staged.iterator, tP_carrier.layout)
++        cP_carrier = cute.composition(
++            tScS,
++            (
++                cute.make_layout((self.tile_shape_K, p_carrier_cols)),
++                1,
++                1,
++            ),
++        )
++
+         num_warp_groups = self.num_compute_warps // 4
+         dp_idx = tidx % 128
+         wg_idx = (tidx % (self.num_compute_warps * self.threads_per_warp)) // 128
+@@ -2930,16 +2957,26 @@
+         tTR_tdPT = thr_t2r.partition_S(tdPTtdPT)
+         tTR_tdPT = self.split_wg(tTR_tdPT, num_warp_groups, wg_idx)
+
+-        tdVcST = PdO_tiled_mma.get_slice(0).partition_A(cST)
+-
+-        tiled_r2t = tcgen05.make_tmem_copy(tmem_store_atom, tdVrP)
+-        thr_r2t = tiled_r2t.get_slice(dp_idx)
+-
+-        tRT_tP = thr_r2t.partition_D(tdVrP)
+-        tRT_tP = self.split_wg(tRT_tP, num_warp_groups, wg_idx)
+-
+-        tRT_cST = thr_r2t.partition_S(tdVcST)
+-        tRT_cST = self.split_wg(tRT_cST, num_warp_groups, wg_idx)
++        # Include both compute warp groups in one coordinate-preserving TMEM
++        # store map.  This mirrors the direct P publication used by the fast
++        # forward/backward CuTe kernels without a shared-memory transpose.
++        p_store_tv = cute.make_layout(
++            ((32, 4, num_warp_groups), (4, 32)),
++            stride=((0, 1, 16), (4, 32)),
++        )
++        p_store_tiler = (
++            cute.make_layout((32, 32), stride=(32, 1)),
++        )
++        tiled_r2t = cute.make_tiled_copy(
++            tmem_store_atom, p_store_tv, p_store_tiler
++        )
++        thr_r2t = tiled_r2t.get_slice(
++            tidx % (self.num_compute_warps * self.threads_per_warp)
++        )
++        tRT_cP = thr_r2t.partition_S(cP_carrier)
++        tRT_tP = thr_r2t.partition_D(tP_carrier)
++        tRT_rP_carrier = cute.make_rmem_tensor(tRT_cP.shape, self.acc_dtype)
++        tRT_rP = cute.recast_tensor(tRT_rP_carrier, self.element_dtype)
+
+         while iter_count > 0:
+             # Wait for S and P
+@@ -3018,16 +3055,22 @@
+             if cutlass.const_expr(self.element_dtype == Float8E4M3FN):
+                 p_dv_lift = Float32(256.0)
+             tRT_rST = self.quantize(tTR_rST, 4, p_dv_lift)
+-
+-            tRT_rST_reshaped = cute.make_tensor(
+-                tRT_rST.iterator, cute.make_layout(tRT_cST.shape)
+-            )
++            for p_stage in cutlass.range_constexpr(4):
++                cute.autovec_copy(
++                    tRT_rST[None, 0, p_stage],
++                    tRT_rP[None, p_stage, 0, 0],
++                )
+
+             cute.arch.fence_view_async_tmem_load()
+             self.compute_sync_barrier.arrive_and_wait()
+             cute.arch.fence_view_async_tmem_load()
+
+-            cute.copy(tiled_r2t, tRT_rST_reshaped, tRT_tP)
++            for p_stage in cutlass.range_constexpr(4):
++                cute.copy(
++                    tiled_r2t,
++                    tRT_rP_carrier[None, p_stage, None, None],
++                    tRT_tP[None, p_stage, None, None],
++                )
+
+             cute.arch.fence_view_async_tmem_store()

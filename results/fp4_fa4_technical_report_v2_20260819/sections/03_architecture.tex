@@ -1,0 +1,222 @@
+\section{Previous Work}
+\label{sec:hao-background}
+
+Direct-P starts from HAO AI Lab's FP4 FA4 implementation
+\cite{hao2026fp4flashattention}.  HAO already provides a two-query pipeline
+that assigns data movement, matrix products, softmax, and output correction to
+specialized warps.  We keep that outer schedule.  Our forward contribution is
+the narrower stage that turns a completed score fragment into the scaled
+probability operand consumed by the value product.  This section first
+explains the tiled algorithm, then states exactly which scheduling and storage
+decisions we inherit.
+
+\subsection{Why FlashAttention uses an online softmax}
+
+For one query row, exact attention is
+\begin{equation}
+  O_i=\frac{\sum_j e^{z_{ij}}V_j}{\sum_j e^{z_{ij}}},
+  \qquad z_{ij}=Q_iK_j^\mathsf{T}/\sqrt d.
+  \label{eq:exact-attention}
+\end{equation}
+FlashAttention visits the keys in tiles.  After a tile with maximum
+$\widetilde m_i$ arrives, it updates a running maximum $m_i$, denominator
+$\ell_i$, and output $o_i$:
+\begin{align}
+  m_i' &= \max(m_i,\widetilde m_i), \\
+  \ell_i' &= e^{m_i-m_i'}\ell_i+
+    \sum_{j\in B}e^{z_{ij}-m_i'}, \\
+  o_i' &= e^{m_i-m_i'}o_i+
+    \sum_{j\in B}e^{z_{ij}-m_i'}V_j.
+  \label{eq:online-recurrence}
+\end{align}
+This recurrence avoids storing the full score and probability matrices in
+HBM.  Its cost is a strict dependency: a score tile must be reduced and turned
+into probabilities before those probabilities can be multiplied by $V$.
+
+On data-center Blackwell GPUs, asynchronous \tcgen{} operations accumulate
+32-bit floating-point (FP32) score and output tiles in tensor memory (TMEM).
+The Tensor Memory Accelerator (TMA) supplies shared-memory operands.  Separate
+warps issue matrix operations, compute softmax, and correct the online output
+\cite{nvidia2026ptx,zadouri2026flashattention4}.
+
+\subsection{Implementation baseline}
+
+HAO's implementation supports block-scaled FP4 QK with BF16 or FP8 PV, as
+well as a stabilized path that uses NVFP4 throughout attention.  Its
+implementation and Attn-QAT, an attention quantization-aware-training study,
+identify online P quantization and scale movement as central costs
+\cite{hao2026fp4flashattention,zhang2026attnqat}.
+
+SageAttention3 contributes related numerical ideas, including Q/K smoothing,
+two-level P scaling, and reuse of the block maximum during online softmax
+\cite{zhang2025sageattention3}.  It targets a consumer Blackwell interface
+that differs from the asynchronous tensor-core and tensor-memory interface on
+the data-center Blackwell GPUs evaluated here \cite{nvidia2026ptx}.  We use
+those numerical ideas as context, but inherit the execution schedule from HAO
+and FA4.
+
+\subsection{Two-query execution model}
+
+For our purposes, HAO's key contribution is a complete ownership plan for the
+Blackwell pipeline \cite{hao2026fp4flashattention}.  At head dimension 128
+(D128), one 16-warp cooperative thread array (CTA) advances two 128-row query
+tiles (M128), called stage 0 and stage 1.  A load warp keeps K and V ahead in a
+TMA-fed shared-memory ring.  One warp issues ordered QK and PV matrix
+multiply--accumulate (MMA) operations.  Two softmax warpgroups (WGs), each
+made of four warps, process the query stages in ping-pong fashion.  Separate
+warps correct the online state and store the final output.
+
+Small hardware barriers act as event counters rather than stopping the whole
+CTA.  They announce ``score ready'', ``first P half ready'', ``tail P ready'',
+and ``output released''.  Algorithm~\ref{alg:hao-pipeline} states the retained
+ownership protocol.  Operations for $q=0$ and $q=1$ interleave whenever their
+dependencies allow; the table gives the required order for one score bank,
+not a serialized whole-CTA loop.
+
+N32 denotes a 32-column score or probability fragment.  K$x$ denotes an
+$x$-element matrix-product inner dimension, so K64 consumes two adjacent N32
+fragments.
+
+\begin{algorithm}[htbp]
+\caption{Two-query score-to-PV ownership protocol inherited from HAO}
+\label{alg:hao-pipeline}
+\small
+\begin{tabularx}{\textwidth}{@{}r p{.18\textwidth} X@{}}
+\toprule
+& Owner & Event for query stage $q\in\{0,1\}$ \\
+\midrule
+1 & Load warp & Prefetch the next K/V tile into the shared-memory ring. \\
+2 & MMA warp & Wait until score bank $S_q$ is free; issue QK into $S_q$ and publish \emph{score ready}. \\
+3 & Softmax WG $q$ & Read N32 quarters Q0 and Q1, create packed P and scales in retired score addresses, then publish the first legal K64 operand. \\
+4 & MMA warp & Observe the first-half event and issue asynchronous $PV_{q,0}$ into permanent output bank $O_q$. \\
+5 & Softmax WG $q$ & Process Q2 and Q3 and publish the tail K64 operand. \\
+6 & MMA warp & Issue $PV_{q,1}$; meanwhile issue legal work for stage $1-q$. \\
+7 & Correction WG & Update online state; the epilogue normalizes and stores when the key loop ends. \\
+8 & MMA warp & After tail PV has consumed the overlay, publish $S_q$ as free for the next QK tile. \\
+\bottomrule
+\end{tabularx}
+\end{algorithm}
+
+The two-query topology matters at high head count because one CTA performs two
+query jobs while reusing the same K/V stream.  A one-query topology creates
+twice as many independent CTAs and can add a second scheduling wave after all
+streaming multiprocessors are occupied.  A third query stage would provide
+more look-ahead, but the TMEM layout leaves no bank for it.
+
+\subsection{Why the D128 layout cannot look farther ahead}
+
+SM100 and the tested SM103 path expose 512 logical TMEM columns. A D128 FP32
+score tile or output accumulator uses 128 columns. Two score banks and two
+output banks therefore consume the entire allocation.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[x=0.044\textwidth,y=0.72cm,font=\small]
+  \draw[thick] (0,0) rectangle (20,1);
+  \fill[scoreblue!22] (0,0) rectangle (5,1);
+  \fill[scoreblue!36] (5,0) rectangle (10,1);
+  \fill[outputgreen!26] (10,0) rectangle (15,1);
+  \fill[outputgreen!40] (15,0) rectangle (20,1);
+  \draw (5,0) -- (5,1);
+  \draw (10,0) -- (10,1);
+  \draw (15,0) -- (15,1);
+  \node at (2.5,.55) {$S_0$: score stage 0};
+  \node at (7.5,.55) {$S_1$: score stage 1};
+  \node at (12.5,.55) {$O_0$: output stage 0};
+  \node at (17.5,.55) {$O_1$: output stage 1};
+  \node[below] at (0,0) {0};
+  \node[below] at (5,0) {128};
+  \node[below] at (10,0) {256};
+  \node[below] at (15,0) {384};
+  \node[below] at (20,0) {512};
+  \node[align=center,text=inkgray,font=\scriptsize,text width=.40\textwidth]
+    at (5,-1.05)
+    {temporary: QK score, then packed $P$ and scale pages};
+  \node[align=center,text=inkgray,font=\scriptsize,text width=.40\textwidth]
+    at (15,-1.05)
+    {long lived: FP32 online output accumulators};
+\end{tikzpicture}
+\caption{D128 TMEM layout inherited from HAO. P and its instruction-facing
+scales reuse score storage only after that score fragment is retired. There
+is no unowned 128-column bank.}
+\label{fig:tmem-layout}
+\end{figure}
+
+HAO reuses each score bank as
+\begin{equation}
+  \text{QK score}\rightarrow\text{read N32 fragment}
+  \rightarrow\text{P/scale overlay}\rightarrow\text{PV consume}
+  \rightarrow\text{free}.
+  \label{eq:score-overlay}
+\end{equation}
+Writing the next QK tile too early destroys P while PV still needs it.
+Waiting leaves the matrix issuer idle.  The scheduling problem is therefore a
+storage-ownership handoff, not merely a shortage of barrier signals.  A
+barrier can report that storage is free; it cannot create another destination.
+
+\subsection{Why probability tiles are published in halves}
+
+QK still writes one 128-row by 128-column (M128$\times$N128) FP32 score tile.
+``Quartering'' means
+that a softmax warpgroup reads and transforms four N32 fragments,
+\begin{equation}
+  S=[Q0\mid Q1\mid Q2\mid Q3],\qquad
+  Qk\in\mathbb R^{128\times32},
+\end{equation}
+not that QK becomes four smaller matrix products. The score allocation remains
+128 columns.
+
+The scaled-FP4 PV instruction used by the retained HAO path consumes K64
+rather than K32. Two adjacent quarters must therefore be complete before
+useful matrix work can issue:
+\begin{equation}
+  (Q0,Q1)\rightarrow PV_{K64}^{(0)},\qquad
+  (Q2,Q3)\rightarrow PV_{K64}^{(1)}.
+  \label{eq:k64-pairs}
+\end{equation}
+Quartering reduces the live register fragment and lets P overwrite score
+addresses that are no longer needed.  It does not reduce the score bank's
+TMEM allocation.  Its performance value is the event after Q1: first-half PV
+can begin while Q2/Q3 and the other query stage provide independent work.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  x=1.18cm,y=.82cm,font=\small,
+  box/.style={draw,rounded corners=1.5pt,minimum width=1.22cm,
+              minimum height=.56cm,align=center},
+  dep/.style={-{Stealth[length=2mm]},thick}]
+  \node[box,fill=scoreblue!26] (s0) at (0,1.5) {QK 0};
+  \node[box,fill=probred!17] (a0) at (1.5,1.5) {Q0};
+  \node[box,fill=probred!23] (a1) at (2.8,1.5) {Q1};
+  \node[box,fill=outputgreen!25,minimum width=1.55cm] (p0) at (4.25,1.5) {PV 0a};
+  \node[box,fill=probred!28] (a2) at (5.75,1.5) {Q2};
+  \node[box,fill=probred!34] (a3) at (7.05,1.5) {Q3};
+  \node[box,fill=outputgreen!38,minimum width=1.55cm] (p1) at (8.5,1.5) {PV 0b};
+
+  \node[box,fill=scoreblue!38] (s1) at (1.0,0) {QK 1};
+  \node[box,fill=probred!17] (b0) at (2.5,0) {Q0};
+  \node[box,fill=probred!23] (b1) at (3.8,0) {Q1};
+  \node[box,fill=outputgreen!25,minimum width=1.55cm] (p2) at (5.25,0) {PV 1a};
+  \node[box,fill=probred!28] (b2) at (6.75,0) {Q2};
+  \node[box,fill=probred!34] (b3) at (8.05,0) {Q3};
+  \node[box,fill=outputgreen!38,minimum width=1.55cm] (p3) at (9.5,0) {PV 1b};
+
+  \draw[dep] (s0)--(a0); \draw[dep] (a0)--(a1);
+  \draw[dep] (a1)--(p0); \draw[dep] (a1)--(a2);
+  \draw[dep] (a2)--(a3); \draw[dep] (a3)--(p1);
+  \draw[dep] (s1)--(b0); \draw[dep] (b0)--(b1);
+  \draw[dep] (b1)--(p2); \draw[dep] (b1)--(b2);
+  \draw[dep] (b2)--(b3); \draw[dep] (b3)--(p3);
+\end{tikzpicture}
+\caption{Dependency sketch for the two query stages. Box width is not
+measured time. Each first PV half waits for two N32 producer quarters; work
+from the other stage covers part of that delay.}
+\label{fig:quarter-pipeline}
+\end{figure}
+
+We inherit this outer pipeline, tensor-memory lifecycle, and publication
+protocol unchanged.  They also expose the remaining problem: PV cannot begin
+until softmax has constructed, scaled, packed, and published two adjacent
+probability fragments.  The next section separates this timing constraint
+from the numerical range constraint.

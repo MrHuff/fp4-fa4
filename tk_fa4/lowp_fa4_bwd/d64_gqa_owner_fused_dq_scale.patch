@@ -1,0 +1,81 @@
+--- a/fmha_bwd.py
++++ b/fmha_bwd.py
+@@ -1847,6 +1847,7 @@
+                         owner_dq_global_scale,
+                         owner_rope_packed,
+                         owner_dq_ready,
++                        scale_softmax,
+                     )
+             # ///////////////////////////////////////////////////////////////////////////////
+             #  Reduce
+@@ -3300,15 +3301,18 @@
+             mma_reduce_dQ_pipeline.consumer_release(mma_reduce_dQ_consumer_state)
+             tTR_store_dQ = tTR_rdQ
+             if cutlass.const_expr(self.compact_dq_acc):
+-                if cutlass.const_expr(
++                if cutlass.const_expr(self.owner_quantize_dq):
++                    # Keep owner-private partials unscaled.  The final power-of-two
++                    # gradient scale is folded into the mandatory NVFP4 encode.
++                    tTR_store_dQ = self.convert_output(tTR_rdQ, 4)
++                elif cutlass.const_expr(
+                     self.direct_compact_dq
+                     or self.hierarchical_dq_lanes > 1
+-                    or self.owner_quantize_dq
+                 ):
+                     tTR_store_dQ = self.convert_scaled_output(
+                         tTR_rdQ, 4, gradient_scale
+                     )
+                 else:
+                     tTR_store_dQ = self.convert_output(tTR_rdQ, 4)
+
+             mma_reduce_dQ_consumer_state.advance()
+@@ -3530,6 +3533,7 @@
+         owner_dq_global_scale: cute.Tensor,
+         owner_rope_packed: cute.Tensor,
+         owner_dq_ready: cute.Tensor,
++        scale_softmax: Float32,
+     ):
+         tidx, _, _ = cute.arch.thread_idx()
+         Q, _, _, HB = problem_shape
+@@ -3596,6 +3600,9 @@
+                 stride=(self.tile_shape_dQ_K // 8, 1),
+             ),
+         )
++        gradient_scale = scale_softmax
++        if cutlass.const_expr(self.element_dtype == Float8E4M3FN):
++            gradient_scale *= Float32(1.0 / self.fp8_ds_lift)
+         global_decode = Float32(owner_dq_global_scale[0])
+         global_encode = cute.arch.rcp_approx(
+             cute.arch.fmax(global_decode, Float32(0.000000000001))
+@@ -3693,19 +3700,22 @@
+                 amax = cute.arch.fmax(amax, abs(Float32(rotated_y)))
+
+             packed_scale, local_decode = tk_encode_e4m3_f32(
+-                amax * global_encode * Float32(1.0 / 6.0)
++                amax
++                * gradient_scale
++                * global_encode
++                * Float32(1.0 / 6.0)
+             )
+-            global_block = chunk * 2 + block_in_chunk
+-            scale_half = global_block // 4
+-            scale_block = global_block % 4
+-            sOwnerScales[
+-                scale_half,
+-                scale_row_offset + scale_block,
+-            ] = Uint8(packed_scale)
+-            encode = cute.arch.rcp_approx(
++            encode = gradient_scale * cute.arch.rcp_approx(
+                 cute.arch.fmax(
+                     local_decode * global_decode,
+                     Float32(0.000000000001),
+                 )
+             )
++            global_block = chunk * 2 + block_in_chunk
++            scale_half = global_block // 4
++            scale_block = global_block % 4
++            sOwnerScales[
++                scale_half,
++                scale_row_offset + scale_block,
++            ] = Uint8(packed_scale)
+             packed_values = cute.make_rmem_tensor(cute.make_layout(8), Int32)

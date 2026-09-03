@@ -1,0 +1,862 @@
+--- a/examples/python/CuTeDSL/blackwell/fmha_bwd.py
++++ b/examples/python/CuTeDSL/blackwell/fmha_bwd.py
+@@ -50,0 +51,108 @@
++from cutlass._mlir.dialects import llvm
++from cutlass.cutlass_dsl import T, dsl_user_op
++
++
++@dsl_user_op
++def tk_exp2_alu_degree1_f32x2(
++    x: Float32, y: Float32, *, loc=None, ip=None
++) -> Tuple[Float32, Float32]:
++    result = llvm.inline_asm(
++        llvm.StructType.get_literal([T.i32(), T.i32()]),
++        [
++            Float32(x).ir_value(loc=loc, ip=ip),
++            Float32(y).ir_value(loc=loc, ip=ip),
++        ],
++        """{
++        .reg .f32 f1, f2, f3, f4, f5;
++        .reg .b64 l1, l2, l3, l4, l7, l8, l9, l10;
++        .reg .s32 r1, r2, r3, r4, r5, r6, r7, r8;
++        max.ftz.f32 f1, $2, 0fC2FE0000;
++        max.ftz.f32 f2, $3, 0fC2FE0000;
++        mov.b64 l1, {f1, f2};
++        mov.f32 f3, 0f4B400000;
++        mov.b64 l2, {f3, f3};
++        add.rm.ftz.f32x2 l7, l1, l2;
++        sub.rn.ftz.f32x2 l8, l7, l2;
++        sub.rn.ftz.f32x2 l9, l1, l8;
++        mov.f32 f5, 0f3F317218;
++        mov.b64 l4, {f5, f5};
++        mov.f32 f4, 0f3F800000;
++        mov.b64 l3, {f4, f4};
++        fma.rn.ftz.f32x2 l10, l9, l4, l3;
++        mov.b64 {r1, r2}, l7;
++        mov.b64 {r3, r4}, l10;
++        shl.b32 r5, r1, 23;
++        add.s32 r7, r5, r3;
++        shl.b32 r6, r2, 23;
++        add.s32 r8, r6, r4;
++        mov.b32 $0, r7;
++        mov.b32 $1, r8;
++        }""",
++        "=r,=r,f,f",
++        has_side_effects=False,
++        is_align_stack=False,
++        asm_dialect=llvm.AsmDialect.AD_ATT,
++        loc=loc,
++        ip=ip,
++    )
++    result_x = llvm.extractvalue(T.i32(), result, [0], loc=loc, ip=ip)
++    result_y = llvm.extractvalue(T.i32(), result, [1], loc=loc, ip=ip)
++    return (
++        Float32(llvm.bitcast(Float32.mlir_type, result_x, loc=loc, ip=ip)),
++        Float32(llvm.bitcast(Float32.mlir_type, result_y, loc=loc, ip=ip)),
++    )
++
++
++@dsl_user_op
++def tk_exp2_alu_degree2_f32x2(
++    x: Float32, y: Float32, *, loc=None, ip=None
++) -> Tuple[Float32, Float32]:
++    result = llvm.inline_asm(
++        llvm.StructType.get_literal([T.i32(), T.i32()]),
++        [
++            Float32(x).ir_value(loc=loc, ip=ip),
++            Float32(y).ir_value(loc=loc, ip=ip),
++        ],
++        """{
++        .reg .f32 f1, f2, f3, f4, f5, f6;
++        .reg .b64 l1, l2, l3, l4, l5, l7, l8, l9, l10;
++        .reg .s32 r1, r2, r3, r4, r5, r6, r7, r8;
++        max.ftz.f32 f1, $2, 0fC2FE0000;
++        max.ftz.f32 f2, $3, 0fC2FE0000;
++        mov.b64 l1, {f1, f2};
++        mov.f32 f3, 0f4B400000;
++        mov.b64 l2, {f3, f3};
++        add.rm.ftz.f32x2 l7, l1, l2;
++        sub.rn.ftz.f32x2 l8, l7, l2;
++        sub.rn.ftz.f32x2 l9, l1, l8;
++        mov.f32 f6, 0f3EA903CA;
++        mov.b64 l5, {f6, f6};
++        mov.f32 f5, 0f3F2A70E4;
++        mov.b64 l4, {f5, f5};
++        mov.f32 f4, 0f3F800000;
++        mov.b64 l3, {f4, f4};
++        fma.rn.ftz.f32x2 l10, l9, l5, l4;
++        fma.rn.ftz.f32x2 l10, l10, l9, l3;
++        mov.b64 {r1, r2}, l7;
++        mov.b64 {r3, r4}, l10;
++        shl.b32 r5, r1, 23;
++        add.s32 r7, r5, r3;
++        shl.b32 r6, r2, 23;
++        add.s32 r8, r6, r4;
++        mov.b32 $0, r7;
++        mov.b32 $1, r8;
++        }""",
++        "=r,=r,f,f",
++        has_side_effects=False,
++        is_align_stack=False,
++        asm_dialect=llvm.AsmDialect.AD_ATT,
++        loc=loc,
++        ip=ip,
++    )
++    result_x = llvm.extractvalue(T.i32(), result, [0], loc=loc, ip=ip)
++    result_y = llvm.extractvalue(T.i32(), result, [1], loc=loc, ip=ip)
++    return (
++        Float32(llvm.bitcast(Float32.mlir_type, result_x, loc=loc, ip=ip)),
++        Float32(llvm.bitcast(Float32.mlir_type, result_y, loc=loc, ip=ip)),
++    )
++
+@@ -104,0 +105,21 @@
++        # Keep gradient publication training-friendly when the tensor-core
++        # operands are FP8.  The mainloop remains FP8 while dQ/dK/dV are
++        # converted from FP32 accumulators to BF16 at the boundary.
++        self.output_dtype = (
++            BFloat16 if element_dtype == Float8E4M3FN else element_dtype
++        )
++        self.reuse_quantized_p = False
++        self.exp2_alu_period = 0
++        self.exp2_alu_degree = 1
++        self.compact_dq_acc = False
++        self.direct_compact_dq = False
++        self.hierarchical_dq_lanes = 1
++        self.use_precomputed_stats = False
++        self.skip_stats_preprocess = False
++        # The reference GQA topology serializes every query head that shares a
++        # KV head inside one CTA.  D64 has enough parallelism pressure that it
++        # can be faster to give each (query head, K tile) pair its own CTA and
++        # reduce the resulting dK/dV partials afterwards.
++        self.split_gqa_heads = False
++        self.fuse_gqa_reduce = False
++        self.fused_convert_block_seq = 16
+@@ -156 +170,5 @@
+-        self.sum_OdO_elem_per_load = 2
++        # FP8 conversion instructions require a 32-bit packed source.  Use
++        # four bytes per lane for FP8 and retain bf16/fp16 pairs otherwise.
++        self.sum_OdO_elem_per_load = (
++            4 if element_dtype == Float8E4M3FN else 2
++        )
+@@ -207,0 +226,3 @@
++        self.gqa_reduce_vector = 4
++        self.gqa_reduce_threads = 128
++
+@@ -244,0 +379,2 @@
++        precomputed_sum_OdO = O
++        precomputed_scaled_LSE = LSE
+@@ -334,0 +471,5 @@
++        if cutlass.const_expr(self.use_precomputed_stats):
++            precomputed_sum_OdO = cute.make_tensor(
++                precomputed_sum_OdO.iterator, LSE.layout
++            )
++            precomputed_scaled_LSE = LSE
+@@ -483,8 +504,9 @@
++        dQ_store_dtype = self.output_dtype if self.compact_dq_acc else self.acc_dtype
+         dQ_smem_layout_atom = sm100_utils.make_smem_layout_atom(
+             sm100_utils.get_smem_layout_atom_ab(
+                 tcgen05.OperandMajorMode.K,
+-                self.acc_dtype,
++                dQ_store_dtype,
+                 (self.tile_shape_Q, 32),
+             ),
+-            self.acc_dtype,
++            dQ_store_dtype,
+         )
+@@ -610,7 +632,7 @@
+             ]
+             sdQ: cute.struct.Align[
+                 cute.struct.MemRange[
+-                    self.acc_dtype, cute.cosize(dQ_smem_layout_staged)
++                    dQ_store_dtype, cute.cosize(dQ_smem_layout_staged)
+                 ],
+                 self.buffer_align_bytes,
+             ]
+@@ -627 +649 @@
+-        sum_OdO, scaled_LSE, dQ_acc = self.get_workspace_tensor(
++        sum_OdO, scaled_LSE, dQ_acc, dK_partial, dV_partial = self.get_workspace_tensor(
+@@ -630,0 +768,11 @@
++        if cutlass.const_expr(self.use_precomputed_stats):
++            sum_OdO = cute.make_tensor(
++                precomputed_sum_OdO.iterator, sum_OdO.layout
++            )
++            scaled_LSE = cute.make_tensor(
++                precomputed_scaled_LSE.iterator, scaled_LSE.layout
++            )
++
++        if cutlass.const_expr(self.direct_compact_dq):
++            dQ_acc = dQ
++
+@@ -646,17 +790,20 @@
+-        self.sum_OdO(
+-            O,
+-            dO,
+-            sum_OdO,
+-            LSE,
+-            scaled_LSE,
+-            cumulative_s_q,
+-            sum_OdO_scale,
+-            LSE_scale,
+-            problem_shape,
+-        ).launch(
+-            grid=sum_OdO_grid,
+-            block=[self.sum_OdO_num_threads_d, self.sum_OdO_num_threads_q, 1],
+-            cluster=[1, 1, 1],
+-            stream=stream,
+-            min_blocks_per_mp=1,
+-        )
++        if cutlass.const_expr(
++            not self.use_precomputed_stats and not self.skip_stats_preprocess
++        ):
++            self.sum_OdO(
++                O,
++                dO,
++                sum_OdO,
++                LSE,
++                scaled_LSE,
++                cumulative_s_q,
++                sum_OdO_scale,
++                LSE_scale,
++                problem_shape,
++            ).launch(
++                grid=sum_OdO_grid,
++                block=[self.sum_OdO_num_threads_d, self.sum_OdO_num_threads_q, 1],
++                cluster=[1, 1, 1],
++                stream=stream,
++                min_blocks_per_mp=1,
++            )
+@@ -666,0 +688,3 @@
++        dK_mainloop = dK_partial if self.split_gqa_heads else dK
++        dV_mainloop = dV_partial if self.split_gqa_heads else dV
++
+@@ -683,2 +707,2 @@
+-            dK,
+-            dV,
++            dK_mainloop,
++            dV_mainloop,
+@@ -714,0 +739,28 @@
++        if cutlass.const_expr(
++            self.split_gqa_heads and not self.fuse_gqa_reduce
++        ):
++            if cutlass.const_expr(self.varlen):
++                raise RuntimeError("split GQA heads does not yet support varlen")
++            reduce_gqa_grid = (
++                cute.ceil_div(
++                    problem_shape[1]
++                    * (problem_shape[2] // self.gqa_reduce_vector),
++                    self.gqa_reduce_threads,
++                ),
++                cute.size(problem_shape[3][0][1]),
++                cute.size(problem_shape[3][1]),
++            )
++            self.reduce_gqa_dkdv(
++                dK_partial,
++                dV_partial,
++                dK,
++                dV,
++                problem_shape,
++            ).launch(
++                grid=reduce_gqa_grid,
++                block=[self.gqa_reduce_threads, 1, 1],
++                cluster=[1, 1, 1],
++                smem=0,
++                stream=stream,
++            )
++
+@@ -718,0 +771,5 @@
++        if cutlass.const_expr(self.fuse_gqa_reduce):
++            self.block_seq = self.fused_convert_block_seq
++            self.num_threads_seq = (
++                self.gqa_reduce_threads // self.num_threads_D_convert
++            )
+@@ -723,0 +781,14 @@
++        if cutlass.const_expr(self.fuse_gqa_reduce):
++            # Make the fused launch large enough to cover every dK/dV vector
++            # even for GQA ratios below the ratio-4 production target.  Extra
++            # z tiles simply fail the dQ sequence bound in ``convert``.
++            reduce_blocks_per_batch = cute.size(problem_shape[3][0][1]) * cute.ceil_div(
++                problem_shape[1]
++                * (problem_shape[2] // self.gqa_reduce_vector),
++                self.gqa_reduce_threads,
++            )
++            reduce_grid_z = cute.ceil_div(
++                reduce_blocks_per_batch,
++                cute.size(problem_shape[3][0]),
++            )
++            convert_grid_z = max(convert_grid_z, reduce_grid_z)
+@@ -733,0 +805,5 @@
++            dK_partial,
++            dV_partial,
++            dK,
++            dV,
++            problem_shape,
+@@ -790,2 +866,6 @@
+-                    prod_frag = O_frag * dO_frag
+-                    prod_frag = prod_frag.to(self.acc_dtype)
++                    # FP8 does not have a native scalar multiply in the DSL.
++                    # Widen the pair before the O*dO reduction; BF16/FP16 use
++                    # the same numerically safer path and this pass is O(SD).
++                    prod_frag = O_frag.to(self.acc_dtype) * dO_frag.to(
++                        self.acc_dtype
++                    )
+@@ -805,0 +886,58 @@
++    def reduce_gqa_dkdv(
++        self,
++        dK_partial: cute.Tensor,
++        dV_partial: cute.Tensor,
++        dK: cute.Tensor,
++        dV: cute.Tensor,
++        problem_shape: Tuple[Int32, Int32, Int32, Tuple[Tuple[Int32, Int32], Int32]],
++    ):
++        """Reduce per-query-head dK/dV partials into each shared KV head."""
++        bidx, bidy, bidz = cute.arch.block_idx()
++        tidx, _, _ = cute.arch.thread_idx()
++        _, K, D, HB = problem_shape
++        H_R, _ = HB[0]
++
++        linear_idx = bidx * self.gqa_reduce_threads + tidx
++        vectors_per_row = D // self.gqa_reduce_vector
++        if linear_idx < K * vectors_per_row:
++            idx_k = linear_idx // vectors_per_row
++            idx_d_vec = linear_idx - idx_k * vectors_per_row
++
++            first_head = ((Int32(0), bidy), bidz)
++            dk_row = cute.logical_divide(
++                dK_partial[idx_k, None, first_head],
++                cute.make_layout(self.gqa_reduce_vector),
++            )
++            dv_row = cute.logical_divide(
++                dV_partial[idx_k, None, first_head],
++                cute.make_layout(self.gqa_reduce_vector),
++            )
++            dk_acc = dk_row[None, idx_d_vec].load().to(self.acc_dtype)
++            dv_acc = dv_row[None, idx_d_vec].load().to(self.acc_dtype)
++
++            for h_r in cutlass.range(1, H_R):
++                head_coord = ((h_r, bidy), bidz)
++                dk_row = cute.logical_divide(
++                    dK_partial[idx_k, None, head_coord],
++                    cute.make_layout(self.gqa_reduce_vector),
++                )
++                dv_row = cute.logical_divide(
++                    dV_partial[idx_k, None, head_coord],
++                    cute.make_layout(self.gqa_reduce_vector),
++                )
++                dk_acc += dk_row[None, idx_d_vec].load().to(self.acc_dtype)
++                dv_acc += dv_row[None, idx_d_vec].load().to(self.acc_dtype)
++
++            kv_coord = ((Int32(0), bidy), bidz)
++            dk_out = cute.logical_divide(
++                dK[idx_k, None, kv_coord],
++                cute.make_layout(self.gqa_reduce_vector),
++            )
++            dv_out = cute.logical_divide(
++                dV[idx_k, None, kv_coord],
++                cute.make_layout(self.gqa_reduce_vector),
++            )
++            dk_out[None, idx_d_vec].store(dk_acc.to(self.output_dtype))
++            dv_out[None, idx_d_vec].store(dv_acc.to(self.output_dtype))
++
++    @cute.kernel
+@@ -998 +1136,12 @@
+-        blk_coord = (Int32(0), bidx, Int32(0), ((Int32(0), bidy), bidz))
++        blk_coord_h_r = Int32(0)
++        blk_coord_h_k = bidy
++        if cutlass.const_expr(self.split_gqa_heads):
++            H_R = problem_shape[3][0][0]
++            blk_coord_h_r = bidy % H_R
++            blk_coord_h_k = bidy // H_R
++        blk_coord = (
++            Int32(0),
++            bidx,
++            Int32(0),
++            ((blk_coord_h_r, blk_coord_h_k), bidz),
++        )
+@@ -1037 +1186,2 @@
+-        trip_count = trip_count * problem_shape_cur_batch[3][0][0]
++        if cutlass.const_expr(not self.split_gqa_heads):
++            trip_count = trip_count * problem_shape_cur_batch[3][0][0]
+@@ -1190,0 +1341 @@
++                    scale_softmax,
+@@ -1200,0 +1352,5 @@
++        dK_partial: cute.Tensor,
++        dV_partial: cute.Tensor,
++        dK: cute.Tensor,
++        dV: cute.Tensor,
++        problem_shape: Tuple[Int32, Int32, Int32, Tuple[Tuple[Int32, Int32], Int32]],
+@@ -1210,0 +1367,4 @@
++        if cutlass.const_expr(
++            self.direct_compact_dq or self.hierarchical_dq_lanes > 1
++        ):
++            seqlen = Int32(0)
+@@ -1235 +1392 @@
+-                    dQ_acc_frg = dQ_acc_bhs[None, idx_d].load()
++                    dQ_acc_frg = dQ_acc_bhs[None, idx_d].load().to(self.acc_dtype)
+@@ -1237 +1392,79 @@
+-                    dQ_bhs[None, idx_d].store(dQ_acc_frg.to(self.element_dtype))
++                    dQ_bhs[None, idx_d].store(dQ_acc_frg.to(self.output_dtype))
++
++        if cutlass.const_expr(self.fuse_gqa_reduce):
++            grid_x, grid_y, grid_z = cute.arch.grid_dim()
++            _, K, D, HB = problem_shape
++            H_R, H_K = HB[0]
++            reduce_blocks_per_head = cute.ceil_div(
++                K * (D // self.gqa_reduce_vector),
++                self.gqa_reduce_threads,
++            )
++            convert_block_linear = (
++                (bidy * grid_x + bidx) * grid_z + bidz
++            )
++            reduce_blocks_per_batch = H_K * reduce_blocks_per_head
++            if convert_block_linear < grid_y * reduce_blocks_per_batch:
++                reduce_batch = convert_block_linear // reduce_blocks_per_batch
++                reduce_in_batch = (
++                    convert_block_linear
++                    - reduce_batch * reduce_blocks_per_batch
++                )
++                reduce_head = reduce_in_batch // reduce_blocks_per_head
++                reduce_block = (
++                    reduce_in_batch - reduce_head * reduce_blocks_per_head
++                )
++                reduce_thread = (
++                    tidy * self.num_threads_D_convert + tidx
++                )
++                linear_idx = (
++                    reduce_block * self.gqa_reduce_threads + reduce_thread
++                )
++                vectors_per_row = D // self.gqa_reduce_vector
++                if linear_idx < K * vectors_per_row:
++                    idx_k = linear_idx // vectors_per_row
++                    idx_d_vec = linear_idx - idx_k * vectors_per_row
++
++                    first_head = ((Int32(0), reduce_head), reduce_batch)
++                    dk_row = cute.logical_divide(
++                        dK_partial[idx_k, None, first_head],
++                        cute.make_layout(self.gqa_reduce_vector),
++                    )
++                    dv_row = cute.logical_divide(
++                        dV_partial[idx_k, None, first_head],
++                        cute.make_layout(self.gqa_reduce_vector),
++                    )
++                    dk_acc = dk_row[None, idx_d_vec].load().to(self.acc_dtype)
++                    dv_acc = dv_row[None, idx_d_vec].load().to(self.acc_dtype)
++
++                    for h_r in cutlass.range(1, H_R):
++                        head_coord = ((h_r, reduce_head), reduce_batch)
++                        dk_row = cute.logical_divide(
++                            dK_partial[idx_k, None, head_coord],
++                            cute.make_layout(self.gqa_reduce_vector),
++                        )
++                        dv_row = cute.logical_divide(
++                            dV_partial[idx_k, None, head_coord],
++                            cute.make_layout(self.gqa_reduce_vector),
++                        )
++                        dk_acc += dk_row[None, idx_d_vec].load().to(
++                            self.acc_dtype
++                        )
++                        dv_acc += dv_row[None, idx_d_vec].load().to(
++                            self.acc_dtype
++                        )
++
++                    kv_coord = ((Int32(0), reduce_head), reduce_batch)
++                    dk_out = cute.logical_divide(
++                        dK[idx_k, None, kv_coord],
++                        cute.make_layout(self.gqa_reduce_vector),
++                    )
++                    dv_out = cute.logical_divide(
++                        dV[idx_k, None, kv_coord],
++                        cute.make_layout(self.gqa_reduce_vector),
++                    )
++                    dk_out[None, idx_d_vec].store(
++                        dk_acc.to(self.output_dtype)
++                    )
++                    dv_out[None, idx_d_vec].store(
++                        dv_acc.to(self.output_dtype)
++                    )
+@@ -1270,0 +1504,4 @@
++        if cutlass.const_expr(self.split_gqa_heads):
++            H_R = problem_shape[3][0][0]
++            blk_coord_h_r = blk_coord_h_k % H_R
++            blk_coord_h_k = blk_coord_h_k // H_R
+@@ -1492,2 +1729,3 @@
+-                blk_coord_h_r += 1
+-                blk_coord_h = (blk_coord_h_r, blk_coord_h_k)
++                if cutlass.const_expr(not self.split_gqa_heads):
++                    blk_coord_h_r += 1
++                    blk_coord_h = (blk_coord_h_r, blk_coord_h_k)
+@@ -2066 +2306 @@
+-            for i in cutlass.range(0, cute.size(tTR_rST), 2, unroll_full=True):
++            for i in cutlass.range_constexpr(0, cute.size(tTR_rST), 2):
+@@ -2082,2 +2322,20 @@
+-                tTR_rST[i] = cute.math.exp2(tTR_rST[i], fastmath=True)
+-                tTR_rST[i + 1] = cute.math.exp2(tTR_rST[i + 1], fastmath=True)
++                if cutlass.const_expr(
++                    self.element_dtype == Float8E4M3FN
++                    and self.exp2_alu_period > 0
++                    and (i // 2) % self.exp2_alu_period == 0
++                ):
++                    if cutlass.const_expr(self.exp2_alu_degree == 1):
++                        tTR_rST[i], tTR_rST[i + 1] = (
++                            tk_exp2_alu_degree1_f32x2(
++                                tTR_rST[i], tTR_rST[i + 1]
++                            )
++                        )
++                    else:
++                        tTR_rST[i], tTR_rST[i + 1] = (
++                            tk_exp2_alu_degree2_f32x2(
++                                tTR_rST[i], tTR_rST[i + 1]
++                            )
++                        )
++                else:
++                    tTR_rST[i] = cute.math.exp2(tTR_rST[i], fastmath=True)
++                    tTR_rST[i + 1] = cute.math.exp2(tTR_rST[i + 1], fastmath=True)
+@@ -2124,0 +2363,7 @@
++            if cutlass.const_expr(
++                self.element_dtype == Float8E4M3FN and self.reuse_quantized_p
++            ):
++                p_fp8_fragments = cute.logical_divide(
++                    tRT_rST, cute.make_layout(4)
++                )
++
+@@ -2138,0 +2384,16 @@
++                if cutlass.const_expr(
++                    self.element_dtype == Float8E4M3FN and self.reuse_quantized_p
++                ):
++                    # P has already been rounded to the value consumed by
++                    # dV.  Reuse that compact fragment for dS so the full
++                    # FP32 probability tile dies before the dP wait instead
++                    # of spilling across it.
++                    p_vec = p_fp8_fragments[None, i // 4].load().to(
++                        self.acc_dtype
++                    )
++                    p_pair = (
++                        p_vec[i % 4] * Float32(self.fp8_ds_lift / 256.0),
++                        p_vec[(i % 4) + 1] * Float32(self.fp8_ds_lift / 256.0),
++                    )
++                else:
++                    p_pair = (tTR_rST[i], tTR_rST[i + 1])
+@@ -2140 +2401 @@
+-                    (tTR_rdPT[i], tTR_rdPT[i + 1]), (tTR_rST[i], tTR_rST[i + 1])
++                    (tTR_rdPT[i], tTR_rdPT[i + 1]), p_pair
+@@ -2207,0 +2450 @@
++        scale_softmax: Float32,
+@@ -2215,0 +2459,8 @@
++        if cutlass.const_expr(self.hierarchical_dq_lanes > 1):
++            H_K = problem_shape[3][0][1]
++            dq_lane = blk_coord_k % self.hierarchical_dq_lanes
++            blk_coord_h_k += dq_lane * H_K
++            blk_coord_batch = (
++                (blk_coord_h_r, blk_coord_h_k),
++                blk_coord_b,
++            )
+@@ -2267,0 +2511,11 @@
++            tTR_store_dQ = tTR_rdQ
++            if cutlass.const_expr(self.compact_dq_acc):
++                if cutlass.const_expr(
++                    self.direct_compact_dq or self.hierarchical_dq_lanes > 1
++                ):
++                    tTR_store_dQ = self.convert_scaled_output(
++                        tTR_rdQ, 4, scale_softmax
++                    )
++                else:
++                    tTR_store_dQ = self.convert_output(tTR_rdQ, 4)
++
+@@ -2278 +2523 @@
+-                    tTR_rdQ[None, None, i],
++                    tTR_store_dQ[None, None, i],
+@@ -2304,2 +2569,3 @@
+-                blk_coord_h_r += 1
+-                blk_coord_batch = ((blk_coord_h_r, blk_coord_h_k), blk_coord_b)
++                if cutlass.const_expr(not self.split_gqa_heads):
++                    blk_coord_h_r += 1
++                    blk_coord_batch = ((blk_coord_h_r, blk_coord_h_k), blk_coord_b)
+@@ -2360,0 +2630,33 @@
++    def convert_output(
++        self,
++        input: cute.Tensor,
++        frg_cnt: Int32,
++    ) -> cute.Tensor:
++        output = cute.make_rmem_tensor(input.shape, self.output_dtype)
++        frg_tile = cute.size(input) // frg_cnt
++        t_frg = cute.logical_divide(input, cute.make_layout(frg_cnt))
++        output_frg = cute.make_tensor(output.iterator, t_frg.layout)
++        for i in cutlass.range(frg_tile, unroll_full=True):
++            frg_vec = t_frg[None, i].load()
++            output_frg[None, i].store(frg_vec.to(self.output_dtype))
++        return output
++
++    @cute.jit
++    def convert_scaled_output(
++        self,
++        input: cute.Tensor,
++        frg_cnt: Int32,
++        scale: Float32,
++    ) -> cute.Tensor:
++        output = cute.make_rmem_tensor(input.shape, self.output_dtype)
++        frg_tile = cute.size(input) // frg_cnt
++        t_frg = cute.logical_divide(input, cute.make_layout(frg_cnt))
++        output_frg = cute.make_tensor(output.iterator, t_frg.layout)
++        for i in cutlass.range(frg_tile, unroll_full=True):
++            frg_vec = t_frg[None, i].load()
++            output_frg[None, i].store(
++                (scale * frg_vec).to(self.output_dtype)
++            )
++        return output
++
++    @cute.jit
+@@ -2367,0 +2645 @@
++        copy_bits = 128
+@@ -2370,2 +2648,2 @@
+-            self.element_dtype,
+-            num_bits_per_copy=128,
++            self.output_dtype,
++            num_bits_per_copy=copy_bits,
+@@ -2375 +2653 @@
+-            cute.make_layout((1, 128 // self.element_dtype.width)),
++            cute.make_layout((1, copy_bits // self.output_dtype.width)),
+@@ -2381 +2659,3 @@
+-        tCr = thr_copy.partition_S(self.quantize(regs, 4))
++        if cutlass.const_expr(self.split_gqa_heads):
++            tCg = cute.make_tensor(tCg.iterator.align(16), tCg.layout)
++        tCr = thr_copy.partition_S(self.convert_output(regs, 4))
+@@ -2421,0 +2702,3 @@
++        dK_iter = dK.iterator
++        if cutlass.const_expr(self.split_gqa_heads):
++            dK_iter = dK_iter.align(16)
+@@ -2423 +2706 @@
+-            dK.iterator + cute.assume(blk_offset[1] * dK.stride[0], divby=64),
++            dK_iter + cute.assume(blk_offset[1] * dK.stride[0], divby=64),
+@@ -2450,0 +2734,3 @@
++        dV_iter = dV.iterator
++        if cutlass.const_expr(self.split_gqa_heads):
++            dV_iter = dV_iter.align(16)
+@@ -2452 +2738 @@
+-            dV.iterator, cute.make_layout((K, self.cta_tiler[2], HB), stride=dV.stride)
++            dV_iter, cute.make_layout((K, self.cta_tiler[2], HB), stride=dV.stride)
+@@ -2512,16 +2798,28 @@
+-    ) -> Tuple[cute.Tensor, cute.Tensor, cute.Tensor]:
++    ) -> Tuple[cute.Tensor, cute.Tensor, cute.Tensor, cute.Tensor, cute.Tensor]:
+         Q, D, HB = (
+             problem_shape[0],
+             problem_shape[2],
+             problem_shape[3],
+         )
+         H, B = cute.size(problem_shape[3][0]), cute.size(problem_shape[3][1])
+         H_r, H_k = problem_shape[3][0]
+         D = cute.round_up(D, 8)
+         Q = cute.round_up(Q, 8)
+-
++
+         acc_bytes = acc_dtype.width // 8
+         sum_OdO_bytes = cute.assume(B * H * Q * acc_bytes, divby=acc_bytes)
+         scaled_lse_bytes = cute.assume(B * H * Q * acc_bytes, divby=acc_bytes)
+-        dQ_acc_bytes = cute.assume(B * H * Q * D * acc_bytes, divby=acc_bytes)
++        dQ_acc_dtype = self.output_dtype if self.compact_dq_acc else self.acc_dtype
++        dQ_acc_bytes = 0
++        if cutlass.const_expr(not self.direct_compact_dq):
++            dQ_acc_bytes = cute.assume(
++                self.hierarchical_dq_lanes
++                * B * H * Q * D * dQ_acc_dtype.width // 8,
++                divby=2,
++            )
+-
++
++        output_bytes = self.output_dtype.width // 8
++        dK_partial_bytes = cute.assume(
++            B * H * problem_shape[1] * D * output_bytes, divby=output_bytes
++        )
++
+@@ -2529,2 +2820,16 @@
+-        scaled_lse_iter = sum_OdO_iter + sum_OdO_bytes
+-        dQ_acc_iter = scaled_lse_iter + scaled_lse_bytes
++        scaled_lse_iter = workspace.iterator + cute.assume(
++            sum_OdO_bytes, divby=16
++        )
++        dQ_acc_iter = workspace.iterator + cute.assume(
++            sum_OdO_bytes + scaled_lse_bytes, divby=16
++        )
++        dK_partial_iter = workspace.iterator + cute.assume(
++            sum_OdO_bytes + scaled_lse_bytes + dQ_acc_bytes, divby=16
++        )
++        dV_partial_iter = workspace.iterator + cute.assume(
++            sum_OdO_bytes
++            + scaled_lse_bytes
++            + dQ_acc_bytes
++            + dK_partial_bytes,
++            divby=16,
++        )
+@@ -2534 +2841,13 @@
+-        dQ_acc_iter = cute.recast_ptr(dQ_acc_iter, dtype=self.acc_dtype)
++        dQ_acc_iter = cute.recast_ptr(dQ_acc_iter, dtype=dQ_acc_dtype)
++        dK_partial_iter = cute.make_ptr(
++            self.output_dtype,
++            dK_partial_iter.toint(),
++            cute.AddressSpace.gmem,
++            assumed_align=16,
++        )
++        dV_partial_iter = cute.make_ptr(
++            self.output_dtype,
++            dV_partial_iter.toint(),
++            cute.AddressSpace.gmem,
++            assumed_align=16,
++        )
+@@ -2544,7 +2863,9 @@
+-        dQ_acc = cute.make_tensor(
+-            dQ_acc_iter,
+-            cute.make_layout(
+-                (Q, D, ((H_r, H_k), B)),
+-                stride=(D, 1, ((D * Q, D * Q * H_r), D * Q * H)),
+-            ),
+-        )
++        dQ_h_k = H_k * self.hierarchical_dq_lanes
++        dQ_h = H * self.hierarchical_dq_lanes
++        dQ_acc = cute.make_tensor(
++            dQ_acc_iter,
++            cute.make_layout(
++                (Q, D, ((H_r, dQ_h_k), B)),
++                stride=(D, 1, ((D * Q, D * Q * H_r), D * Q * dQ_h)),
++            ),
++        )
+@@ -2552 +2869,15 @@
+-        return sum_OdO, scaled_lse, dQ_acc
++        partial_layout = cute.make_layout(
++            (problem_shape[1], D, ((H_r, H_k), B)),
++            stride=(
++                D,
++                1,
++                (
++                    (D * problem_shape[1], D * problem_shape[1] * H_r),
++                    D * problem_shape[1] * H,
++                ),
++            ),
++        )
++        dK_partial = cute.make_tensor(dK_partial_iter, partial_layout)
++        dV_partial = cute.make_tensor(dV_partial_iter, partial_layout)
++
++        return sum_OdO, scaled_lse, dQ_acc, dK_partial, dV_partial
+@@ -2566 +2896,0 @@
+-    @staticmethod
+@@ -2567,0 +2898 @@
++        self,
+@@ -2574 +2905,4 @@
+-        return (cute.ceil_div(K, block_k), cute.size(H_K), cute.size(B))
++        grid_heads = cute.size(H_K)
++        if self.split_gqa_heads:
++            grid_heads *= cute.size(H_R)
++        return (cute.ceil_div(K, block_k), grid_heads, cute.size(B))
+@@ -2576 +2909,0 @@
+-    @staticmethod
+@@ -2578 +2911,8 @@
+-        q: int, k: int, d: int, h: int, b: int, acc_dtype: Type[cutlass.Numeric]
++        self,
++        q: int,
++        k: int,
++        d: int,
++        h: int,
++        b: int,
++        acc_dtype: Type[cutlass.Numeric],
++        output_dtype: Type[cutlass.Numeric],
+@@ -2587,3 +2927,13 @@
+-        # FP32 versions of outputs that are churned (start off with Q only)
+-        workspace_bytes += b * h * q * d * acc_dtype.width // 8
++        # The direct route reduces into the caller's zeroed BF16 dQ tensor.
++        if not self.direct_compact_dq:
++            dq_width = (
++                output_dtype.width if self.compact_dq_acc else acc_dtype.width
++            )
++            workspace_bytes += (
++                self.hierarchical_dq_lanes
++                * b * h * q * d * dq_width // 8
++            )
++        if self.split_gqa_heads:
++            # Per-query-head dK/dV partials for the split-GQA specialization.
++            workspace_bytes += 2 * b * h * k * d * output_dtype.width // 8
+         return workspace_bytes
+@@ -2812,0 +3155,2 @@
++    output_dtype = BFloat16 if element_dtype == Float8E4M3FN else element_dtype
++
+@@ -2855,3 +3199,7 @@
+-        torch_dtype = cutlass_torch.dtype(dtype)
+-
+-        dst_tensor = ref_tensor.to(dtype=torch_dtype).cuda()
++        # torch.float8 tensors cannot currently be exported through DLPack.
++        # Quantize with PyTorch, carry the encoded bytes through an int8 view,
++        # then restore the logical CuTe element type below.
++        if dtype == Float8E4M3FN:
++            dst_tensor = ref_tensor.to(torch.float8_e4m3fn).view(torch.int8).cuda()
++        else:
++            dst_tensor = ref_tensor.to(dtype=cutlass_torch.dtype(dtype)).cuda()
+@@ -2954 +3302 @@
+-        element_dtype,
++        output_dtype,
+@@ -2964 +3312 @@
+-        element_dtype,
++        output_dtype,
+@@ -2974 +3322 @@
+-        element_dtype,
++        output_dtype,
+@@ -3002,3 +3350,3 @@
+-    workspace_size = BlackwellFusedMultiHeadAttentionBackward._get_workspace_size(
++    workspace_size = fmha_bwd._get_workspace_size(
+-        s_q_max, s_k_max, d, h_q, orig_b, acc_dtype
++        s_q_max, s_k_max, d, h_q, orig_b, acc_dtype, output_dtype
+     )
+@@ -3087,0 +3435,2 @@
++        if fmha_bwd.direct_compact_dq:
++            dq_torch.zero_()
+@@ -3152 +3502,3 @@
+-            upcast=False,
++            # PyTorch has no scalar FP8 arithmetic path; widen the alternate
++            # operation-order reference while retaining native FP8 inputs.
++            upcast=element_dtype == Float8E4M3FN,
+@@ -3174,9 +3524,30 @@
+-        assert (dv - dv_ref).abs().max().item() <= rtol * (
+-            dv_pt - dv_ref
+-        ).abs().max().item() + dv_atol
+-        assert (dk - dk_ref).abs().max().item() <= rtol * (
+-            dk_pt - dk_ref
+-        ).abs().max().item() + dk_atol
+-        assert (dq - dq_ref).abs().max().item() <= rtol * (
+-            dq_pt - dq_ref
+-        ).abs().max().item() + dq_atol
++        for name, actual, reference in (
++            ("dv", dv, dv_ref),
++            ("dk", dk, dk_ref),
++            ("dq", dq, dq_ref),
++        ):
++            actual_f = actual.float().reshape(-1)
++            reference_f = reference.float().reshape(-1)
++            rel_l2 = (actual_f - reference_f).norm() / reference_f.norm().clamp_min(
++                1.0e-12
++            )
++            cosine = (actual_f * reference_f).sum() / (
++                actual_f.norm() * reference_f.norm()
++            ).clamp_min(1.0e-12)
++            print(f"{name} rel_l2: {rel_l2.item()}")
++            print(f"{name} cosine: {cosine.item()}")
++
++        if element_dtype == Float8E4M3FN:
++            assert torch.isfinite(dv).all()
++            assert torch.isfinite(dk).all()
++            assert torch.isfinite(dq).all()
++        else:
++            assert (dv - dv_ref).abs().max().item() <= rtol * (
++                dv_pt - dv_ref
++            ).abs().max().item() + dv_atol
++            assert (dk - dk_ref).abs().max().item() <= rtol * (
++                dk_pt - dk_ref
++            ).abs().max().item() + dk_atol
++            assert (dq - dq_ref).abs().max().item() <= rtol * (
++                dq_pt - dq_ref
++            ).abs().max().item() + dq_atol
+@@ -3196 +3567 @@
+-            element_dtype,
++            output_dtype,
+@@ -3197,0 +3569 @@
++            zero_out=fmha_bwd.direct_compact_dq,
+@@ -3206 +3577 @@
+-            (b, s_k, h_k, 1, d), (1, 4, 3, 2, 0), element_dtype, is_dynamic_layout=True
++            (b, s_k, h_k, 1, d), (1, 4, 3, 2, 0), output_dtype, is_dynamic_layout=True
+@@ -3212 +3583 @@
+-            (b, s_k, h_k, 1, d), (1, 4, 3, 2, 0), element_dtype, is_dynamic_layout=True
++            (b, s_k, h_k, 1, d), (1, 4, 3, 2, 0), output_dtype, is_dynamic_layout=True

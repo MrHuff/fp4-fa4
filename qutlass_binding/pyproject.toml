@@ -1,0 +1,17 @@
+[project]
+name = "qutlass"
+version = "0.0.1"
+description = "Qutlass Binding"
+requires-python = ">=3.11"
+dependencies = ["torch"]
+
+[build-system]
+requires = ["scikit-build-core>=0.11", "nanobind"]
+build-backend = "scikit_build_core.build"
+
+[tool.scikit-build]
+cmake.build-type = "Release"
+build-dir = "build/{wheel_tag}"
+
+[tool.scikit-build.cmake.define]
+CMAKE_CUDA_ARCHITECTURES = {env="CUDAARCHS"}

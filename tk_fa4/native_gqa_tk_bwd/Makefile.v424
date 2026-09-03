@@ -1,0 +1,32 @@
+GPU := B200
+.DEFAULT_GOAL := all
+SRC := v424_d128_gqa_e4m3_score_release_async_production_bshd.cu
+BUILD_DIR ?= /tmp/tkfa4_v424_d128_gqa_score_release_async_production_bshd_build
+EXT_SUFFIX := $(shell python3 -c "import sysconfig; print(sysconfig.get_config_var('EXT_SUFFIX'))")
+MODULE := _C_sm100_gqa_tk_v424_d128_e4m3_score_release_async_production_bshd
+OUT := $(BUILD_DIR)/$(MODULE)$(EXT_SUFFIX)
+CMD := python3 -c "import importlib.util; p='$(OUT)'; s=importlib.util.spec_from_file_location('$(MODULE)', p); m=importlib.util.module_from_spec(s); s.loader.exec_module(m); print(m.native_tk_d128_backward_metadata())"
+CONFIG := pytorch
+NVCCFLAGS += -DTORCH_COMPILE
+NVCCFLAGS += -I$(CURDIR)
+
+HEADERS := \
+	v424_d128_gqa_e4m3_score_release_async_production_bshd.cuh \
+	v421_d128_gqa_e4m3_async_production_bshd.cuh \
+	v420_d128_gqa_e4m3_shared_p_production_bshd.cuh \
+	v416_d64_gqa_e4m3_production_bshd_dq_first_vec2_ds.cuh \
+	v387_d64_gqa_e4m3_async_pipeline.cuh \
+	v386_d64_gqa_e4m3_k128q128_halfcols.cuh \
+	v385_d64_gqa_e4m3_k128q128.cuh \
+	native_gqa_tk_bwd_pipelined.cuh \
+	../deprecated/fa4_common.cuh
+
+$(BUILD_DIR):
+	mkdir -p $(BUILD_DIR)
+
+$(OUT): $(HEADERS) | $(BUILD_DIR)
+
+include ../../ThunderKittens/kernels/common.mk
+
+NVCCFLAGS += -UTORCH_EXTENSION_NAME
+NVCCFLAGS += -DTORCH_EXTENSION_NAME=$(MODULE)

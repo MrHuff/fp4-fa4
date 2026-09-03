@@ -1,0 +1,1255 @@
+{
+  "command": [
+    "/workspace/codebases/pv/fp4_matmul_worktrees/causal_matrix_20260820/tk_fa4/lowp_fa4_bwd/benchmark_causal_backward_matrix.py",
+    "--sequences",
+    "16384",
+    "--head-dims",
+    "64",
+    "--head-pairs",
+    "32/8",
+    "--routes",
+    "retained_lowp",
+    "--seeds",
+    "20260820,20260821,20260822",
+    "--warmups",
+    "7",
+    "--samples",
+    "41",
+    "--min-device-free-gib",
+    "32",
+    "--min-host-free-gib",
+    "128",
+    "--output",
+    "results/causal_isolated_matrix_20260820/backward/production_s16384_final.json"
+  ],
+  "created_utc": "2026-08-20T15:26:01.151707+00:00",
+  "device": {
+    "compute_capability": [
+      10,
+      0
+    ],
+    "device_name": "NVIDIA GB200",
+    "torch": "2.9.0a0+145a3a7bda.nv25.10",
+    "torch_cuda": "13.0",
+    "total_memory_bytes": 197897617408,
+    "visible_device_count": 1
+  },
+  "host": {
+    "platform": "Linux-6.12.68-92.122.amzn2023.aarch64-aarch64-with-glibc2.39",
+    "python": "3.12.3"
+  },
+  "planned_cases": [
+    {
+      "available": true,
+      "route": "retained_lowp",
+      "route_policy": {
+        "detached_fp8_p_tmem": true,
+        "direct_tma_dkdv": true,
+        "exp2_degree": 1,
+        "exp2_period": 2,
+        "exp2_policy": {
+          "effective": {
+            "degree": 1,
+            "period": 2
+          },
+          "mode": "auto_verified_shape",
+          "reason": "this measured D64 sequence/head shape uses the degree-1/period-2 selective packed-ALU EX2 path",
+          "requested": {
+            "degree": 2,
+            "period": null
+          },
+          "version": "d64_verified_shape_selective_exp2_v3"
+        },
+        "fp8_ds_lift": 16,
+        "head_fast_raster": true,
+        "lowp_do_stages": 1,
+        "probability_lift": 256,
+        "probability_storage": "tmem",
+        "probability_tmem_policy": {
+          "auto_eligible": true,
+          "effective_detached": true,
+          "mode": "auto_verified_shape",
+          "reason": "the measured long-sequence D64 retained route stores FP8 P in unused TMEM so score retirement does not wait for P publication",
+          "requested_detached": null,
+          "version": "d64_verified_shape_detached_fp8_p_tmem_v2"
+        },
+        "raster_policy": {
+          "auto_eligible": true,
+          "effective_head_fast": true,
+          "forced_head_fast": false,
+          "mode": "auto_verified_shape",
+          "reason": "this measured one-lane direct-TMA D64 causal route launches all heads for each key tile so the longest CTAs retire before the tail",
+          "requested_head_fast": null,
+          "version": "d64_verified_shape_head_fast_raster_v2"
+        },
+        "retained_source": "0db D64 coherent training policy with sequence-resolved EX2",
+        "reuse_quantized_p": false,
+        "workspace_stats": true
+      },
+      "shape": {
+        "batch": 1,
+        "gqa_ratio": 4,
+        "head_dim": 64,
+        "kv_heads": 8,
+        "q_heads": 32,
+        "sequence": 16384
+      }
+    }
+  ],
+  "planned_shapes": [
+    {
+      "batch": 1,
+      "gqa_ratio": 4,
+      "head_dim": 64,
+      "kv_heads": 8,
+      "q_heads": 32,
+      "sequence": 16384
+    }
+  ],
+  "protocol": {
+    "accuracy_seeds": [
+      20260820,
+      20260821,
+      20260822
+    ],
+    "backward_exp2_dispatch": {
+      "default": {
+        "degree": 2,
+        "period": 0
+      },
+      "scope": "D64 B1 causal retained lowp",
+      "threshold_sequence": 4096,
+      "verified_shape_policy": {
+        "degree": 1,
+        "period": 2
+      },
+      "verified_shapes": [
+        {
+          "kv_heads": 4,
+          "q_heads": 16,
+          "sequence": 4096
+        },
+        {
+          "kv_heads": 8,
+          "q_heads": 32,
+          "sequence": 4096
+        },
+        {
+          "kv_heads": 16,
+          "q_heads": 64,
+          "sequence": 4096
+        },
+        {
+          "kv_heads": 8,
+          "q_heads": 32,
+          "sequence": 8192
+        },
+        {
+          "kv_heads": 8,
+          "q_heads": 32,
+          "sequence": 16384
+        }
+      ],
+      "version": "d64_verified_shape_selective_exp2_v3"
+    },
+    "backward_probability_tmem_dispatch": {
+      "default": "score_alias_p",
+      "scope": "D64 B1 causal one-lane direct-TMA retained lowp with TMEM probability storage and workspace statistics",
+      "verified_shape_policy": "detached_fp8_p_tmem",
+      "verified_shapes": [
+        {
+          "kv_heads": 8,
+          "q_heads": 32,
+          "sequence": 8192
+        },
+        {
+          "kv_heads": 8,
+          "q_heads": 32,
+          "sequence": 16384
+        }
+      ],
+      "version": "d64_verified_shape_detached_fp8_p_tmem_v2"
+    },
+    "backward_raster_dispatch": {
+      "default": "key_fast",
+      "scope": "D64 B1 causal one-lane direct-TMA retained lowp with TMEM probability storage and workspace statistics",
+      "verified_shape_policy": "head_fast",
+      "verified_shapes": [
+        {
+          "kv_heads": 8,
+          "q_heads": 32,
+          "sequence": 8192
+        },
+        {
+          "kv_heads": 8,
+          "q_heads": 32,
+          "sequence": 16384
+        }
+      ],
+      "version": "d64_verified_shape_head_fast_raster_v2"
+    },
+    "causal": true,
+    "comparison": "CuTe BF16 and retained lowp backward on one exact E4M3-represented Q/K/V/dO state",
+    "fixed_length": true,
+    "forward_for_statistics": "CuTe BF16 causal flash attention",
+    "forward_timing_included": false,
+    "minimum_device_free_gib": 32.0,
+    "minimum_host_free_gib": 128.0,
+    "primary_timing_includes_required_clears": true,
+    "quantization_timing_included": false,
+    "samples": 41,
+    "timing_seed": 20260820,
+    "warmups": 7
+  },
+  "records": [
+    {
+      "memory_before": {
+        "device_free_bytes": 197171675136,
+        "device_total_bytes": 197897617408,
+        "estimated_live_tensor_bytes": 889192448,
+        "host_available_bytes": 917837697024
+      },
+      "route": "retained_lowp",
+      "route_policy": {
+        "detached_fp8_p_tmem": true,
+        "direct_tma_dkdv": true,
+        "exp2_degree": 1,
+        "exp2_period": 2,
+        "exp2_policy": {
+          "effective": {
+            "degree": 1,
+            "period": 2
+          },
+          "mode": "auto_verified_shape",
+          "reason": "this measured D64 sequence/head shape uses the degree-1/period-2 selective packed-ALU EX2 path",
+          "requested": {
+            "degree": 2,
+            "period": null
+          },
+          "version": "d64_verified_shape_selective_exp2_v3"
+        },
+        "fp8_ds_lift": 16,
+        "head_fast_raster": true,
+        "lowp_do_stages": 1,
+        "probability_lift": 256,
+        "probability_storage": "tmem",
+        "probability_tmem_policy": {
+          "auto_eligible": true,
+          "effective_detached": true,
+          "mode": "auto_verified_shape",
+          "reason": "the measured long-sequence D64 retained route stores FP8 P in unused TMEM so score retirement does not wait for P publication",
+          "requested_detached": null,
+          "version": "d64_verified_shape_detached_fp8_p_tmem_v2"
+        },
+        "raster_policy": {
+          "auto_eligible": true,
+          "effective_head_fast": true,
+          "forced_head_fast": false,
+          "mode": "auto_verified_shape",
+          "reason": "this measured one-lane direct-TMA D64 causal route launches all heads for each key tile so the longest CTAs retire before the tail",
+          "requested_head_fast": null,
+          "version": "d64_verified_shape_head_fast_raster_v2"
+        },
+        "retained_source": "0db D64 coherent training policy with sequence-resolved EX2",
+        "reuse_quantized_p": false,
+        "workspace_stats": true
+      },
+      "seed_records": [
+        {
+          "accuracy": {
+            "aggregate": {
+              "actual_finite": true,
+              "cosine": 0.9985245514642616,
+              "max_abs": 0.06640625,
+              "norm_ratio": 0.9709022511457733,
+              "reference_finite": true,
+              "relative_l2": 0.0609238179858915
+            },
+            "dk": {
+              "actual_finite": true,
+              "cosine": 0.9976227879524231,
+              "max_abs": 0.0032958984375,
+              "norm_ratio": 0.9719974994659424,
+              "reference_finite": true,
+              "relative_l2": 0.07352181524038315,
+              "row_cosine_p01": 0.973014235496521,
+              "row_cosine_p05": 0.9795140624046326,
+              "row_cosine_p50": 0.9912156462669373
+            },
+            "dq": {
+              "actual_finite": true,
+              "cosine": 0.9976258277893066,
+              "max_abs": 0.002655029296875,
+              "norm_ratio": 0.9719101786613464,
+              "reference_finite": true,
+              "relative_l2": 0.07351254671812057,
+              "row_cosine_p01": 0.9757400751113892,
+              "row_cosine_p05": 0.9825948476791382,
+              "row_cosine_p50": 0.9954400062561035
+            },
+            "dv": {
+              "actual_finite": true,
+              "cosine": 0.9985305666923523,
+              "max_abs": 0.06640625,
+              "norm_ratio": 0.9708952903747559,
+              "reference_finite": true,
+              "relative_l2": 0.06083159148693085,
+              "row_cosine_p01": 0.9975740313529968,
+              "row_cosine_p05": 0.9980050921440125,
+              "row_cosine_p50": 0.9988422393798828
+            }
+          },
+          "peak_device_allocated_bytes": 1809850880,
+          "peak_device_reserved_bytes": 1925185536,
+          "reference_policy": {
+            "causal": true,
+            "input": "BF16 decode of the represented E4M3 state",
+            "output": "BF16 dQ/dK/dV",
+            "probability": "BF16 score/softmax",
+            "statistics": "internal O*dO and LSE preprocessing"
+          },
+          "route": "retained_lowp",
+          "route_policy": {
+            "causal": true,
+            "detached_fp8_p_tmem": true,
+            "direct_tma_dkdv": true,
+            "exp2_degree": 1,
+            "exp2_period": 2,
+            "exp2_policy": {
+              "effective": {
+                "degree": 1,
+                "period": 2
+              },
+              "mode": "auto_verified_shape",
+              "reason": "this measured D64 sequence/head shape uses the degree-1/period-2 selective packed-ALU EX2 path",
+              "requested": {
+                "degree": 2,
+                "period": null
+              },
+              "version": "d64_verified_shape_selective_exp2_v3"
+            },
+            "fp8_ds_lift": 16,
+            "head_fast_raster": true,
+            "input": "E4M3 Q/K/V/dO with fixed x4 publication scale",
+            "lowp_do_stages": 1,
+            "output": "BF16 dQ/dK/dV with common x4 decode",
+            "probability_lift": 256,
+            "probability_storage": "tmem",
+            "probability_tmem_policy": {
+              "auto_eligible": true,
+              "effective_detached": true,
+              "mode": "auto_verified_shape",
+              "reason": "the measured long-sequence D64 retained route stores FP8 P in unused TMEM so score retirement does not wait for P publication",
+              "requested_detached": null,
+              "version": "d64_verified_shape_detached_fp8_p_tmem_v2"
+            },
+            "raster_policy": {
+              "auto_eligible": true,
+              "effective_head_fast": true,
+              "forced_head_fast": false,
+              "mode": "auto_verified_shape",
+              "reason": "this measured one-lane direct-TMA D64 causal route launches all heads for each key tile so the longest CTAs retire before the tail",
+              "requested_head_fast": null,
+              "version": "d64_verified_shape_head_fast_raster_v2"
+            },
+            "retained_source": "0db D64 coherent training policy with sequence-resolved EX2",
+            "reuse_quantized_p": false,
+            "score_scale": "(1/sqrt(64))/16",
+            "statistics": "negative projection-native pages in backward workspace",
+            "workspace_stats": true
+          },
+          "seed": 20260820,
+          "timing": {
+            "breakdown": {
+              "cute_bf16": {
+                "kernel_after_required_clear": {
+                  "maximum_us": 2892.8000926971436,
+                  "mean_us": 2709.7803034433505,
+                  "median_us": 2696.1920261383057,
+                  "minimum_us": 2662.559986114502,
+                  "p05_us": 2668.544054031372,
+                  "p95_us": 2775.0399112701416,
+                  "samples_us": [
+                    2697.02410697937,
+                    2671.6160774230957,
+                    2668.544054031372,
+                    2662.559986114502,
+                    2669.5680618286133,
+                    2685.6958866119385,
+                    2691.7760372161865,
+                    2695.1680183410645,
+                    2698.1120109558105,
+                    2674.7519969940186,
+                    2668.0960655212402,
+                    2674.720048904419,
+                    2689.023971557617,
+                    2682.87992477417,
+                    2705.4080963134766,
+                    2892.8000926971436,
+                    2757.63201713562,
+                    2735.1040840148926,
+                    2720.7679748535156,
+                    2705.6639194488525,
+                    2690.0479793548584,
+                    2695.1680183410645,
+                    2693.4080123901367,
+                    2700.2880573272705,
+                    2699.2640495300293,
+                    2694.1440105438232,
+                    2701.375961303711,
+                    2693.919897079468,
+                    2693.120002746582,
+                    2687.999963760376,
+                    2696.1920261383057,
+                    2702.303886413574,
+                    2688.447952270508,
+                    2704.3840885162354,
+                    2723.8399982452393,
+                    2773.024082183838,
+                    2778.208017349243,
+                    2772.1920013427734,
+                    2775.0399112701416,
+                    2764.8000717163086,
+                    2726.912021636963
+                  ],
+                  "stdev_us": 42.959912307827395
+                },
+                "required_clear_only": {
+                  "maximum_us": 86.40000224113464,
+                  "mean_us": 82.83239039706021,
+                  "median_us": 82.84799754619598,
+                  "minimum_us": 80.4160013794899,
+                  "p05_us": 81.02399855852127,
+                  "p95_us": 85.66399663686752,
+                  "samples_us": [
+                    85.66399663686752,
+                    83.67999643087387,
+                    82.75199681520462,
+                    83.0719992518425,
+                    81.56800270080566,
+                    83.42400193214417,
+                    83.45600217580795,
+                    83.23200047016144,
+                    85.66399663686752,
+                    82.68799632787704,
+                    83.26400071382523,
+                    82.84799754619598,
+                    82.30400085449219,
+                    81.69600367546082,
+                    82.33600109815598,
+                    83.16799998283386,
+                    86.40000224113464,
+                    81.24800026416779,
+                    83.20000022649765,
+                    82.14399963617325,
+                    81.11999928951263,
+                    83.39200168848038,
+                    83.00799876451492,
+                    85.21600067615509,
+                    81.34400099515915,
+                    84.44800227880478,
+                    82.71999657154083,
+                    81.02399855852127,
+                    82.87999778985977,
+                    82.56000280380249,
+                    80.64000308513641,
+                    83.90399813652039,
+                    82.65600353479385,
+                    80.4160013794899,
+                    81.53600245714188,
+                    82.94399827718735,
+                    82.49600231647491,
+                    82.91199803352356,
+                    82.56000280380249,
+                    81.15199953317642,
+                    83.39200168848038
+                  ],
+                  "stdev_us": 1.335019428741335
+                }
+              },
+              "retained_lowp": {
+                "kernel_after_required_clear": {
+                  "maximum_us": 2705.984115600586,
+                  "mean_us": 2582.771510612674,
+                  "median_us": 2576.832056045532,
+                  "minimum_us": 2569.4398880004883,
+                  "p05_us": 2571.0079669952393,
+                  "p95_us": 2625.119924545288,
+                  "samples_us": [
+                    2646.6240882873535,
+                    2625.119924545288,
+                    2581.023931503296,
+                    2577.183961868286,
+                    2570.5599784851074,
+                    2574.9759674072266,
+                    2577.183961868286,
+                    2572.319984436035,
+                    2575.615882873535,
+                    2574.496030807495,
+                    2572.9598999023438,
+                    2576.0960578918457,
+                    2581.376075744629,
+                    2574.8798847198486,
+                    2576.832056045532,
+                    2574.2719173431396,
+                    2569.4398880004883,
+                    2579.7760486602783,
+                    2571.712017059326,
+                    2571.9680786132812,
+                    2578.5279273986816,
+                    2580.512046813965,
+                    2571.808099746704,
+                    2575.8719444274902,
+                    2581.631898880005,
+                    2580.064058303833,
+                    2576.9920349121094,
+                    2579.3919563293457,
+                    2575.9360790252686,
+                    2594.5279598236084,
+                    2582.7200412750244,
+                    2705.984115600586,
+                    2580.735921859741,
+                    2582.6239585876465,
+                    2571.0079669952393,
+                    2573.568105697632,
+                    2575.0720500946045,
+                    2576.8959522247314,
+                    2575.6800174713135,
+                    2572.5760459899902,
+                    2577.0881175994873
+                  ],
+                  "stdev_us": 24.09947984809576
+                },
+                "required_clear_only": {
+                  "maximum_us": 48.448000103235245,
+                  "mean_us": 37.953560853876716,
+                  "median_us": 37.66399994492531,
+                  "minimum_us": 34.623999148607254,
+                  "p05_us": 35.19999980926514,
+                  "p95_us": 41.439998894929886,
+                  "samples_us": [
+                    41.439998894929886,
+                    39.16800022125244,
+                    42.047999799251556,
+                    36.19199991226196,
+                    38.27200084924698,
+                    38.2080003619194,
+                    39.744000881910324,
+                    36.38400137424469,
+                    39.16800022125244,
+                    36.67199984192848,
+                    39.903998374938965,
+                    38.55999931693077,
+                    48.448000103235245,
+                    40.991999208927155,
+                    36.67199984192848,
+                    39.0079990029335,
+                    38.68800029158592,
+                    37.408001720905304,
+                    34.623999148607254,
+                    36.54399886727333,
+                    36.67199984192848,
+                    35.711999982595444,
+                    38.176000118255615,
+                    38.24000060558319,
+                    38.40000182390213,
+                    35.87200120091438,
+                    36.479998379945755,
+                    37.66399994492531,
+                    38.176000118255615,
+                    37.856001406908035,
+                    35.51999852061272,
+                    35.551998764276505,
+                    37.43999823927879,
+                    38.43199834227562,
+                    37.63199970126152,
+                    37.53599897027016,
+                    35.13599932193756,
+                    38.55999931693077,
+                    35.19999980926514,
+                    36.928001791238785,
+                    36.768000572919846
+                  ],
+                  "stdev_us": 2.382764274590951
+                }
+              }
+            },
+            "paired_with_required_clear": {
+              "cute_bf16": {
+                "maximum_us": 3166.016101837158,
+                "mean_us": 2777.7412809976718,
+                "median_us": 2757.9519748687744,
+                "minimum_us": 2738.624095916748,
+                "p05_us": 2746.17600440979,
+                "p95_us": 2872.25604057312,
+                "samples_us": [
+                  2789.504051208496,
+                  2760.0319385528564,
+                  2752.8960704803467,
+                  2753.3440589904785,
+                  3166.016101837158,
+                  2757.9519748687744,
+                  2756.9921016693115,
+                  2753.312110900879,
+                  2759.3278884887695,
+                  2761.4400386810303,
+                  2748.960018157959,
+                  2760.767936706543,
+                  2756.704092025757,
+                  2776.639938354492,
+                  2765.216112136841,
+                  2773.695945739746,
+                  2767.9998874664307,
+                  2776.479959487915,
+                  2776.1919498443604,
+                  2765.8560276031494,
+                  2880.064010620117,
+                  2748.608112335205,
+                  2738.624095916748,
+                  2746.17600440979,
+                  2744.3840503692627,
+                  2749.376058578491,
+                  2749.631881713867,
+                  2752.351999282837,
+                  2752.255916595459,
+                  2753.567934036255,
+                  2767.904043197632,
+                  2793.66397857666,
+                  2788.7680530548096,
+                  2802.7520179748535,
+                  2799.0400791168213,
+                  2756.1919689178467,
+                  2872.25604057312,
+                  2753.5040378570557,
+                  2747.4238872528076,
+                  2757.4400901794434,
+                  2754.080057144165
+                ],
+                "stdev_us": 68.60709292965711
+              },
+              "retained_lowp": {
+                "maximum_us": 2665.5359268188477,
+                "mean_us": 2625.6952169464857,
+                "median_us": 2621.407985687256,
+                "minimum_us": 2605.760097503662,
+                "p05_us": 2608.6080074310303,
+                "p95_us": 2652.3520946502686,
+                "samples_us": [
+                  2644.5438861846924,
+                  2618.0479526519775,
+                  2621.920108795166,
+                  2605.9839725494385,
+                  2626.240015029907,
+                  2622.080087661743,
+                  2626.271963119507,
+                  2620.0640201568604,
+                  2622.8480339050293,
+                  2610.0800037384033,
+                  2617.9840564727783,
+                  2622.4958896636963,
+                  2638.6239528656006,
+                  2626.3680458068848,
+                  2638.495922088623,
+                  2636.320114135742,
+                  2637.2480392456055,
+                  2639.1680240631104,
+                  2620.5759048461914,
+                  2620.6400394439697,
+                  2623.647928237915,
+                  2605.760097503662,
+                  2618.112087249756,
+                  2612.607955932617,
+                  2617.311954498291,
+                  2608.6080074310303,
+                  2619.4560527801514,
+                  2617.568016052246,
+                  2621.2480068206787,
+                  2617.8879737854004,
+                  2665.5359268188477,
+                  2651.263952255249,
+                  2654.911994934082,
+                  2652.3520946502686,
+                  2635.0719928741455,
+                  2619.3599700927734,
+                  2624.6719360351562,
+                  2616.5759563446045,
+                  2621.407985687256,
+                  2613.152027130127,
+                  2620.9919452667236
+                ],
+                "stdev_us": 13.590784375047107
+              }
+            },
+            "primary_boundary": "backward_with_every_required_clear",
+            "rotated_order": true,
+            "speedup_vs_bf16": 1.0520880343414842
+          }
+        },
+        {
+          "accuracy": {
+            "aggregate": {
+              "actual_finite": true,
+              "cosine": 0.9984995720078274,
+              "max_abs": 0.0537109375,
+              "norm_ratio": 0.968884924398993,
+              "reference_finite": true,
+              "relative_l2": 0.062254574556233115
+            },
+            "dk": {
+              "actual_finite": true,
+              "cosine": 0.9976373910903931,
+              "max_abs": 0.002197265625,
+              "norm_ratio": 0.9723111987113953,
+              "reference_finite": true,
+              "relative_l2": 0.07322079688310623,
+              "row_cosine_p01": 0.9730061292648315,
+              "row_cosine_p05": 0.9795445799827576,
+              "row_cosine_p50": 0.991153359413147
+            },
+            "dq": {
+              "actual_finite": true,
+              "cosine": 0.9976382851600647,
+              "max_abs": 0.001678466796875,
+              "norm_ratio": 0.9720917344093323,
+              "reference_finite": true,
+              "relative_l2": 0.07328440994024277,
+              "row_cosine_p01": 0.9758080840110779,
+              "row_cosine_p05": 0.982545793056488,
+              "row_cosine_p50": 0.9953991174697876
+            },
+            "dv": {
+              "actual_finite": true,
+              "cosine": 0.998505175113678,
+              "max_abs": 0.0537109375,
+              "norm_ratio": 0.9688635468482971,
+              "reference_finite": true,
+              "relative_l2": 0.06217757239937782,
+              "row_cosine_p01": 0.9975975155830383,
+              "row_cosine_p05": 0.998066246509552,
+              "row_cosine_p50": 0.9988641142845154
+            }
+          },
+          "peak_device_allocated_bytes": 1809850880,
+          "peak_device_reserved_bytes": 1925185536,
+          "reference_policy": {
+            "causal": true,
+            "input": "BF16 decode of the represented E4M3 state",
+            "output": "BF16 dQ/dK/dV",
+            "probability": "BF16 score/softmax",
+            "statistics": "internal O*dO and LSE preprocessing"
+          },
+          "route": "retained_lowp",
+          "route_policy": {
+            "causal": true,
+            "detached_fp8_p_tmem": true,
+            "direct_tma_dkdv": true,
+            "exp2_degree": 1,
+            "exp2_period": 2,
+            "exp2_policy": {
+              "effective": {
+                "degree": 1,
+                "period": 2
+              },
+              "mode": "auto_verified_shape",
+              "reason": "this measured D64 sequence/head shape uses the degree-1/period-2 selective packed-ALU EX2 path",
+              "requested": {
+                "degree": 2,
+                "period": null
+              },
+              "version": "d64_verified_shape_selective_exp2_v3"
+            },
+            "fp8_ds_lift": 16,
+            "head_fast_raster": true,
+            "input": "E4M3 Q/K/V/dO with fixed x4 publication scale",
+            "lowp_do_stages": 1,
+            "output": "BF16 dQ/dK/dV with common x4 decode",
+            "probability_lift": 256,
+            "probability_storage": "tmem",
+            "probability_tmem_policy": {
+              "auto_eligible": true,
+              "effective_detached": true,
+              "mode": "auto_verified_shape",
+              "reason": "the measured long-sequence D64 retained route stores FP8 P in unused TMEM so score retirement does not wait for P publication",
+              "requested_detached": null,
+              "version": "d64_verified_shape_detached_fp8_p_tmem_v2"
+            },
+            "raster_policy": {
+              "auto_eligible": true,
+              "effective_head_fast": true,
+              "forced_head_fast": false,
+              "mode": "auto_verified_shape",
+              "reason": "this measured one-lane direct-TMA D64 causal route launches all heads for each key tile so the longest CTAs retire before the tail",
+              "requested_head_fast": null,
+              "version": "d64_verified_shape_head_fast_raster_v2"
+            },
+            "retained_source": "0db D64 coherent training policy with sequence-resolved EX2",
+            "reuse_quantized_p": false,
+            "score_scale": "(1/sqrt(64))/16",
+            "statistics": "negative projection-native pages in backward workspace",
+            "workspace_stats": true
+          },
+          "seed": 20260821,
+          "timing": null
+        },
+        {
+          "accuracy": {
+            "aggregate": {
+              "actual_finite": true,
+              "cosine": 0.9984194313149328,
+              "max_abs": 0.05859375,
+              "norm_ratio": 0.9710941741992711,
+              "reference_finite": true,
+              "relative_l2": 0.062492470340051016
+            },
+            "dk": {
+              "actual_finite": true,
+              "cosine": 0.9976678490638733,
+              "max_abs": 0.00238037109375,
+              "norm_ratio": 0.9718332290649414,
+              "reference_finite": true,
+              "relative_l2": 0.07298228144645691,
+              "row_cosine_p01": 0.9729526042938232,
+              "row_cosine_p05": 0.9793582558631897,
+              "row_cosine_p50": 0.9911755323410034
+            },
+            "dq": {
+              "actual_finite": true,
+              "cosine": 0.9976795315742493,
+              "max_abs": 0.001953125,
+              "norm_ratio": 0.9720147848129272,
+              "reference_finite": true,
+              "relative_l2": 0.07276242226362228,
+              "row_cosine_p01": 0.9757397770881653,
+              "row_cosine_p05": 0.9825697541236877,
+              "row_cosine_p50": 0.9954249858856201
+            },
+            "dv": {
+              "actual_finite": true,
+              "cosine": 0.998424768447876,
+              "max_abs": 0.05859375,
+              "norm_ratio": 0.9710882902145386,
+              "reference_finite": true,
+              "relative_l2": 0.06241411343216896,
+              "row_cosine_p01": 0.9974995255470276,
+              "row_cosine_p05": 0.9978898763656616,
+              "row_cosine_p50": 0.9987185001373291
+            }
+          },
+          "peak_device_allocated_bytes": 1809850880,
+          "peak_device_reserved_bytes": 1925185536,
+          "reference_policy": {
+            "causal": true,
+            "input": "BF16 decode of the represented E4M3 state",
+            "output": "BF16 dQ/dK/dV",
+            "probability": "BF16 score/softmax",
+            "statistics": "internal O*dO and LSE preprocessing"
+          },
+          "route": "retained_lowp",
+          "route_policy": {
+            "causal": true,
+            "detached_fp8_p_tmem": true,
+            "direct_tma_dkdv": true,
+            "exp2_degree": 1,
+            "exp2_period": 2,
+            "exp2_policy": {
+              "effective": {
+                "degree": 1,
+                "period": 2
+              },
+              "mode": "auto_verified_shape",
+              "reason": "this measured D64 sequence/head shape uses the degree-1/period-2 selective packed-ALU EX2 path",
+              "requested": {
+                "degree": 2,
+                "period": null
+              },
+              "version": "d64_verified_shape_selective_exp2_v3"
+            },
+            "fp8_ds_lift": 16,
+            "head_fast_raster": true,
+            "input": "E4M3 Q/K/V/dO with fixed x4 publication scale",
+            "lowp_do_stages": 1,
+            "output": "BF16 dQ/dK/dV with common x4 decode",
+            "probability_lift": 256,
+            "probability_storage": "tmem",
+            "probability_tmem_policy": {
+              "auto_eligible": true,
+              "effective_detached": true,
+              "mode": "auto_verified_shape",
+              "reason": "the measured long-sequence D64 retained route stores FP8 P in unused TMEM so score retirement does not wait for P publication",
+              "requested_detached": null,
+              "version": "d64_verified_shape_detached_fp8_p_tmem_v2"
+            },
+            "raster_policy": {
+              "auto_eligible": true,
+              "effective_head_fast": true,
+              "forced_head_fast": false,
+              "mode": "auto_verified_shape",
+              "reason": "this measured one-lane direct-TMA D64 causal route launches all heads for each key tile so the longest CTAs retire before the tail",
+              "requested_head_fast": null,
+              "version": "d64_verified_shape_head_fast_raster_v2"
+            },
+            "retained_source": "0db D64 coherent training policy with sequence-resolved EX2",
+            "reuse_quantized_p": false,
+            "score_scale": "(1/sqrt(64))/16",
+            "statistics": "negative projection-native pages in backward workspace",
+            "workspace_stats": true
+          },
+          "seed": 20260822,
+          "timing": null
+        }
+      ],
+      "shape": {
+        "batch": 1,
+        "gqa_ratio": 4,
+        "head_dim": 64,
+        "kv_heads": 8,
+        "q_heads": 32,
+        "sequence": 16384
+      },
+      "status": "complete"
+    }
+  ],
+  "requested_routes": [
+    "retained_lowp"
+  ],
+  "route_capabilities": {
+    "mx_exact_replay": {
+      "available": false,
+      "reason": "No retained callable adapter in the clean source line consumes the causal forward's published MXFP4 probability payload/E8M0 scale page at the CompiledGqaBackward boundary. Exploratory fp4_pv_experiments.py probes are not a production substitute.",
+      "required_adapter_contract": {
+        "inputs": [
+          "represented E4M3 Q/K/V/dO",
+          "forward MXFP4 probability payload or deterministic replay",
+          "forward-published E8M0 block32 probability scales",
+          "forward LSE/statistics"
+        ],
+        "outputs": [
+          "BF16 dQ",
+          "BF16 dK",
+          "BF16 dV"
+        ],
+        "required_methods": [
+          "reset",
+          "run"
+        ],
+        "timing_boundary": "replay/publication handoff plus every required clear and attention backward"
+      },
+      "scope": "route_complete_mxfp4_probability_replay_and_backward"
+    },
+    "retained_lowp": {
+      "available": true,
+      "d64_exp2_contract": "automatic d1/p2 only for measured S/Hq/Hkv shapes: 4096/16/4, 4096/32/8, 4096/64/16, 8192/32/8, and 16384/32/8; all other shapes retain native d2/p0",
+      "d64_probability_tmem_contract": "S8192 and S16384 Hq/Hkv=32/8 store FP8 P in the unused D64 TMEM tail; other retained shapes preserve score aliasing",
+      "d64_raster_contract": "the measured one-lane direct-TMA TMEM S8192 and S16384 Hq/Hkv=32/8 routes use the head-fast/key-wavefront raster; named comparison controls inherit that raster so they isolate only their advertised direct-TMA, EX2, or detached-P change",
+      "input_contract": "represented_e4m3_q_k_v_dout_x4",
+      "probability_contract": "score/LSE reconstruction with retained E4M3 probability path",
+      "scope": "isolated_attention_backward_shared_core",
+      "supported_head_dims": [
+        64,
+        128
+      ]
+    },
+    "retained_lowp_alias_p": {
+      "available": true,
+      "comparison_control_for": "retained_lowp",
+      "explicit_detached_fp8_p_tmem": false,
+      "input_contract": "represented_e4m3_q_k_v_dout_x4",
+      "only_policy_change": {
+        "control_module_detached_fp8_p_tmem": [
+          true,
+          false
+        ]
+      },
+      "probability_contract": "score/LSE reconstruction with retained E4M3 probability path",
+      "reason_d64_only": "This control retains score-aliasing FP8 P while inheriting the production raster so detached-P speedup remains measurable.",
+      "scope": "isolated_attention_backward_shared_core",
+      "supported_head_dims": [
+        64
+      ],
+      "supported_shapes": [
+        {
+          "kv_heads": 8,
+          "q_heads": 32,
+          "sequence": 8192
+        },
+        {
+          "kv_heads": 8,
+          "q_heads": 32,
+          "sequence": 16384
+        }
+      ]
+    },
+    "retained_lowp_detached_p": {
+      "available": true,
+      "comparison_control_for": "retained_lowp_alias_p",
+      "explicit_detached_fp8_p_tmem": true,
+      "input_contract": "represented_e4m3_q_k_v_dout_x4",
+      "only_policy_change": {
+        "control_module_detached_fp8_p_tmem": [
+          false,
+          true
+        ]
+      },
+      "probability_contract": "score/LSE reconstruction with retained E4M3 probability path",
+      "reason_d64_only": "This control moves FP8 P from the score alias to unused D64 TMEM while inheriting the retained route's physical raster.",
+      "scope": "isolated_attention_backward_shared_core",
+      "supported_head_dims": [
+        64
+      ],
+      "supported_shapes": [
+        {
+          "kv_heads": 8,
+          "q_heads": 32,
+          "sequence": 8192
+        },
+        {
+          "kv_heads": 8,
+          "q_heads": 32,
+          "sequence": 16384
+        }
+      ]
+    },
+    "retained_lowp_exp2_d1_p2": {
+      "available": true,
+      "comparison_control_for": "retained_lowp_native_exp2",
+      "explicit_exp2_policy": {
+        "degree": 1,
+        "period": 2
+      },
+      "input_contract": "represented_e4m3_q_k_v_dout_x4",
+      "only_policy_change": {
+        "exp2_degree": [
+          2,
+          1
+        ],
+        "exp2_period": [
+          0,
+          2
+        ]
+      },
+      "probability_contract": "score/LSE reconstruction with retained E4M3 probability path",
+      "reason_d64_only": "This is a controlled long-sequence D64 screen of the selective packed-ALU EX2 cadence; it is not a D128 policy.",
+      "scope": "isolated_attention_backward_shared_core",
+      "supported_head_dims": [
+        64
+      ]
+    },
+    "retained_lowp_exp2_d1_p3": {
+      "available": true,
+      "comparison_control_for": "retained_lowp_native_exp2",
+      "explicit_exp2_policy": {
+        "degree": 1,
+        "period": 3
+      },
+      "input_contract": "represented_e4m3_q_k_v_dout_x4",
+      "only_policy_change": {
+        "exp2_degree": [
+          2,
+          1
+        ],
+        "exp2_period": [
+          0,
+          3
+        ]
+      },
+      "probability_contract": "score/LSE reconstruction with retained E4M3 probability path",
+      "reason_d64_only": "This is a controlled long-sequence D64 screen of the selective packed-ALU EX2 cadence; it is not a D128 policy.",
+      "scope": "isolated_attention_backward_shared_core",
+      "supported_head_dims": [
+        64
+      ]
+    },
+    "retained_lowp_native_exp2": {
+      "available": true,
+      "comparison_control_for": "retained_lowp",
+      "explicit_exp2_policy": {
+        "degree": 2,
+        "period": 0
+      },
+      "input_contract": "represented_e4m3_q_k_v_dout_x4",
+      "probability_contract": "score/LSE reconstruction with retained E4M3 probability path",
+      "reason_d64_only": "This control forces the pre-dispatch native EX2 implementation.",
+      "scope": "isolated_attention_backward_shared_core",
+      "supported_head_dims": [
+        64
+      ]
+    },
+    "retained_lowp_no_direct_tma": {
+      "available": true,
+      "comparison_control_for": "retained_lowp",
+      "input_contract": "represented_e4m3_q_k_v_dout_x4",
+      "only_policy_change": {
+        "compiled_backward_direct_tma_dkdv": [
+          true,
+          false
+        ],
+        "control_module_direct_tma_dkdv": [
+          true,
+          false
+        ]
+      },
+      "probability_contract": "score/LSE reconstruction with retained E4M3 probability path",
+      "reason_d64_only": "D128 retained_lowp already uses direct_tma_dkdv=False; this control isolates the D64 direct-TMA dK/dV epilogue only.",
+      "scope": "isolated_attention_backward_shared_core",
+      "supported_head_dims": [
+        64
+      ]
+    }
+  },
+  "schema": "fp4_fa4_causal_backward_matrix_v2",
+  "source": {
+    "control_inputs": [
+      {
+        "exists": true,
+        "path": "qutlass/third_party/cutlass/examples/python/CuTeDSL/blackwell/fmha_bwd.py",
+        "sha256": "953b86a13cc64789052e9d1f8090c9562ac579ee903d275d78cf426780c09eff",
+        "size_bytes": 130976
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/backward_policy.py",
+        "sha256": "417413c7f70162629712d880a7786a4ba6648cafb83d8740b0aa0cfeed6f6082",
+        "size_bytes": 12011
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/profile_gqa_d128_chain.py",
+        "sha256": "dcfe9daacedde7b68ae73192080da703756eaeb96ff993d7399d17166fa3fe60",
+        "size_bytes": 97889
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/tune_d64_gqa_cute.py",
+        "sha256": "92edfa134bc7507f4247da0a4c88e317139079d39cd50c466589cb5edf26b98b",
+        "size_bytes": 29793
+      },
+      {
+        "exists": true,
+        "path": "flash-attention/flash_attn/cute/interface.py",
+        "sha256": "f62d3cc9ba70534fa36cb3300bcf87432c957289e53ef165ad79d247820016ca",
+        "size_bytes": 150840
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/d64_gqa_cute.patch",
+        "sha256": "51c7c733108b6a4547b00b560dfd0a827ec321733fae08fdb55ae5708598e487",
+        "size_bytes": 34748
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/d64_gqa_detached_fp8_p_tmem.patch",
+        "sha256": "bac48319b298f8e56537a06eefec0c981ea4d5dee1f00b3d327e3d75d3982f3a",
+        "size_bytes": 5052
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/d64_gqa_direct_tma_dkdv.patch",
+        "sha256": "948413fdd2e95c3844c2771222458d6bbe5d17a3c84b4f3d717a9797a1586b9e",
+        "size_bytes": 15482
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/d64_gqa_fp8_p_layout.patch",
+        "sha256": "4e9fbd7e5a2a291dd8965c17df5a1bb950d3c0a09276f9963ca5fea3ca45db34",
+        "size_bytes": 7705
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/d64_gqa_fp8_p_lift.patch",
+        "sha256": "39884efa3580ea6342730bdc817a83dfc6294235584e3482e67fe524ca948f1f",
+        "size_bytes": 6200
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/d64_gqa_fp8_p_tmem_coord.patch",
+        "sha256": "3533c0f0e20faaad2a9a59ac2286e21ba56f840c88848e8dd9b196f7e3cc879c",
+        "size_bytes": 5063
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/d64_gqa_fp8_p_tmem_wide_load.patch",
+        "sha256": "d1fd6695d181b475e1d9104f8adf292d06af2bdd6096dda38e494bf3389b7486",
+        "size_bytes": 328
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/d64_gqa_fused_probability_lift.patch",
+        "sha256": "af7adbc9dc0faf06d7ebeed206a891139efcc197f6671896b57da61f6791b8bd",
+        "size_bytes": 3697
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/d64_gqa_head_fast_raster.patch",
+        "sha256": "4254b14b753920563ea79baef3579523c6d0821620e4ac3b35a05edf89e2bcaa",
+        "size_bytes": 1793
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/d64_gqa_owner_d64.patch",
+        "sha256": "ec42e984a982b3e8608e9c3d4095b249bfec3bac0628c08e9d3730745e319b01",
+        "size_bytes": 7070
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/d64_gqa_owner_full_operand.patch",
+        "sha256": "2dc9455b7820f78e70744db83d6cb91c22214f8af665ba96e94ca371fa15b198",
+        "size_bytes": 1521
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/d64_gqa_owner_fused_dq_scale.patch",
+        "sha256": "96d97e96e8afc6d375a5ca361f339f7b353819de9a632834fca3e30b2b4a22e5",
+        "size_bytes": 3396
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/d64_gqa_owner_kv_no_materialize.patch",
+        "sha256": "14cfb0e5abe1d8d496594c0dc531079db3d9599c6a398bf34217b8e910ace63e",
+        "size_bytes": 4871
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/d64_gqa_owner_kv_quantize.patch",
+        "sha256": "b9b54388fe6b1b39dd3259391a8660405f0b7e2b57191ead9659563154432b84",
+        "size_bytes": 7939
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/d64_gqa_owner_quantize.patch",
+        "sha256": "fc03f81c1ac0fb325dfc0b517a096e0ab8fb60ce139ba10a1b4fdeffe73904d8",
+        "size_bytes": 34684
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/d64_gqa_reverse_query.patch",
+        "sha256": "7e8b469320c2c9e5350d6f6fa2014c30106c538e14fd9c1e84968d0a97586f23",
+        "size_bytes": 5047
+      },
+      {
+        "exists": true,
+        "path": "tk_fa4/lowp_fa4_bwd/d64_gqa_tile_ready.patch",
+        "sha256": "60cba7afbb40933ac9154f56a0761f87e6ed34f3d5925e4414f27e7a9c0637ba",
+        "size_bytes": 8042
+      }
+    ],
+    "git": {
+      "branch": "codex/causal-isolated-matrix-20260820",
+      "dirty": true,
+      "head": "bcea11cfac575d9474957354ff62b5703d4b5cb0"
+    },
+    "harness": {
+      "exists": true,
+      "path": "tk_fa4/lowp_fa4_bwd/benchmark_causal_backward_matrix.py",
+      "sha256": "5d3167c7bad3295d02c2438bbddd103751d5750b9106a904b4b55438995f94fe",
+      "size_bytes": 62548
+    },
+    "lowp_extension": {
+      "exists": true,
+      "path": "/workspace/codebases/pv/fp4_matmul_worktrees/causal_matrix_20260820/tk_fa4/_C_b300_lowp_bwd.cpython-312-aarch64-linux-gnu.so",
+      "sha256": "aeed2603d40290b815218cc77142ddacda0c734384429f26c0d4a6a200fbe884",
+      "size_bytes": 17423160
+    }
+  },
+  "status": "complete",
+  "unavailable_routes": []
+}

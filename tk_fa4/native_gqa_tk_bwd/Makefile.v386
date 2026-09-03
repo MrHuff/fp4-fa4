@@ -1,0 +1,27 @@
+GPU := B200
+.DEFAULT_GOAL := all
+SRC := v386_d64_gqa_e4m3_k128q128_halfcols.cu
+BUILD_DIR ?= /tmp/tkfa4_v386_d64_gqa_k128q128_halfcols_build
+EXT_SUFFIX := $(shell python3 -c "import sysconfig; print(sysconfig.get_config_var('EXT_SUFFIX'))")
+MODULE := _C_sm100_gqa_tk_v386_d64_e4m3_k128q128_halfcols
+OUT := $(BUILD_DIR)/$(MODULE)$(EXT_SUFFIX)
+CMD := python3 -c "import importlib.util; p='$(OUT)'; s=importlib.util.spec_from_file_location('$(MODULE)', p); m=importlib.util.module_from_spec(s); s.loader.exec_module(m); print(m.native_tk_d64_backward_metadata())"
+CONFIG := pytorch
+NVCCFLAGS += -DTORCH_COMPILE
+NVCCFLAGS += -I$(CURDIR)
+
+HEADERS := \
+	v386_d64_gqa_e4m3_k128q128_halfcols.cuh \
+	v385_d64_gqa_e4m3_k128q128.cuh \
+	native_gqa_tk_bwd_pipelined.cuh \
+	../deprecated/fa4_common.cuh
+
+$(BUILD_DIR):
+	mkdir -p $(BUILD_DIR)
+
+$(OUT): $(HEADERS) | $(BUILD_DIR)
+
+include ../../ThunderKittens/kernels/common.mk
+
+NVCCFLAGS += -UTORCH_EXTENSION_NAME
+NVCCFLAGS += -DTORCH_EXTENSION_NAME=$(MODULE)

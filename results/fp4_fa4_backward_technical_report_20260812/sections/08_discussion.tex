@@ -1,0 +1,191 @@
+\section{Discussion and Merge Boundary}
+
+\subsection{What the current result establishes}
+
+The retained route demonstrates that low-precision backward should be treated
+as a represented operator, not as BF16 backward followed by casts.  The fixed
+powers in Equations~\ref{eq:fp8-operands}--\ref{eq:represented-dk} remove
+general rescaling from the hot path; P and dS are quantized at production;
+and adaptive Q/K metadata is consumed by tensor scale pages and gradient
+epilogues without adding an MMA.
+
+The learned-projection result adds the systems half of that argument.  NVFP4
+tensor work is useful only if its operand preparation and output layouts are
+part of surrounding producers.  The unified epilogue emits one Q/K payload
+for both directions, transposed MXFP4 V, and optional BF16 Q/K/V.  It thereby
+avoids multiple BF16 rereads, standalone transposes, and fake-quantization
+launches, producing a much larger systems gain than another local backward
+barrier adjustment.
+
+The final pure-FP4 specialization applies that rule more aggressively.  It
+quantizes each Q/K projection fragment once at the fixed pure scale and fans
+the same codes into all six consumer layouts.  This removes 69.6--97.2
+$\mu$s from two projection-plus-backward chains.  The result also separates
+the remaining limits cleanly: pure operand generation is no longer the main
+setup penalty, yet the mixed-dP hybrid remains faster because block maxima,
+dual dS scale publication, and score fanout are exposed inside backward.
+Changing those internal pages from MXFP4 K32/E8M0 to NVFP4 K16/E4M3 does not
+recover the gap.  The more accurate NVFP4-dS variant is slower than BF16, and
+the combined NVFP4 diagnostic is non-finite.
+
+The lifetime-safe adaptive mixed-dP result is a narrower positive outcome.
+Once the dP tail word and adaptive score page have separate lifetimes, the
+route is stable at the same zero-spill register limit.  It wins at H24 but not
+H8 and remains in the approximately 0.983 dQ/dK accuracy class.  This confirms
+that adaptive scaling and mixed operand precision are independent choices;
+fixing the former does not erase error introduced by the latter.
+
+The upstream dO result supports the same rule from the other side of the
+graph.  Row and column MXFP4 representations and the softmax delta should be
+published by one producer, not reconstructed through three kernels immediately
+before backward.  This halves that setup boundary without changing any
+backward arithmetic.
+
+The composed MFU result tests the rule at a model-facing boundary.  Keeping
+the FP4 FA4 forward and FP4+FP8 backward together raises useful algorithmic
+MFU on all five measured shapes.  The gain is modest at H16 and largest at
+wide H64 projection widths, where projection-native NVFP4 work amortizes
+packing and publication.  The faster activation-only stacked handoff is not
+silently used for full training: the latter retains BF16 QKV publication so
+the QKV weight-gradient GEMM remains present.
+
+\subsection{Why backward does not reproduce the forward gain directly}
+
+The companion forward report uses two matrix products and two major TMEM
+accumulators, then attacks the serial score-to-P publication path.  Backward
+has five products, persistent dK/dV state, two dS orientations, and a
+cross-owner dQ reduction.  Its critical path is therefore not just
+exponential evaluation.  Approximating $2^x$ more aggressively cannot remove
+the score TMEM fanout, dP centering, dS publication, or dQ reduction.
+
+The current backward also chooses E4M3 P for its accuracy-oriented route,
+whereas the forward report's retained full-FP4 policy uses MXFP4 P/V and a
+direct E2M1 code map.  Those are different represented operators.  A local
+represented-P replay saves 0.76\%, but materializing forward P for backward
+would write and reread 272 MiB at S8192/H8.  The profitable analogue of
+forward reuse must therefore remain on chip or change the consumer topology;
+an HBM cache is not a useful bridge.
+
+\subsection{What the six integration tests rule out}
+
+The tests narrow the next breakthrough substantially.  It is not a second Q/K
+format, a standalone V quantizer, three separate dO setup kernels, a global P
+cache, or another barrier.  Per-head polling inside the projection K loop is
+enough for a small H8 win, and double-buffering the projection's private TMEM
+removes its MMA--epilogue bubble.  It is not enough at wider heads.  The
+remaining high-value boundary is the global dQ reduction: projection backward
+must consume the reduction tile before, or instead of, BF16 global
+materialization.  Observing the tile immediately after publication still
+pays the global rendezvous and leaves a bounded-consumer tail.
+
+The compact NVFP4 final-tile handoff sharpens this boundary.  Its isolated
+projection, including delayed-scale conversion, beats BF16 at both measured
+widths and reaches approximately 0.991 cosine.  The composed chain wins 3.7\%
+at H24 but loses 1.9\% at H8 because it still waits for and rereads the private
+BF16 reduction.  Format choice can accelerate the consumer; it cannot by
+itself remove the producer topology that defines the ceiling.
+
+The implemented two-lane hierarchy further rules out a weaker interpretation
+of that target.  Projection can consume two BF16 owner sums directly and avoid
+ever constructing completed dQ, but it is slower because BF16 partial traffic
+is unchanged and the consumer must duplicate the weight MMA or fold the lanes.
+The useful breakthrough must therefore combine projection integration with
+pre-publication owner grouping or a compact FP8/FP4 partial representation.
+Moving the final addition alone does not approach the no-publication timing
+diagnostic.
+
+The stacked-NVFP4 version reaches the same conclusion through a different
+consumer.  Folding two dQ lanes, inverse RoPE, and local quantization in one
+K128 producer is accurate, but its readiness signals perturb the attention
+schedule enough to lose.  Removing those signals makes the one-lane stacked
+layout a small activation-only winner, but also restores completed BF16 dQ.
+It is a useful publication optimization, not the sought reduction-topology
+breakthrough.
+
+Storage reclamation also has a hard hardware boundary.  Projection scratch
+can be unioned because Q/K code staging and V BF16-pair staging have disjoint
+lifetimes.  The backward mixed-dP row cannot simply shrink from 128 to 96
+bytes: the grouped SM100 depth transaction does not retire with that geometry.
+The final 32 bytes are logically padding but are not currently reclaimable by
+a legal drop-in descriptor.
+
+\subsection{Accuracy and training limits}
+
+The reported cosine values cover synthetic calibrated, unit-scale, and
+sparse-outlier regimes.  The new 500-step teacher/student experiment adds a
+block-level optimization trajectory with refreshed weights and complete
+projection weight gradients.  Across three seeds, low precision retains
+89.7--99.6\% of BF16's absolute validation-loss improvement.  This does not
+establish language-model convergence, final perplexity, optimizer-state
+stability over many layers, or sensitivity to realistic activation tails.
+The learned NVFP4 projection itself has Q/K/V cosine near 0.991, while
+attention backward has a separate approximately 0.991 dQ/dK cosine.  Native
+forward output cosine is 0.9907--0.9913 on the two unified-projection checks.
+The compact NVFP4 dQ projection contribution has approximately 0.991 cosine
+against the BF16 projection; FP8 is approximately 0.9993 and MXFP4
+approximately 0.9832--0.9834 on the same boundary.
+Their composed error is not the product of those scalars.  The trajectory
+experiment shows that reducible error falls, but the FP4 forward contributes
+a native teacher floor of 0.093--0.098 relative MSE and the final shared-BF16
+evaluation remains 25.5\% above the BF16 student's loss on average.  The raw
+loss gap must remain visible beside the floor-adjusted convergence rate.
+
+Robust per-head clipping deliberately sacrifices extreme values to protect
+the bulk distribution.  Per-token or blockwise Q/K scales could retain more
+outliers, but scales varying along the $dQ/dK$ reduction dimension require
+additional instruction scale pages and TMEM movement.  Quantization-aware
+training is the natural larger validation framework
+\cite{zhang2026attnqat}.
+
+\subsection{Hardware and shape scope}
+
+The active specialization is causal, batch one, sequence divisible by 128,
+$D_{QK}=192$, and $D_V=128$ on data-center Blackwell.  It supports the
+measured S4096, S8192, and S16384 families and selected head counts.  The
+projection kernel requires matrix dimensions aligned to its NVFP4 tiling.
+GQA, variable-length batches, dropout, arbitrary head dimensions, and a
+portable non-TMEM implementation are outside this report.
+
+The 512-column alias schedule, \tcgen{} scale pages, and two-CTA matrix shapes
+are SM100-specific \cite{nvidia2026ptx}.  A device with another score bank,
+different scaled-MMA K granularity, or cheaper cross-cluster reduction could
+choose a different ownership plan.
+
+\subsection{What belongs to prior structure}
+
+FlashAttention supplies the recomputation and IO-aware backward formulation
+\cite{dao2022flashattention}.  FA4 supplies the hardware-asymmetric,
+warp-specialized scheduling framework \cite{zadouri2026flashattention4}.
+ThunderKittens supplies the optimized V382 control and the tile abstractions
+\cite{thunderkittens}.  HAO's forward FP4 work is a structural reference for
+block-scaled tensor operations, TMEM lifetime reuse, and producer-side
+quantization \cite{hao2026fp4flashattention}.  This report's contribution is
+the backward precision factorization, adaptive Q/K contract, retained TMEM
+handoffs, BF16 dQ endpoint, unified learned-QKV publication, fused upstream dO
+contract, and measured projection-gradient boundary built on those
+foundations.
+
+\subsection{Should this merge with the forward report?}
+
+Not yet as a single method section.  The reports should remain separate while
+the following are unresolved:
+
+\begin{itemize}
+  \item the forward and backward P representations differ, and the measured
+  HBM P cache is not viable;
+  \item projection-scale production is still an explicit integration
+  contract;
+  \item composed forward-plus-backward accuracy and a synthetic block-level
+  trajectory are measured, but stock-model loss and perplexity are not;
+  \item the pure-FP4 backward route is validated but experimental, while the
+  retained backward is the more accurate FP4+FP8 route;
+  \item the fused dO producer and all-MX consumer compose successfully, but
+  that endpoint is not the selected performance/accuracy frontier.
+\end{itemize}
+
+A later umbrella manuscript should merge the shared introduction, Blackwell
+format background, notation, and end-to-end evaluation.  It should keep
+separate forward and backward architecture/method sections, then add one
+systems section for projection epilogues and one composed training-results
+section.  This avoids duplicating background without implying that the two
+kernels currently implement the same probability operator.

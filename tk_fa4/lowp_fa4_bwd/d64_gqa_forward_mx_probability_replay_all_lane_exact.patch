@@ -1,0 +1,166 @@
+--- a/fmha_bwd_d64_gqa_aug19_exact.py
++++ b/fmha_bwd_d64_gqa_aug19_replay_alllane_exact.py
+@@ -58,6 +58,9 @@
+ )
+ from cutlass._mlir.dialects import llvm
+ from cutlass.cutlass_dsl import T, dsl_user_op
++
++
++TK_FORWARD_MX_PROBABILITY_REPLAY_ALL_LANE_EXACT_MATH = True
+ 
+ 
+ @dsl_user_op
+@@ -3270,39 +3270,39 @@
+                 for i in cutlass.range_constexpr(
+                     0, cute.size(tTR_rST), 2
+                 ):
+-                    # Only q leaders load/combine and decode.  A modulo-four
+-                    # shuffle broadcasts each result to the other seven lanes
+-                    # consuming the same physical N32 group.
+-                    exponent0 = Float32(-127.0)
+-                    exponent1 = Float32(-127.0)
+-                    if score_lane < 4:
+-                        if cutlass.const_expr(
+-                            self.use_forward_mx_probability_scales
+-                        ):
+-                            # Fragment coordinates identify query rows; the
+-                            # flat query-contiguous base was formed once per
+-                            # CTA above.
+-                            query_row0 = (
+-                                iter_index * self.tile_shape_Q
+-                                + cute.get(tTR_cST[i], mode=[1])
+-                            )
+-                            query_row1 = (
+-                                iter_index * self.tile_shape_Q
+-                                + cute.get(tTR_cST[i + 1], mode=[1])
+-                            )
+-                            packed0 = forward_mx_probability_scale_rows[
+-                                query_row0
+-                            ]
+-                            packed1 = forward_mx_probability_scale_rows[
+-                                query_row1
+-                            ]
+-                            exponent0 = tk_mxfp4_unpack_scale_exponent(
+-                                packed0, scale_group
+-                            )
+-                            exponent1 = tk_mxfp4_unpack_scale_exponent(
+-                                packed1, scale_group
+-                            )
+-                        else:
++                    if cutlass.const_expr(
++                        self.use_forward_mx_probability_scales
++                    ):
++                        # For fixed fragment i, the query coordinate and
++                        # packed-word address are uniform across the score
++                        # warp.  Every lane can therefore unpack its own
++                        # lane-modulo-four byte without a leader shuffle.
++                        query_row0 = (
++                            iter_index * self.tile_shape_Q
++                            + cute.get(tTR_cST[i], mode=[1])
++                        )
++                        query_row1 = (
++                            iter_index * self.tile_shape_Q
++                            + cute.get(tTR_cST[i + 1], mode=[1])
++                        )
++                        packed0 = forward_mx_probability_scale_rows[
++                            query_row0
++                        ]
++                        packed1 = forward_mx_probability_scale_rows[
++                            query_row1
++                        ]
++                        exponent0 = tk_mxfp4_unpack_scale_exponent(
++                            packed0, scale_group
++                        )
++                        exponent1 = tk_mxfp4_unpack_scale_exponent(
++                            packed1, scale_group
++                        )
++                    else:
++                        # The no-handoff fallback still needs four q leaders
++                        # to combine the per-score-warp shared maxima.
++                        exponent0 = Float32(-127.0)
++                        exponent1 = Float32(-127.0)
++                        if score_lane < 4:
+                             partial00 = sMxProbabilityScales[
+                                 ((wg_idx * 4) * 64 + i) * 4 + scale_group
+                             ]
+@@ -3344,8 +3344,8 @@
+                             )
+                             exponent0 = tk_mxfp4_scale_exponent(group_max0)
+                             exponent1 = tk_mxfp4_scale_exponent(group_max1)
+-                    exponent0 = tk_lane_mod4_broadcast(exponent0)
+-                    exponent1 = tk_lane_mod4_broadcast(exponent1)
++                        exponent0 = tk_lane_mod4_broadcast(exponent0)
++                        exponent1 = tk_lane_mod4_broadcast(exponent1)
+                     working_exponent0 = cute.arch.fmax(
+                         exponent0, Float32(-126.0)
+                     )
+@@ -3376,12 +3376,12 @@
+                     represented1 = tk_mxfp4_zero_invalid(
+                         represented1, exponent1
+                     )
+-                    # LSE and the physical-group exponent are identical for
+-                    # all eight lanes in a modulo-four subgroup.  Compute the
+-                    # normalization EX2 only in q leaders and broadcast it.
+-                    probability_scale0 = Float32(0.0)
+-                    probability_scale1 = Float32(0.0)
+-                    if score_lane < 4:
++                    if cutlass.const_expr(
++                        self.use_forward_mx_probability_scales
++                    ):
++                        # The query row is lane-uniform and each lane already
++                        # owns its physical-group exponent, so apply the exact
++                        # row normalization directly without a second shuffle.
+                         lse0 = sLSE[
+                             cute.get(tTR_cST[i], mode=[1]),
+                             load_compute_LSE_consumer_state.index,
+@@ -3408,12 +3408,44 @@
+                             decode_exponent1 - log2_six + lse1,
+                             fastmath=True,
+                         )
+-                    probability_scale0 = tk_lane_mod4_broadcast(
+-                        probability_scale0
+-                    )
+-                    probability_scale1 = tk_lane_mod4_broadcast(
+-                        probability_scale1
+-                    )
++                    else:
++                        # Preserve the no-handoff fallback's leader-only
++                        # normalization and modulo-four broadcasts.
++                        probability_scale0 = Float32(0.0)
++                        probability_scale1 = Float32(0.0)
++                        if score_lane < 4:
++                            lse0 = sLSE[
++                                cute.get(tTR_cST[i], mode=[1]),
++                                load_compute_LSE_consumer_state.index,
++                            ]
++                            lse1 = sLSE[
++                                cute.get(tTR_cST[i + 1], mode=[1]),
++                                load_compute_LSE_consumer_state.index,
++                            ]
++                            # Forward stores scale_code=max(e-16+127, 0) and
++                            # restores the shift in saved LSE.  The payload used
++                            # the original exponent e, while represented
++                            # probability decodes through max(e, -110).
++                            decode_exponent0 = cute.arch.fmax(
++                                exponent0, Float32(-110.0)
++                            )
++                            decode_exponent1 = cute.arch.fmax(
++                                exponent1, Float32(-110.0)
++                            )
++                            probability_scale0 = cute.math.exp2(
++                                decode_exponent0 - log2_six + lse0,
++                                fastmath=True,
++                            )
++                            probability_scale1 = cute.math.exp2(
++                                decode_exponent1 - log2_six + lse1,
++                                fastmath=True,
++                            )
++                        probability_scale0 = tk_lane_mod4_broadcast(
++                            probability_scale0
++                        )
++                        probability_scale1 = tk_lane_mod4_broadcast(
++                            probability_scale1
++                        )
+                     tTR_rST[i] = represented0 * probability_scale0
+                     tTR_rST[i + 1] = represented1 * probability_scale1
+             else:

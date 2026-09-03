@@ -1,0 +1,159 @@
+--- a/fmha_bwd.py
++++ b/fmha_bwd.py
+@@ -589,24 +589,26 @@
+                 or self.varlen
+                 or self.tile_shape_Q != 128
+                 or self.tile_shape_K != 128
+-                or self.tile_shape_dQ_K != 128
++                or self.tile_shape_dQ_K not in (64, 128)
+             ):
+                 raise RuntimeError(
+                     "owner dQ quantization requires compact private BF16 dQ, "
+-                    "split heads, fixed B/S, and D128 128x128 tiles"
++                    "split heads, fixed B/S, and D64/D128 128x128 tiles"
+                 )
+             owner_gradient_heads = h_r * h_k + 2 * h_k
++            owner_payload_cols = self.tile_shape_dQ_K // 2
++            owner_scale_pages = self.tile_shape_dQ_K // 64
+             owner_dq_fp4 = cute.make_tensor(
+                 owner_dq_fp4_iter,
+                 cute.make_layout(
+-                    (q_seq_max, owner_gradient_heads * 64),
+-                    stride=(owner_gradient_heads * 64, 1),
++                    (q_seq_max, owner_gradient_heads * owner_payload_cols),
++                    stride=(owner_gradient_heads * owner_payload_cols, 1),
+                 ),
+             )
+             owner_dq_scales = cute.make_tensor(
+                 owner_dq_scale_iter,
+                 cute.make_layout(
+-                    (q_seq_max // 128, owner_gradient_heads * 2, 512),
+-                    stride=(owner_gradient_heads * 1024, 512, 1),
++                    (q_seq_max // 128, owner_gradient_heads * owner_scale_pages, 512),
++                    stride=(owner_gradient_heads * owner_scale_pages * 512, 512, 1),
+                 ),
+             )
+@@ -934,2 +936,2 @@
+-            owner_packed_smem_elements = self.tile_shape_Q * 64
+-            owner_scale_smem_elements = 2 * 512
++            owner_packed_smem_elements = self.tile_shape_Q * self.tile_shape_dQ_K // 2
++            owner_scale_smem_elements = self.tile_shape_dQ_K // 64 * 512
+@@ -1069,14 +1071,14 @@
+         owner_scale_tma_tensor = None
+         if cutlass.const_expr(self.owner_quantize_dq):
+             owner_payload_smem_layout = cute.make_layout(
+-                (self.tile_shape_Q, 64),
+-                stride=(64, 1),
++                (self.tile_shape_Q, self.tile_shape_dQ_K // 2),
++                stride=(self.tile_shape_dQ_K // 2, 1),
+             )
+             owner_payload_tma_atom, owner_payload_tma_tensor = (
+                 cute.nvgpu.cpasync.make_tiled_tma_atom(
+                     cpasync.CopyBulkTensorTileS2GOp(),
+                     owner_dq_fp4,
+                     owner_payload_smem_layout,
+-                    (self.tile_shape_Q, 64),
++                    (self.tile_shape_Q, self.tile_shape_dQ_K // 2),
+                 )
+             )
+@@ -1083,3 +1085,7 @@
+-                    (512, h_r * h_k * 2, q_seq_max // self.tile_shape_Q),
+-                    stride=(1, 512, (h_r * h_k + 2 * h_k) * 1024),
++                    (
++                        512,
++                        h_r * h_k * (self.tile_shape_dQ_K // 64),
++                        q_seq_max // self.tile_shape_Q,
++                    ),
++                    stride=(1, 512, (h_r * h_k + 2 * h_k) * (self.tile_shape_dQ_K // 64) * 512),
+                 ),
+@@ -1531,10 +1537,10 @@
+             )
+             sOwnerPacked = storage.sOwnerPacked.get_tensor(
+                 cute.make_layout(
+-                    (self.tile_shape_Q, 64),
+-                    stride=(64, 1),
++                    (self.tile_shape_Q, self.tile_shape_dQ_K // 2),
++                    stride=(self.tile_shape_dQ_K // 2, 1),
+                 )
+             )
+             sOwnerScales = storage.sOwnerScales.get_tensor(
+-                cute.make_layout((2, 512), stride=(512, 1))
++                cute.make_layout((self.tile_shape_dQ_K // 64, 512), stride=(512, 1))
+             )
+@@ -2171,1 +2177,1 @@
+-        payload_offset = logical_head * 64 + block * 8
++        payload_offset = logical_head * (self.tile_shape_dQ_K // 2) + block * 8
+@@ -2181,1 +2187,1 @@
+-            logical_head * 2 + block // 4,
++            logical_head * (self.tile_shape_dQ_K // 64) + block // 4,
+@@ -3340,1 +3346,1 @@
+-                    for i in cutlass.range_constexpr(4):
++                    for i in cutlass.range_constexpr(cute.size(tTR_cdQ, mode=[2])):
+@@ -3577,4 +3583,4 @@
+         gOwnerPayload = cute.local_tile(
+             owner_payload_tma_tensor,
+-            (self.tile_shape_Q, 64),
++            (self.tile_shape_Q, self.tile_shape_dQ_K // 2),
+             (None, None),
+@@ -3596,8 +3602,10 @@
+-        tScaleS1, _ = cute.nvgpu.cpasync.tma_partition(
+-            owner_scale_tma_atom,
+-            0,
+-            cute.make_layout(1),
+-            cute.group_modes(sOwnerScales[1, None], 0, 1),
+-            cute.group_modes(owner_scale_tma_tensor, 0, 1),
+-        )
++        tScaleS1 = tScaleS0
++        if cutlass.const_expr(self.tile_shape_dQ_K > 64):
++            tScaleS1, _ = cute.nvgpu.cpasync.tma_partition(
++                owner_scale_tma_atom,
++                0,
++                cute.make_layout(1),
++                cute.group_modes(sOwnerScales[1, None], 0, 1),
++                cute.group_modes(owner_scale_tma_tensor, 0, 1),
++            )
+         sOwnerPackedWords = cute.make_tensor(
+@@ -3606,3 +3615,3 @@
+-                (self.tile_shape_Q, 16),
+-                stride=(16, 1),
++                (self.tile_shape_Q, self.tile_shape_dQ_K // 8),
++                stride=(self.tile_shape_dQ_K // 8, 1),
+             ),
+@@ -3649,4 +3658,5 @@
+-        for chunk in cutlass.range_constexpr(4):
+-            if cutlass.const_expr(chunk < 3):
++        owner_chunks = self.tile_shape_dQ_K // 32
++        for chunk in cutlass.range_constexpr(owner_chunks):
++            if cutlass.const_expr(chunk + 1 < owner_chunks):
+                 next_chunk = chunk + 1
+                 next_stage = next_chunk % 2
+@@ -3739,2 +3749,2 @@
+-            if cutlass.const_expr(chunk < 3):
++            if cutlass.const_expr(chunk + 1 < owner_chunks):
+                 self.compute_sync_barrier.arrive_and_wait()
+@@ -3754,13 +3764,18 @@
+             cute.copy(
+                 owner_scale_tma_atom,
+                 tScaleS0[None],
+-                tScaleG[None, q_head * 2, iter_index],
++                tScaleG[
++                    None,
++                    q_head * (self.tile_shape_dQ_K // 64),
++                    iter_index,
++                ],
+             )
+             cute.arch.cp_async_bulk_commit_group()
+-            cute.copy(
+-                owner_scale_tma_atom,
+-                tScaleS1[None],
+-                tScaleG[None, q_head * 2 + 1, iter_index],
+-            )
+-            cute.arch.cp_async_bulk_commit_group()
++            if cutlass.const_expr(self.tile_shape_dQ_K > 64):
++                cute.copy(
++                    owner_scale_tma_atom,
++                    tScaleS1[None],
++                    tScaleG[None, q_head * 2 + 1, iter_index],
++                )
++                cute.arch.cp_async_bulk_commit_group()
+             cute.arch.cp_async_bulk_wait_group(0, read=True)

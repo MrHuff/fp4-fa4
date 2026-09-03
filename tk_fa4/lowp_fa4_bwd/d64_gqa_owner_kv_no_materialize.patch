@@ -1,0 +1,97 @@
+--- a/fmha_bwd.py
++++ b/fmha_bwd.py
+@@ -1965,53 +1965,58 @@
+                     idx_d_vec = linear_idx - idx_k * vectors_per_row
+
+                     first_head = ((Int32(0), reduce_head), reduce_batch)
+-                    dk_row = cute.logical_divide(
+-                        dK_partial[idx_k, None, first_head],
+-                        cute.make_layout(self.gqa_reduce_vector),
+-                    )
+-                    dv_row = cute.logical_divide(
+-                        dV_partial[idx_k, None, first_head],
+-                        cute.make_layout(self.gqa_reduce_vector),
+-                    )
+-                    dk_acc = dk_row[None, idx_d_vec].load().to(self.acc_dtype)
+-                    dv_acc = dv_row[None, idx_d_vec].load().to(self.acc_dtype)
+-
+-                    for h_r in cutlass.range(1, H_R):
+-                        head_coord = ((h_r, reduce_head), reduce_batch)
++                    if cutlass.const_expr(not self.owner_quantize_kv):
+                         dk_row = cute.logical_divide(
+-                            dK_partial[idx_k, None, head_coord],
++                            dK_partial[idx_k, None, first_head],
+                             cute.make_layout(self.gqa_reduce_vector),
+                         )
+                         dv_row = cute.logical_divide(
+-                            dV_partial[idx_k, None, head_coord],
++                            dV_partial[idx_k, None, first_head],
+                             cute.make_layout(self.gqa_reduce_vector),
+                         )
+-                        dk_acc += dk_row[None, idx_d_vec].load().to(
++                        dk_acc = dk_row[None, idx_d_vec].load().to(
+                             self.acc_dtype
+                         )
+-                        dv_acc += dv_row[None, idx_d_vec].load().to(
++                        dv_acc = dv_row[None, idx_d_vec].load().to(
+                             self.acc_dtype
+                         )
+
+-                    kv_coord = ((Int32(0), reduce_head), reduce_batch)
+-                    dk_out = cute.logical_divide(
+-                        dK[idx_k, None, kv_coord],
+-                        cute.make_layout(self.gqa_reduce_vector),
+-                    )
+-                    dv_out = cute.logical_divide(
+-                        dV[idx_k, None, kv_coord],
+-                        cute.make_layout(self.gqa_reduce_vector),
+-                    )
+-                    dk_out[None, idx_d_vec].store(
+-                        dk_acc.to(self.output_dtype)
+-                    )
+-                    if cutlass.const_expr(
+-                        self.element_dtype == Float8E4M3FN
+-                    ):
+-                        dv_acc *= Float32(1.0 / 256.0)
+-                    dv_out[None, idx_d_vec].store(
+-                        dv_acc.to(self.output_dtype)
+-                    )
++                        for h_r in cutlass.range(1, H_R):
++                            head_coord = ((h_r, reduce_head), reduce_batch)
++                            dk_row = cute.logical_divide(
++                                dK_partial[idx_k, None, head_coord],
++                                cute.make_layout(self.gqa_reduce_vector),
++                            )
++                            dv_row = cute.logical_divide(
++                                dV_partial[idx_k, None, head_coord],
++                                cute.make_layout(self.gqa_reduce_vector),
++                            )
++                            dk_acc += dk_row[None, idx_d_vec].load().to(
++                                self.acc_dtype
++                            )
++                            dv_acc += dv_row[None, idx_d_vec].load().to(
++                                self.acc_dtype
++                            )
++
++                        kv_coord = ((Int32(0), reduce_head), reduce_batch)
++                        dk_out = cute.logical_divide(
++                            dK[idx_k, None, kv_coord],
++                            cute.make_layout(self.gqa_reduce_vector),
++                        )
++                        dv_out = cute.logical_divide(
++                            dV[idx_k, None, kv_coord],
++                            cute.make_layout(self.gqa_reduce_vector),
++                        )
++                        dk_out[None, idx_d_vec].store(
++                            dk_acc.to(self.output_dtype)
++                        )
++                        if cutlass.const_expr(
++                            self.element_dtype == Float8E4M3FN
++                        ):
++                            dv_acc *= Float32(1.0 / 256.0)
++                        dv_out[None, idx_d_vec].store(
++                            dv_acc.to(self.output_dtype)
++                        )
+
+                     if cutlass.const_expr(self.owner_quantize_kv):
+                         if idx_d_vec % 4 == 0:
