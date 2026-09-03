@@ -103,7 +103,7 @@ EXPECTED_MATERIALIZED_TREES = {
     "baseline_kernels": "5242c6d77a09cbd415b6d11e100657e0810aa4dd",
     "fused_ops": "efb0668033a9eeee8a95b21759664d6d49f5decc",
     "qutlass_binding": "32332ed7b0d26971bb0873647d154eb8fdc6aa65",
-    "results": "38f0afdb92b8726db42902eefa7927281f415acc",
+    "results": "ef8d9765006088862e375a691d28a0e97e69e5a1",
     "reproduction/snapshots/forward_cfc06dad/TK_quantisation": (
         "9a0a63b1aa98ca4e377d0fd867b0b764e19d8b4d"
     ),
@@ -322,7 +322,7 @@ EXPECTED_FILE_HASHES = {
     "patches/flash_attention_fp4_runtime_overlay_9743edaf_20260831.patch": "bc8caf8cd3c860d2bf958a96113a4b97a7987b2350bfed7f54337f0b9ac0cb8a",
     "reproduction/snapshots/v510_aa021504/aa021504.patch": "704fe124c17891ba3eb1f072532aad8a6958fde859c86bf91e74fc22c3179a37",
     "reproduction/snapshots/v510_aa021504/SHA256SUMS": "ee51c433b371c5c5c7cbad9d052599cb3714df84203b0d891623195d7450713b",
-    "results/fp4_fa4_technical_report_v2_20260819/main.pdf": "4dc4a8db31b184150c3e5613da1de4c9e87c776c4772334b9f0a9996c55d53e0",
+    "results/fp4_fa4_technical_report_v2_20260819/main.pdf": "f788a329d63fd5094f430f49a11b00caae8265bbc33b325717142237e7d7d4ee",
 }
 
 EXPECTED_DEVELOPMENT_ROUTES = {
