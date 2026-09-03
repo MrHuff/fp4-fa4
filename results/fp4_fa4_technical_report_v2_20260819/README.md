@@ -4,7 +4,7 @@ This directory contains the v2 structured report for the ThunderKittens FP4
 FlashAttention-4 forward and causal-training investigations on NVIDIA
 Blackwell.  It preserves the July report layout and adds the final D128 causal
 backward, projection-inclusive attention, and end-to-end transformer evidence
-collected through September 2, 2026.  The retained training path passes the
+collected through September 3, 2026.  The retained training path passes the
 forward Q/K quantization, scales, and normalizer into causal backward; the
 four-arm 8B diagnostic selects FP8 rather than MXFP4 probabilities and values.
 
@@ -72,23 +72,26 @@ Primary data:
   the rejected NVFP4-projection+MXFP4-P/V arm, and authenticated update-239
   checkpoint inventories.  This early launch check is used only for route
   validation, not for the aggregate-throughput comparison.
-- `receipts/llama8b_b4_matched_snapshot_20260902T1358Z.json`: frozen,
+- `receipts/llama8b_b4_completed_20260903.json`: checkpoint-selected,
   credential-free B4/W64 histories for the matched bfloat16 and
-  NVFP4-projection+FP8-P/V arms through their latest common training update
-  (68.9B tokens), plus same-update validation through 68.7B tokens and the
-  failed MXFP4-P/V fallback.  It also stores every common post-warmup
-  throughput observation used by the aggregate plot.  This is one trajectory
+  NVFP4-projection+FP8-P/V arms over the completed 100B-token schedule.  It
+  contains 954 aligned training reports, 81 aligned validation reports, and
+  all 874 common post-warmup throughput observations.  This is one trajectory
   per route and therefore not a repeated-run estimate.
+- `receipts/llama8b_b4_matched_snapshot_20260902T1358Z.json`: the earlier
+  matched snapshot, retained as the source of the separate failed MXFP4-P/V
+  diagnostic.  Its healthy-route prefix is superseded by the completed
+  receipt above.
 
-The distributed rows are frozen at the paper's reporting cutoff.  In the
+The distributed rows are frozen over the completed schedule.  In the
 earlier four-arm diagnostic, both FP8-P/V arms remained non-divergent through their common
 55.5B-token horizon, while both MXFP4-P/V arms separated by roughly 0.1B
 tokens and diverged.  The report keeps those historical curves and their
 failure diagnostic in the causal-training design-history appendix because the
 historical bfloat16 trace uses a different topology and sample order.  The main
 section now plots the later matched B4 bfloat16 and NVFP4-projection+FP8-P/V
-trajectories through 68.9B common training tokens, their same-update validation
-through 68.7B tokens, and aggregate post-warmup throughput.  It reports the
+trajectories through the end of the 100B-token schedule, their same-update
+validation, and aggregate post-warmup throughput.  It reports the
 failed MXFP4-P/V fallback separately and does not include that arm in the
 throughput comparison.  The report also separates three local D128
 measurements: isolated backward, projection-inclusive attention forward and
@@ -109,12 +112,12 @@ make data
 make
 ```
 
-`make data` is offline and regenerates the plots from committed receipts. The
-optional metric-capture utility accepts service-side run locators only through
-an uncommitted `--source-map`; no project, run ID, or run name is embedded in
-the script or its public output. Public regeneration consumes the
-credential-free receipt. Any replacement snapshot still requires a reviewed
-export and an explicit paper/provenance update.
+`make data` is offline and regenerates the plots from committed receipts.  The
+development tree also contains a read-only metric-history capture utility.  It
+takes service-side run locations through an uncommitted source map and refuses
+to copy those identifiers or credentials into its output.  Public regeneration
+consumes the committed credential-free receipt; replacing that receipt still
+requires authenticated source access and an explicit paper/provenance update.
 
 The report uses the `graphcore_report.sty` layout and the assets vendored in
 this directory.  The build is single-column pdfLaTeX and keeps references

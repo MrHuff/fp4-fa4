@@ -26,13 +26,13 @@ also point to committed receipts.
   BF16 and FP8 P/V, and 857.226 ms versus 751.597 ms for BF16 and MXFP4 P/V.
   FP8 and MXFP4 are tied at this boundary; these fixed-token timings do not
   establish training quality.
-- In the matched 64-GPU B4 snapshot, BF16 and the NVFP4-projection/FP8-PV
-  route are stable and descending through the common update 16,425. At that
-  coordinate their training losses are 2.3966 and 2.4708. The preceding
-  same-coordinate held-out validation losses are 2.3507 and 2.4241. Median
-  recorded throughput over the common post-warmup observations is 21,842 and
-  24,287 tokens/s/GPU, respectively, or 1.112x. This is one trajectory per
-  arm, not a completed 100-billion-token or repeated-run result.
+- In the matched 64-GPU B4 comparison, BF16 and the
+  NVFP4-projection/FP8-P/V route both completed the 100,000,595,968-token
+  schedule. At the final same-update validation point, losses are 2.3048148155
+  and 2.3948404789. Median throughput over all 874 common post-warmup reports
+  is 21,852.6656 and 24,302.9730 tokens/s/GPU, respectively, or 1.1121285x.
+  This is one trajectory per arm, not a repeated-run or statistical-equivalence
+  result.
 - Both learned-projection formats tested with MXFP4 P/V eventually diverge,
   while their FP8-P/V controls remain non-divergent over the observed window.
   In the B4 diagnostic, MXFP4 initially tracks the controls and then shows a
@@ -48,8 +48,12 @@ These statements trace to:
 
 - `results/fp4_fa4_technical_report_v2_20260819/receipts/causal_d128_report_boundaries_20260901.json`;
 - `results/tk_fa4_8b_batch_scaling_20260901/e2e_batch_scaling_summary.json`;
+- `results/fp4_fa4_technical_report_v2_20260819/receipts/llama8b_b4_completed_20260903.json`
+  (SHA256
+  `36272a35bd95c3138425e7330403f94d87e40ddd2109cdcb2bcf5e2b21c1c55e`);
   and
-- `results/fp4_fa4_technical_report_v2_20260819/receipts/llama8b_b4_matched_snapshot_20260902T1358Z.json`.
+- `results/fp4_fa4_technical_report_v2_20260819/receipts/llama8b_b4_matched_snapshot_20260902T1358Z.json`
+  for the separate MXFP4-P/V failure diagnostic.
 
 ## P0: validate the continuation package on clean Blackwell hardware
 
@@ -68,11 +72,11 @@ GPU gates and distributed save/resume pass from the clean clone. Until this
 passes, later measurements are development evidence rather than public-release
 validation.
 
-## P1: complete a matched BF16 versus FP8-P/V training study
+## P1: repeat the matched study on fully public data and quantify variation
 
-**Question.** Does the retained low-precision route preserve its measured
-throughput benefit and bounded validation gap through the full training
-horizon?
+**Question.** Does the completed single-trajectory result reproduce on an
+immutable public token stream, and how much do the validation gap and
+throughput vary across independent seeds?
 
 Use the current 8.03B, D128, S4096 recipe: local batch 4, world size 64,
 gradient accumulation 4, and effective global batch 1024. Start both routes
@@ -83,16 +87,16 @@ checkpoint cadence, and validation set identical. Compare only common token
 coordinates and retain every throughput observation, including input stalls
 and checkpoint windows under a prespecified summary.
 
-Run a short data-and-resume pilot before authorizing the full 100-billion-token
-budget. The historical SlimPajama ordering is not known exactly, so this is a
-new matched replacement experiment, not a byte-identical continuation of the
-old service runs.
+Run a short data-and-resume pilot before authorizing another full
+100-billion-token budget. The historical SlimPajama ordering is not known
+exactly and the raw hosted histories are not public, so this is a new matched
+replacement experiment, not a byte-identical rerun of the completed service
+trajectories.
 
-**Evidence gate.** Both arms reach the declared token budget, save and resume
-successfully, and produce same-coordinate training and held-out validation
-curves plus full-run throughput distributions. One trajectory per arm can
-support a matched comparison, but not a claim about run-to-run variance or
-statistical equivalence. Such a claim requires independent seeds.
+**Evidence gate.** Both arms reach the declared token budget, save and
+resume successfully, and produce same-coordinate training and held-out
+validation curves plus full-run throughput distributions. Independent seeds
+must support any uncertainty or statistical-equivalence claim.
 
 ## P2: localize the MXFP4-P/V divergence before attempting a rescue
 

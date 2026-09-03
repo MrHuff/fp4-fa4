@@ -1,10 +1,11 @@
 # FP4 FlashAttention releases
 
 The first public release is a source snapshot, not a TorchTitan package or
-nightly build. It must be published from the single parentless commit described
+nightly build. Its history is rooted at the pinned parentless commit described
 in [`../release/PUBLIC_EXPORT_POLICY.md`](../release/PUBLIC_EXPORT_POLICY.md).
-The release verifier checks that public history has exactly one reachable
-project commit and no unreachable root-repository objects.
+The release verifier permits ordinary descendant commits while requiring that
+this remains the only reachable root, that HEAD descends from it, and that no
+unreachable root-repository objects or private project ancestry are present.
 
 This repository intentionally ships no GitHub Actions workflows. Inherited
 TorchTitan build, GPU-test, release, Docker, and package-publishing workflows

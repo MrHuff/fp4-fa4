@@ -111,6 +111,14 @@
           ]
         },
         {
+          "path": "results/fp4_fa4_technical_report_v2_20260819/receipts/llama8b_b4_completed_20260903.json",
+          "supports": "Completed 100,000,595,968-token matched BF16 control trajectory with 954 training, 81 validation, and 874 common post-warmup throughput rows.",
+          "limitations": [
+            "This is one trajectory, so it does not estimate run-to-run uncertainty.",
+            "The raw hosted history and exact historical MDS shard/order identity are not public."
+          ]
+        },
+        {
           "path": "results/native_tk_d64_ptx_adaptation_20260829/v416_llama12b_saturated_receipt_20260829.json",
           "supports": "Fixed-state packed-BF16 D64/B16 reference timing and held-out loss for the saturated v416 comparison.",
           "limitations": [
@@ -455,22 +463,24 @@
           ]
         },
         {
-          "path": "results/fp4_fa4_technical_report_v2_20260819/receipts/llama8b_b4_matched_snapshot_20260902T1358Z.json",
-          "supports": "Interim matched distributed BF16 and FP8-P/V trajectory snapshot.",
+          "path": "results/fp4_fa4_technical_report_v2_20260819/receipts/llama8b_b4_completed_20260903.json",
+          "supports": "Completed matched 100,000,595,968-token BF16 and FP8-P/V trajectories, final held-out losses, and all 874 common post-warmup throughput reports.",
           "limitations": [
-            "The long-horizon run was incomplete and the historical data ordering is not yet reproducible byte for byte."
+            "One trajectory per arm does not estimate run-to-run uncertainty or establish statistical equivalence.",
+            "The raw hosted histories and historical data ordering are not publicly reproducible byte for byte."
           ]
         }
       ],
       "known_limits": [
         "The backward remains a one-CTA-per-SM, schedule- and dependency-limited implementation.",
-        "The FP8-P/V trajectory is stable and descending through the retained interim horizon, but retains a measurable loss gap from BF16 and is not a completed convergence study.",
+        "The FP8-P/V trajectory completed the declared 100,000,595,968-token schedule and remained stable, but retained a 0.0900256634 final held-out-loss gap from BF16.",
+        "The completed comparison contains one trajectory per arm and no public raw hosted history; it does not estimate run-to-run uncertainty or establish quality equivalence.",
         "Fresh-clone GB200 build, numerical gates, distributed checkpoint resume, and exact data-order publication remain pending."
       ],
       "promotion_criteria": [
         "Pass clean-clone B1/B2/B4 build, liveness, represented-equation, exact-zero-dO, and performance gates on SM100.",
         "Pass a distributed save/fresh-resume test with authenticated artifacts.",
-        "Complete a token- and data-matched long-horizon comparison against BF16 with published data and tokenizer identities."
+        "Repeat the completed comparison on a published immutable token stream with independent seeds before making uncertainty or quality-equivalence claims."
       ]
     },
     {
@@ -578,7 +588,7 @@
         },
         {
           "path": "results/fp4_fa4_technical_report_v2_20260819/receipts/llama8b_b4_matched_snapshot_20260902T1358Z.json",
-          "supports": "Retained interim 8B B4 trajectory evidence that keeps the MX arm outside convergence claims.",
+          "supports": "Separate retained 8B B4 MXFP4-P/V divergence evidence that keeps the MX arm outside healthy convergence and throughput claims.",
           "limitations": [
             "Historical arms used more than one learned-projection policy; inspect the receipt before attributing divergence to P/V alone.",
             "The historical data order is not yet reproducible byte for byte."

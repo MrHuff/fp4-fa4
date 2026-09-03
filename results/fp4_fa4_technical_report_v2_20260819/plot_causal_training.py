@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import copy
 import json
 import math
 import statistics
@@ -28,9 +29,13 @@ DEFAULT_BOUNDARY_RECEIPT = (
 DEFAULT_TRAINING_RECEIPT = (
     REPORT_DIR / "receipts" / "llama8b_training_curves_20260901.json"
 )
-DEFAULT_MATCHED_B4_RECEIPT = (
+LEGACY_MATCHED_B4_RECEIPT = (
     REPORT_DIR / "receipts" / "llama8b_b4_matched_snapshot_20260902T1358Z.json"
 )
+DEFAULT_MATCHED_B4_RECEIPT = (
+    REPORT_DIR / "receipts" / "llama8b_b4_completed_20260903.json"
+)
+DEFAULT_MATCHED_B4_MX_RECEIPT = LEGACY_MATCHED_B4_RECEIPT
 DEFAULT_E2E_OUTPUT = REPORT_DIR / "figures" / "llama8b_e2e_batch_scaling.pdf"
 DEFAULT_ISOLATED_OUTPUT = REPORT_DIR / "figures" / "causal_isolated_backward.pdf"
 DEFAULT_COMBINED_OUTPUT = (
@@ -72,6 +77,11 @@ def parse_args() -> argparse.Namespace:
         "--matched-b4-receipt",
         type=Path,
         default=DEFAULT_MATCHED_B4_RECEIPT,
+    )
+    parser.add_argument(
+        "--matched-b4-mx-receipt",
+        type=Path,
+        default=DEFAULT_MATCHED_B4_MX_RECEIPT,
     )
     parser.add_argument(
         "--e2e-output",
@@ -340,7 +350,7 @@ def _validate_exact_fields(
             )
 
 
-def validate_matched_b4_receipt(receipt: dict[str, Any]) -> None:
+def validate_matched_b4_v1_receipt(receipt: dict[str, Any]) -> None:
     expected = "tkfa4.report.llama8b_b4_matched_snapshot.v1"
     if receipt.get("schema") != expected:
         raise ValueError("unsupported matched-B4 receipt schema")
@@ -366,11 +376,21 @@ def validate_matched_b4_receipt(receipt: dict[str, Any]) -> None:
     _validate_exact_fields(
         receipt["capture"],
         {
+            "source_kind": (
+                "frozen metric histories with independent four-rank " "agreement checks"
+            ),
+            "public_sanitization": {
+                "service_identifiers_redacted": True,
+                "operational_source_metadata_redacted": True,
+                "scientific_series_unchanged": True,
+            },
             "launch_receipt_basename": "llama8b_b4_w64_launch_check_20260902.json",
             "launch_receipt_sha256": "f652ea07c34048e9180629737dc000933e481e88856e7c64ee87f148eea21063",
         },
         "matched-B4 capture",
     )
+    if "sources" in receipt["capture"]:
+        raise ValueError("matched-B4 receipt retains private source metadata")
     recipe = receipt["shared_recipe"]
     if recipe.get("local_batch") != 4 or recipe.get("world_size") != 64:
         raise ValueError("matched-B4 receipt does not use B4/W64")
@@ -385,8 +405,6 @@ def validate_matched_b4_receipt(receipt: dict[str, Any]) -> None:
         "bf16": {
             "public_arm_label": "bf16_b4_control",
             "route": "BF16 FA4 baseline",
-            "status_at_capture": "cancelled_for_normal_priority_resume",
-            "wandb_state_at_capture": "crashed",
         },
         "fp8": {
             "public_arm_label": "nvfp4_projection_fp8_pv_b4",
@@ -394,8 +412,6 @@ def validate_matched_b4_receipt(receipt: dict[str, Any]) -> None:
                 "NVFP4 learned QKV/O projections + NVFP4 attention QK + "
                 "E4M3 FP8 attention PV + E5M2-dO v509 backward"
             ),
-            "status_at_capture": "cancelled_for_normal_priority_resume",
-            "wandb_state_at_capture": "finished",
         },
         "mx": {
             "public_arm_label": "e4m3_projection_mxfp4_pv_b4",
@@ -403,45 +419,29 @@ def validate_matched_b4_receipt(receipt: dict[str, Any]) -> None:
                 "E4M3 learned QKV/O projections + NVFP4 attention QK + "
                 "MXFP4/E8M0-block32 attention PV + E5M2-dO v509 backward"
             ),
-            "status_at_capture": "cancelled_after_confirmed_divergence",
-            "wandb_state_at_capture": "crashed",
         },
     }
-    expected_sources = {
-        "bf16": (
-            "8b3c5ef94cd57a3718e15df3fb7b32ba66509fe7e3d39c53a46433d3705980dc",
-            "07dda1dcd8a01a32a58a56642a82a22e6bd026c2a1901706da440016dc407e56",
-        ),
-        "fp8": (
-            "7f5a781265b04418bf61dca99041e21b1cd13a46fba18681df5faef95a2264fc",
-            "534ed6a5e5453181d59d0dba0072eed40873ddb1ac720f9526c7f807628c9133",
-        ),
-        "mx": (
-            "a19a237c747c148196dc83c263886ead7910fda08e62565d016a740cec233de5",
-            "50649cc015c14d72cabdd401643addbc9aa7bdf3b3d2288622b3d1be531e68f3",
-        ),
-    }
-    capture_sources = receipt["capture"].get("sources", {})
-    if set(capture_sources) != set(expected_arms):
-        raise ValueError("matched-B4 receipt has an unexpected capture-source set")
     for arm_name, arm in arms.items():
         _validate_exact_fields(arm, expected_arms[arm_name], f"{arm_name} identity")
-        source = capture_sources[arm_name]
-        if source.get("public_arm_label") != expected_arms[arm_name][
-            "public_arm_label"
-        ]:
-            raise ValueError(f"{arm_name}: capture-source arm label disagrees")
-        history_sha, worker_sha = expected_sources[arm_name]
-        if source["wandb_history_export"].get("sha256") != history_sha:
-            raise ValueError(f"{arm_name}: W&B history source hash disagrees")
-        if source["worker_log_crosscheck"].get("sha256") != worker_sha:
-            raise ValueError(f"{arm_name}: worker-log source hash disagrees")
-        history = arm["wandb_history_deduplication"]
+        forbidden = {
+            "status_at_capture",
+            "wandb_state_at_capture",
+            "wandb_history_deduplication",
+            "worker_log_four_rank_deduplication",
+            "wandb_worker_log_crosscheck",
+            "worker_log_tail_updates",
+        }
+        retained = forbidden.intersection(arm)
+        if retained:
+            raise ValueError(
+                f"{arm_name}: private operational fields remain: {sorted(retained)}"
+            )
+        history = arm["metric_history_deduplication"]
         if history["train"].get("first_update") != 1:
-            raise ValueError(f"{arm_name}: W&B training history does not start at 1")
+            raise ValueError(f"{arm_name}: training history does not start at 1")
         if history["validation"].get("first_update") != 1:
-            raise ValueError(f"{arm_name}: W&B validation history does not start at 1")
-        deduplication = arm["worker_log_four_rank_deduplication"]
+            raise ValueError(f"{arm_name}: validation history does not start at 1")
+        deduplication = arm["four_rank_metric_deduplication"]
         if deduplication.get("expected_local_rank_copies_per_update") != 4:
             raise ValueError(f"{arm_name}: local-rank multiplicity is not four")
         if deduplication.get("observed_train_multiplicities") != [4]:
@@ -616,6 +616,238 @@ def validate_matched_b4_receipt(receipt: dict[str, Any]) -> None:
         mx_by_update[update] for update in selected_updates
     ]:
         raise ValueError("current MXFP4 selected diagnostic rows disagree")
+
+
+def validate_matched_b4_completed_receipt(receipt: dict[str, Any]) -> None:
+    if receipt.get("schema") != "tkfa4.report.llama8b_b4_completed.v2":
+        raise ValueError("unsupported completed matched-B4 receipt schema")
+
+    private_locator_fields = {
+        "job_id",
+        "job_name",
+        "run_id",
+        "run_name",
+        "wandb_run_id",
+        "expected_run_name",
+        "tracker_path",
+        "source_uri",
+        "cluster_name",
+        "pod_name",
+        "namespace",
+    }
+
+    def reject_private_locator_fields(value: Any, context: str) -> None:
+        if isinstance(value, dict):
+            retained = private_locator_fields.intersection(value)
+            if retained:
+                raise ValueError(
+                    f"{context}: private locator fields remain: {sorted(retained)}"
+                )
+            for key, child in value.items():
+                reject_private_locator_fields(child, f"{context}.{key}")
+        elif isinstance(value, list):
+            for index, child in enumerate(value):
+                reject_private_locator_fields(child, f"{context}[{index}]")
+
+    reject_private_locator_fields(receipt, "completed matched-B4 receipt")
+    capture = receipt.get("capture", {})
+    _validate_exact_fields(
+        capture,
+        {
+            "credential_free": True,
+            "service_identifiers_redacted": True,
+            "source_map_schema": "tkfa4.metric_lineage_sources.v1",
+            "full_healthy_histories": True,
+            "raw_source_artifacts_committed": False,
+            "target_complete": True,
+            "target_update": 23_842,
+            "last_scheduled_train_report": 23_825,
+            "last_scheduled_validation_report": 23_840,
+            "base_receipt_basename": LEGACY_MATCHED_B4_RECEIPT.name,
+            "base_negative_control_payload_sha256": (
+                "440a59110e1f6cd06ed23cabb2b433bf7b2bd4782eabd7c585ca48a41831d606"
+            ),
+        },
+        "completed matched-B4 capture",
+    )
+    if "timestamp" in capture.get("selection_policy", "").lower():
+        if "never" not in capture["selection_policy"].lower():
+            raise ValueError("checkpoint lineage can never be selected by timestamp")
+
+    legacy = json.loads(LEGACY_MATCHED_B4_RECEIPT.read_text())
+    if receipt.get("identity") != legacy.get("identity"):
+        raise ValueError("completed matched-B4 identity changed")
+    if receipt.get("shared_recipe") != legacy.get("shared_recipe"):
+        raise ValueError("completed matched-B4 recipe changed")
+    recipe = receipt["shared_recipe"]
+    if recipe.get("target_tokens") != 100_000_595_968:
+        raise ValueError("completed matched-B4 target token count changed")
+
+    arms = receipt.get("arms", {})
+    if set(arms) != {"bf16", "fp8"}:
+        raise ValueError("completed matched-B4 receipt must contain two healthy arms")
+    expected_routes = {
+        "bf16": "BF16 FA4 baseline",
+        "fp8": (
+            "NVFP4 learned QKV/O projections + NVFP4 attention QK + "
+            "E4M3 FP8 attention PV + E5M2-dO v509 backward"
+        ),
+    }
+    expected_public_labels = {
+        "bf16": "bf16_b4_control",
+        "fp8": "nvfp4_projection_fp8_pv_b4",
+    }
+    for arm_name, arm in arms.items():
+        if arm.get("public_arm_label") != expected_public_labels[arm_name]:
+            raise ValueError(f"{arm_name}: completed public arm label changed")
+        if arm.get("route") != expected_routes[arm_name]:
+            raise ValueError(f"{arm_name}: completed route identity changed")
+        if arm.get("status_at_capture") != "completed_100b_target":
+            raise ValueError(f"{arm_name}: trajectory is not complete")
+        if arm.get("observed_train_range") != {
+            "first_update": 1,
+            "last_update": 23_825,
+            "rows": 954,
+        }:
+            raise ValueError(f"{arm_name}: completed training range changed")
+        if arm.get("observed_validation_range") != {
+            "first_update": 1,
+            "last_update": 23_840,
+            "rows": 81,
+        }:
+            raise ValueError(f"{arm_name}: completed validation range changed")
+        completion = arm.get("completion", {})
+        _validate_exact_fields(
+            completion,
+            {
+                "target_update": 23_842,
+                "target_tokens": 100_000_595_968,
+                "last_scheduled_train_report": 23_825,
+                "last_scheduled_validation_report": 23_840,
+                "final_checkpoint_step_23842": True,
+                "training_completed": True,
+                "remote_sync_stop_complete": True,
+                "node_success_at_step_23842": True,
+            },
+            f"{arm_name} completion",
+        )
+
+    expected_lineages = {
+        "bf16": [
+            ("bf16_initial_through_16252", None, 16_252, "crashed"),
+            ("bf16_completion_after_16252", 16_252, None, "finished"),
+        ],
+        "fp8": [
+            ("fp8_initial_through_17925", None, 17_925, "finished"),
+            ("fp8_bridge_17925_to_18881", 17_925, 18_881, "crashed"),
+            ("fp8_completion_after_18881", 18_881, None, "finished"),
+        ],
+    }
+    sources = capture.get("sources", {})
+    if set(sources) != set(expected_lineages):
+        raise ValueError("completed matched-B4 source arms changed")
+    for arm_name, expected_segments in expected_lineages.items():
+        segments = sources[arm_name].get("segments", [])
+        observed_segments = [
+            (
+                segment.get("public_segment_label"),
+                segment.get("lower_exclusive"),
+                segment.get("upper_inclusive"),
+                segment.get("run_state_at_capture"),
+            )
+            for segment in segments
+        ]
+        if observed_segments != expected_segments:
+            raise ValueError(f"{arm_name}: checkpoint lineage changed")
+        for segment in segments:
+            for kind in ("train", "validation"):
+                history = segment.get("history", {}).get(kind, {})
+                digest = history.get("selected_series_sha256", "")
+                if not isinstance(digest, str) or len(digest) != 64:
+                    raise ValueError(f"{arm_name}: segment series hash is malformed")
+                if history.get("selected_rows", 0) <= 0:
+                    raise ValueError(f"{arm_name}: empty selected segment")
+        final_log = sources[arm_name].get("final_worker_log", {})
+        digest = final_log.get("sha256", "")
+        if not isinstance(digest, str) or len(digest) != 64:
+            raise ValueError(f"{arm_name}: final worker-log hash is malformed")
+        if not all(final_log.get("completion_evidence", {}).values()):
+            raise ValueError(f"{arm_name}: final worker-log evidence is incomplete")
+        for kind in ("train", "validation"):
+            if (
+                final_log.get("wandb_crosscheck", {})
+                .get(kind, {})
+                .get("overlapping_updates", 0)
+                <= 0
+            ):
+                raise ValueError(f"{arm_name}: worker/W&B overlap is missing")
+
+    excluded = capture.get("excluded_segments", [])
+    if not any(
+        item.get("arm") == "bf16"
+        and item.get("public_segment_label") == "bf16_abandoned_resume_after_16252"
+        for item in excluded
+    ):
+        raise ValueError("abandoned BF16 branch is not recorded")
+    expected_suffixes = {
+        ("bf16", "bf16_initial_through_16252", "greater than 16252"),
+        ("fp8", "fp8_initial_through_17925", "greater than 17925"),
+        ("fp8", "fp8_bridge_17925_to_18881", "greater than 18881"),
+    }
+    observed_suffixes = {
+        (
+            item.get("arm"),
+            item.get("public_segment_label"),
+            item.get("updates"),
+        )
+        for item in capture.get("superseded_suffixes_excluded", [])
+    }
+    if observed_suffixes != expected_suffixes:
+        raise ValueError("superseded checkpoint suffix policy changed")
+
+    negative = receipt.get("negative_control_reference", {})
+    _validate_exact_fields(
+        negative,
+        {
+            "receipt_basename": LEGACY_MATCHED_B4_RECEIPT.name,
+            "payload_sha256": (
+                "440a59110e1f6cd06ed23cabb2b433bf7b2bd4782eabd7c585ca48a41831d606"
+            ),
+            "plot_data_key": "mxfp4_divergence",
+        },
+        "completed matched-B4 negative control",
+    )
+    if "mxfp4_divergence" in receipt:
+        raise ValueError("MXFP4 data must remain separate from the healthy receipt")
+
+    healthy = receipt.get("healthy_matched_comparison", {})
+    if healthy.get("training", {}).get("common_rows") != 954:
+        raise ValueError("completed matched-B4 training row count changed")
+    if healthy.get("training", {}).get("last_common_update") != 23_825:
+        raise ValueError("completed matched-B4 training endpoint changed")
+    if healthy.get("validation", {}).get("common_rows") != 81:
+        raise ValueError("completed matched-B4 validation row count changed")
+    if healthy.get("validation", {}).get("last_common_update") != 23_840:
+        raise ValueError("completed matched-B4 validation endpoint changed")
+    if healthy.get("throughput", {}).get("common_rows") != 874:
+        raise ValueError("completed matched-B4 throughput row count changed")
+
+    # Reuse the mature numerical checks by substituting only the new healthy
+    # comparison into the independently validated legacy envelope.
+    compatibility_receipt = copy.deepcopy(legacy)
+    compatibility_receipt["healthy_matched_comparison"] = healthy
+    validate_matched_b4_v1_receipt(compatibility_receipt)
+
+
+def validate_matched_b4_receipt(receipt: dict[str, Any]) -> None:
+    schema = receipt.get("schema")
+    if schema == "tkfa4.report.llama8b_b4_matched_snapshot.v1":
+        validate_matched_b4_v1_receipt(receipt)
+        return
+    if schema == "tkfa4.report.llama8b_b4_completed.v2":
+        validate_matched_b4_completed_receipt(receipt)
+        return
+    raise ValueError(f"unsupported matched-B4 receipt schema {schema!r}")
 
 
 def setup_style() -> None:
@@ -1227,6 +1459,7 @@ def render_mxfp4_divergence(receipt: dict[str, Any], output: Path) -> None:
 
 
 def render_matched_b4_training(receipt: dict[str, Any], output: Path) -> None:
+    completed = receipt.get("schema") == "tkfa4.report.llama8b_b4_completed.v2"
     healthy = receipt["healthy_matched_comparison"]
     train = healthy["training"]
     validation = healthy["validation"]
@@ -1246,6 +1479,9 @@ def render_matched_b4_training(receipt: dict[str, Any], output: Path) -> None:
         gridspec_kw={"height_ratios": (1.25, 0.85)},
     )
     tokens = [row["tokens"] / 1.0e9 for row in train_series]
+    plot_end_tokens = (
+        receipt["shared_recipe"]["target_tokens"] / 1.0e9 if completed else tokens[-1]
+    )
     arm_fields = (
         ("bf16", "bf16"),
         ("fp8", "nvfp4_projection_fp8_pv"),
@@ -1280,18 +1516,18 @@ def render_matched_b4_training(receipt: dict[str, Any], output: Path) -> None:
     train_ax.set_ylim(
         min(train_values) - train_margin, max(train_values) + train_margin
     )
-    train_ax.set_xlim(tokens[0], tokens[-1])
-    zoom_start = max(tokens[0], 40.0)
+    train_ax.set_xlim(tokens[0], plot_end_tokens)
+    zoom_start = max(tokens[0], 60.0 if completed else 40.0)
     train_ax.axvspan(
         zoom_start,
-        tokens[-1],
+        plot_end_tokens,
         color="#3c78a8",
         alpha=0.055,
         linewidth=0.0,
         zorder=0,
     )
     train_ax.text(
-        (zoom_start + tokens[-1]) / 2.0,
+        (zoom_start + plot_end_tokens) / 2.0,
         0.035,
         "late window enlarged below",
         transform=train_ax.get_xaxis_transform(),
@@ -1305,7 +1541,7 @@ def render_matched_b4_training(receipt: dict[str, Any], output: Path) -> None:
     train_ax.yaxis.grid(True, color="#d7d7d7", linewidth=0.55, alpha=0.8)
     train_ax.set_axisbelow(True)
     train_ax.set_title(
-        "Matched 8B training snapshot",
+        "Matched 8B pretraining" if completed else "Matched 8B training snapshot",
         loc="left",
         pad=9,
         fontweight="bold",
@@ -1325,9 +1561,7 @@ def render_matched_b4_training(receipt: dict[str, Any], output: Path) -> None:
     late_validation_series = [
         row for row in validation_series if row["tokens"] / 1.0e9 >= zoom_start
     ]
-    validation_tokens = [
-        row["tokens"] / 1.0e9 for row in late_validation_series
-    ]
+    validation_tokens = [row["tokens"] / 1.0e9 for row in late_validation_series]
     for short_name, field in (
         ("bf16", "bf16_loss"),
         ("fp8", "fp8_loss"),
@@ -1355,7 +1589,7 @@ def render_matched_b4_training(receipt: dict[str, Any], output: Path) -> None:
         min(validation_values) - validation_margin,
         max(validation_values) + validation_margin,
     )
-    validation_ax.set_xlim(zoom_start, tokens[-1])
+    validation_ax.set_xlim(zoom_start, plot_end_tokens)
     validation_ax.set_xlabel("Processed tokens (billions)")
     validation_ax.set_ylabel("Validation loss")
     validation_ax.yaxis.grid(True, color="#d7d7d7", linewidth=0.55, alpha=0.8)
@@ -1385,8 +1619,15 @@ def render_matched_b4_training(receipt: dict[str, Any], output: Path) -> None:
         -0.29,
         (
             "Thin lines: 25-update training reports; thick lines: 1B-token EWM.\n"
-            "The lower panel enlarges same-update validation; "
-            "this snapshot ends before the 100B-token target."
+            + (
+                "Both arms completed the 100B-token schedule; validation is "
+                "reported every 298 updates."
+                if completed
+                else (
+                    "The lower panel enlarges same-update validation; "
+                    "this snapshot ends before the 100B-token target."
+                )
+            )
         ),
         transform=validation_ax.transAxes,
         ha="center",
@@ -1400,7 +1641,11 @@ def render_matched_b4_training(receipt: dict[str, Any], output: Path) -> None:
         output,
         bbox_inches="tight",
         metadata={
-            "Title": "Matched B4/W64 Llama 3.1 8B training snapshot",
+            "Title": (
+                "Matched B4/W64 Llama 3.1 8B pretraining to 100B tokens"
+                if completed
+                else "Matched B4/W64 Llama 3.1 8B training snapshot"
+            ),
             "Creator": "plot_causal_training.py",
             "CreationDate": None,
             "ModDate": None,
@@ -1410,6 +1655,7 @@ def render_matched_b4_training(receipt: dict[str, Any], output: Path) -> None:
 
 
 def render_matched_b4_throughput(receipt: dict[str, Any], output: Path) -> None:
+    completed = receipt.get("schema") == "tkfa4.report.llama8b_b4_completed.v2"
     healthy = receipt["healthy_matched_comparison"]
     throughput = healthy["throughput"]
     series = [
@@ -1462,7 +1708,10 @@ def render_matched_b4_throughput(receipt: dict[str, Any], output: Path) -> None:
     bf16_median = throughput["bf16_tokens_per_second_per_gpu"]["median"]
     fp8_median = throughput["fp8_tokens_per_second_per_gpu"]["median"]
     speedup = throughput["ratio_of_median_throughputs"]
-    ax.set_xlim(tokens[0], tokens[-1])
+    plot_end_tokens = (
+        receipt["shared_recipe"]["target_tokens"] / 1.0e9 if completed else tokens[-1]
+    )
+    ax.set_xlim(tokens[0], plot_end_tokens)
     ax.set_xlabel("Processed tokens (billions)")
     ax.set_ylabel("Tokens/s/GPU (thousands)")
     ax.yaxis.grid(True, color="#d7d7d7", linewidth=0.55, alpha=0.8)
@@ -1633,10 +1882,12 @@ def main() -> None:
     boundary_receipt = json.loads(args.boundary_receipt.read_text())
     training_receipt = json.loads(args.training_receipt.read_text())
     matched_b4_receipt = json.loads(args.matched_b4_receipt.read_text())
+    matched_b4_mx_receipt = json.loads(args.matched_b4_mx_receipt.read_text())
     validate_e2e_receipt(e2e_receipt)
     validate_boundary_receipt(boundary_receipt)
     validate_training_receipt(training_receipt)
     validate_matched_b4_receipt(matched_b4_receipt)
+    validate_matched_b4_v1_receipt(matched_b4_mx_receipt)
     setup_style()
     render_e2e_batch_scaling(e2e_receipt, args.e2e_output)
     render_isolated_backward(boundary_receipt, args.isolated_output)
@@ -1645,7 +1896,10 @@ def main() -> None:
     render_mxfp4_divergence(training_receipt, args.divergence_output)
     render_matched_b4_training(matched_b4_receipt, args.matched_b4_training_output)
     render_matched_b4_throughput(matched_b4_receipt, args.matched_b4_throughput_output)
-    render_matched_b4_mx_failure(matched_b4_receipt, args.matched_b4_mx_failure_output)
+    render_matched_b4_mx_failure(
+        matched_b4_mx_receipt,
+        args.matched_b4_mx_failure_output,
+    )
 
 
 if __name__ == "__main__":

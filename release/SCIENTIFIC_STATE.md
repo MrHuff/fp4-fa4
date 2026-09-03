@@ -151,7 +151,7 @@ FP8-P/V plus v501, 435.992 ms for MXFP4-P/V plus v501, and 433.539 ms for MX
 plus v503. These values likewise support the conclusion that the complete-step
 FP8 and MX routes are tied, not that shared-MX is a throughput win.
 
-### Distributed 8B training snapshot
+### Completed distributed 8B training comparison
 
 The matched recipe used a Llama-3.1-style 8.03B model, S4096, local batch 4,
 64 GPUs, physical global batch 256, gradient accumulation 4, and effective
@@ -159,11 +159,18 @@ global batch 1024. Each update consumed 4,194,304 tokens. It used fused
 BF16-stochastic-rounding AdamW, BF16 parameters and moments, no FP32 master
 copy, and standard BF16 cross entropy compiled with `torch.compile`.
 
-One BF16 trajectory was observed through update 16,425 and one NVFP4-projection
-FP8-P/V trajectory through update 18,150. Both descended stably over the
-recorded interval; FP8 retained a measurable loss gap. These are single interim
-trajectories, not repeated trials or completed 100-billion-token convergence
-runs.
+One BF16 trajectory and one NVFP4-projection/FP8-P/V trajectory both completed
+the 100,000,595,968-token target. The checkpoint-selected logical paths contain
+954 common training reports through update 23,825 and 81 same-update validation
+reports through update 23,840. At the final validation point, BF16 loss was
+2.3048148155 and FP8-P/V loss was 2.3948404789. Both curves remained stable and
+descending, but the FP8 route retained a measurable gap.
+
+Across all 874 common post-warmup reports, including checkpoint and input-stall
+windows, median throughput was 21,852.6656 tokens/s/GPU for BF16 and
+24,302.9730 tokens/s/GPU for FP8-P/V. The ratio of medians is 1.1121285x. This
+is one trajectory per arm; it neither estimates run-to-run uncertainty nor
+establishes quality equivalence.
 
 The recorded B4 MX arm used E4M3 learned projections, departed near update 325,
 and was stopped at update 2,550 after clear loss and pre-clip-gradient
@@ -179,10 +186,14 @@ format-matched attention binaries but preserve projection format as part of
 the authenticated route identity. This makes the historical four-arm study
 re-runnable without implying that its diagnostic arms are supported recipes.
 
-The sanitized aggregate receipt is
-`results/fp4_fa4_technical_report_v2_20260819/receipts/llama8b_b4_matched_snapshot_20260902T1358Z.json`.
-Its raw hosted histories are not committed, so it is a frozen evidence record,
-not a source from which the service data can be reacquired.
+The credential-free completed receipt is
+`results/fp4_fa4_technical_report_v2_20260819/receipts/llama8b_b4_completed_20260903.json`
+(SHA256
+`36272a35bd95c3138425e7330403f94d87e40ddd2109cdcb2bcf5e2b21c1c55e`).
+The earlier normalized snapshot remains only as the source of the separate
+MXFP4-P/V failure diagnostic. Raw hosted histories are not committed, and the
+historical MDS shard/order identity is incomplete, so the completed receipt is
+a frozen evidence record rather than a byte-for-byte public data rerun.
 
 ## Hardware interpretation
 
@@ -213,8 +224,9 @@ paths without new evidence:
 2. Validate the current repository from a fresh recursive clone on GB200:
    clean build, B1/B2/B4 numerical gates, exact-zero-dO, liveness, saturated
    timing, DDP smoke, and checkpoint save/fresh-load/resume.
-3. Finish a fully matched BF16 versus FP8-P/V long-horizon run on a published,
-   immutable token stream before making a convergence claim.
+3. Repeat the completed matched BF16 versus FP8-P/V comparison on a published,
+   immutable token stream with independent seeds before making uncertainty or
+   quality-equivalence claims.
 4. Validate the D64 build/manifest/training path from a clean clone, including
    the B16 forward factorial, v416 gates, DDP16 save/fresh-resume, and a matched
    public-data trajectory.

@@ -3,9 +3,9 @@
 The noncausal model experiments are fixed-input inference evaluations rather
 than finetuning or pretraining studies.  The causal measurements establish
 operator, complete-sublayer, and full-update performance.  The matched
-distributed comparison supports training and validation claims only through
-the reporting cutoff in Section~\ref{sec:causal-training}; one trajectory per
-route does not estimate run-to-run variability.  The longer historical
+distributed comparison supports training and validation claims over the
+completed 100-billion-token schedule in Section~\ref{sec:causal-training};
+one trajectory per route does not estimate run-to-run variability.  The longer historical
 controls establish the FP8-versus-MXFP4 P/V format choice, but their different
 recipe prevents a paired quality comparison with BF16.  Learned projection
 precision is also a separate boundary: E4M3 is the numerical control and
@@ -33,6 +33,14 @@ gradient products.  This path accelerates the complete projection-inclusive
 attention sublayer by 1.25$\times$ and a single-GPU 8B update by up to
 1.14$\times$.  The distributed controls select FP8 P/V: every tested MXFP4
 P/V trajectory diverges despite competitive short timing runs.
+
+The retained training path therefore still makes a numerical concession to
+FP8 for P/V and backward.  Unsigned E5M3 (UE5M3) block scales retain E2M1
+payloads but provide substantially more scale range, and have enabled stable
+FP4 language model pretraining in separate work~\cite{hu2026ue5m3}.  Applying
+that format to the P/V product and backward gradient products is a promising
+route to a fully FP4 attention training path, but it is not evaluated here and
+requires an efficient hardware implementation.
 
 Faster matrix arithmetic alone is therefore insufficient.  At head dimension
 128, tensor-memory ownership and operand readiness limit how much QK, softmax,

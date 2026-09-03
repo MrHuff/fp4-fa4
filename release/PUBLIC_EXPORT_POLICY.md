@@ -2,11 +2,12 @@
 
 The recovery authority is a private continuation workspace. It must not be
 made public by changing the visibility of its existing remote. This directory
-is the separate public-export candidate. Its complete tree is staged in an
-unborn Git repository so that the first commit can be parentless. That commit,
-the required clean-clone audit, and the public push have not yet happened. A
-conventional squash commit that still has a private parent would not satisfy
-this policy.
+is the separate public export. Its first commit,
+`edde9bcbc5567fe4e69b4faa2c36e667764410e4`, is the audited parentless public
+root. That root must remain reachable and unchanged. Post-publication updates
+must be ordinary descendants of it; they must not recreate, amend, replace, or
+force-push the root. A conventional squash commit that retains a private
+parent would not satisfy this policy.
 
 This policy protects two independent properties:
 
@@ -134,7 +135,7 @@ the precise transformations and before/after hashes recorded in
 not modified. Re-run both automated and manual review on the final reachable
 commit rather than treating the worktree pass as final proof.
 
-## Constructing parentless public history
+## Constructing the initial parentless public history
 
 Use a disposable clone at a frozen, reviewed private commit. Never rewrite,
 filter, garbage-collect, or force-push the canonical private repository. The
@@ -171,10 +172,13 @@ audit below.
    private remote and do not publish private tags, pull requests, releases,
    actions logs, or branch names.
 
-A safe implementation of this procedure should be scripted and tested before
-use. The script must refuse a dirty source checkout, an unapproved license
-state, a non-parentless export commit, a nonempty public remote, or a failed
-audit. This document is a policy, not evidence that those gates have run.
+These steps govern construction of the initial public root. After publication,
+reviewed changes use normal descendant commits. A safe initial-export script
+must refuse a dirty source checkout, an unapproved license state, a
+non-parentless export commit, a nonempty public remote, or a failed audit. An
+update must refuse a history whose only reachable root is not the pinned public
+root, or whose HEAD does not descend from that root. This document is a policy,
+not evidence that those gates have run.
 
 ## Source-publication gates
 
@@ -183,15 +187,16 @@ The source tree may be made public only when all of the following are true:
 - **Rights gate:** confirmed publication approval is accompanied by the
   Apache-2.0 project license, the approved Graphcore copyright notice, and
   complete third-party notices and license payloads.
-- **History gate:** the public repository has one parentless project commit
-  and no reachable private development object or metadata.
+- **History gate:** the public repository has exactly one reachable root, that
+  root is the pinned parentless public commit, every published update descends
+  from it, and no private development object or metadata is reachable.
 - **Identity gate:** manifests, source inventories, submodule pins, and
   generated artifact hashes match the exported tree.
 - **Hygiene gate:** both automated secret scanning and manual
   identifier/metadata review pass on all reachable content.
 - **Clone gate:** an unauthenticated recursive clone obtains every required
   source dependency at the recorded pin. Independent pin checks already pass;
-  the final parentless clone remains to be tested.
+  each release update repeats this check from its public descendant commit.
 - **Offline gate:** source verification, unit tests, and deterministic paper
   regeneration pass from a clean clone.
 - **Documentation gate:** unsupported shapes, missing data, absent raw
@@ -211,13 +216,14 @@ not whether its clearly labelled source may be published:
   private service dependency.
 
 The release manifest marks this tree as a public export. That state selects the
-verifier's parentless-history checks; it does not turn pending source,
+verifier's pinned-public-root history checks; it does not turn pending source,
 evidence, GPU, or training work into completed validation.
 
 ## After publication
 
 Keep the frozen private recovery repository read-only. Development can proceed
-from the public root with ordinary reviewable commits. Each result-bearing
+from the public root with ordinary reviewable commits. Never force-push or
+replace the pinned root. Each result-bearing
 change should update the route catalog and scientific handoff, identify the
 exact source tree and inputs, and say which gates were run. Security fixes
 that reveal private history should be handled through the hosting provider's

@@ -2,9 +2,9 @@
 
 PYTHON ?= python3
 
-# Freeze generated PDF metadata to the timestamp of the latest committed
-# matched-training receipt. Callers may override this for a later release.
-SOURCE_DATE_EPOCH ?= 1788357489
+# Freeze generated PDF metadata to the timestamp of the completed matched
+# training receipt. Callers may override this for a later release.
+SOURCE_DATE_EPOCH ?= 1788436743
 
 UNIFIED := ../fp4_fa4_unified_20260801
 HAO_GRID := ../fp4_fa4_hao_table_gb200_20260802

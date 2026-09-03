@@ -32,12 +32,21 @@ removed identifiers.
 | --- | --- | --- |
 | `results/fp4_fa4_technical_report_v2_20260819/export_llama8b_b4_snapshot.py` | `b53446d2b211d231621faea51408aef80dc2d8670d487fc824cded2c5056c815` | `0a0739ec371316fc9295acd3c25929388f2153faa9b1dd2988c9b820051af438` |
 | `results/fp4_fa4_technical_report_v2_20260819/fetch_llama8b_training_curves.py` | `9dc07f2eaae1dfd47b729190631ffbfbb5beab04a50c66ad3b7e5c45e55a0637` | `8a3ea9e2e7a7b62f2fa727b0e3b4768b10f2fb58fcd7d0ca8d1cc02d9bafe4c8` |
-| `results/fp4_fa4_technical_report_v2_20260819/plot_causal_training.py` | `7416ada80081c7dd25c5034e4e1524874a577f6df2c178e999b909212ff349ba` | `067fa1887bc25a1f9ff5ee9d76220a4dd8d7dfe7a4e4f285e3c8171d0bca9873` |
+| `results/fp4_fa4_technical_report_v2_20260819/plot_causal_training.py` | `7416ada80081c7dd25c5034e4e1524874a577f6df2c178e999b909212ff349ba` | `88dba23aebb251b722f1a315d26d03514f759efc031eae493fa0641893c70b9d` |
 | `results/fp4_fa4_technical_report_v2_20260819/receipts/llama8b_b4_matched_snapshot_20260902T1121Z.json` | `65407758a64e1d6235ae34bdf97259f6f7bef265225e0e74684464a139b824d7` | `c7001d4a1f2278e78771448d16de466c03fa2dc578e8434184f12c9fd1d77ce3` |
-| `results/fp4_fa4_technical_report_v2_20260819/receipts/llama8b_b4_matched_snapshot_20260902T1358Z.json` | `81d3c964d1e14e974de9b73b9502856d5e541605e870eeb5c529d4488fbbc628` | `295fc28099e686ed101cdd86c28313da10cf330fc47f8c1b7c5255b55e230f80` |
+| `results/fp4_fa4_technical_report_v2_20260819/receipts/llama8b_b4_matched_snapshot_20260902T1358Z.json` | `81d3c964d1e14e974de9b73b9502856d5e541605e870eeb5c529d4488fbbc628` | `0ed4b988db3a0805d520b0d41e241d224e0ad43e2258bf993625d85c1af2f0da` |
 | `results/fp4_fa4_technical_report_v2_20260819/receipts/llama8b_b4_w64_launch_check_20260902.json` | `f3d6798db8d31476f515591ab4f2b567b39f22d6cc3f133811ea282e205451bc` | `f652ea07c34048e9180629737dc000933e481e88856e7c64ee87f148eea21063` |
 | `results/fp4_fa4_technical_report_v2_20260819/receipts/llama8b_training_curves_20260901.json` | `9bebd7374a894fd848596058a087561d6214e63fd91e52932294d85c8d2a9fe0` | `eecf78acd3cccd20f2cfae57cd8e4b9f6a79da12ecd3a4537e10f40b73591ca1` |
 | `results/fp4_fa4_technical_report_v2_20260819/receipts/v509_four_arm_cutoff_20260831T2209Z.json` | `5c4b1b6bc40d613e13ece228f55be7429b1ad79ff096323f7a5fe7097245d6f0` | `b8e19765627e4f40d262578f9b59614f61f7eff76b35a3467b9d82b5f2784fc2` |
+
+The completed-run exporter and receipt were designed to be credential-free
+at creation and therefore require no public-tree rewrite. They are
+byte-identical to the reviewed private-paper versions:
+
+| File | Reviewed SHA256 |
+| --- | --- |
+| `results/fp4_fa4_technical_report_v2_20260819/fetch_llama8b_b4_complete.py` | `ccb2e51bc207175c35238875df8758d04185fa4da6b7cba1c7635fb11a7282dc` |
+| `results/fp4_fa4_technical_report_v2_20260819/receipts/llama8b_b4_completed_20260903.json` | `36272a35bd95c3138425e7330403f94d87e40ddd2109cdcb2bcf5e2b21c1c55e` |
 
 Specifically, the transformation:
 
@@ -52,6 +61,17 @@ Specifically, the transformation:
   the generated public receipt records only the source-map SHA256; and
 - updates the manuscript's receipt hashes and the matched-snapshot validator
   to the normalized public artifacts.
+
+A second public-only hardening pass removes the remaining operational envelope
+from the matched snapshot. It deletes per-source worker indices and filenames,
+byte counts, source-log and download-manifest hashes, exact download times, and
+scheduler- or tracker-specific state labels. Generic history-deduplication and
+four-rank agreement statistics remain because they describe the scientific
+data checks, but their field names no longer name a private service or log
+source. The plotted loss, gradient, throughput, model-flop-utilization, token,
+and route payloads are unchanged. In particular, the canonical SHA256 of the
+MXFP4 divergence payload remains
+`440a59110e1f6cd06ed23cabb2b433bf7b2bd4782eabd7c585ca48a41831d606`.
 
 The source map is an operator-provided input of the form
 `{"schema":"tkfa4.metric_sources.v1","runs":{"e4_fp8":"...", ...}}`.

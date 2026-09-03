@@ -31,14 +31,26 @@ def _commit(tmp_path: Path, message: str) -> str:
     return _git(tmp_path, "rev-parse", "HEAD")
 
 
-def _history_manifest(*, visibility: str, base: str, audited: str) -> dict:
-    return {
+def _history_manifest(
+    *,
+    visibility: str,
+    base: str,
+    audited: str,
+    public_root: str | None = None,
+) -> dict:
+    manifest = {
         "project": {
             "visibility": visibility,
             "offline_clone_audit": {"audited_commit": audited},
         },
         "source_pins": {"torchtitan": {"commit": base}},
     }
+    if public_root is not None:
+        manifest["project"]["public_history"] = {
+            "root_commit": public_root,
+            "policy": "parentless_root_with_ordinary_descendants",
+        }
+    return manifest
 
 
 def _init_history_repo(tmp_path: Path) -> None:
@@ -65,14 +77,23 @@ def test_git_visible_files_excludes_ignored_build_products(
     ]
 
 
-def test_public_history_accepts_one_parentless_commit(
+def test_public_history_accepts_parentless_root_and_ordinary_descendant(
     monkeypatch, tmp_path: Path
 ) -> None:
     _init_history_repo(tmp_path)
-    _commit(tmp_path, "public root")
+    public_root = _commit(tmp_path, "public root")
     monkeypatch.setattr(verifier, "ROOT", tmp_path)
-    manifest = _history_manifest(visibility="public", base="1" * 40, audited="2" * 40)
+    monkeypatch.setattr(verifier, "EXPECTED_PUBLIC_ROOT", public_root)
+    manifest = _history_manifest(
+        visibility="public",
+        base="1" * 40,
+        audited="2" * 40,
+        public_root=public_root,
+    )
 
+    assert verifier._verify_history_boundary(manifest) == "public_export"
+
+    _commit(tmp_path, "ordinary public update")
     assert verifier._verify_history_boundary(manifest) == "public_export"
 
 
@@ -83,9 +104,39 @@ def test_public_history_rejects_commit_with_private_parent(
     base = _commit(tmp_path, "private base")
     _commit(tmp_path, "ordinary squash with parent")
     monkeypatch.setattr(verifier, "ROOT", tmp_path)
-    manifest = _history_manifest(visibility="public", base=base, audited=base)
+    monkeypatch.setattr(verifier, "EXPECTED_PUBLIC_ROOT", base)
+    manifest = _history_manifest(
+        visibility="public", base=base, audited=base, public_root=base
+    )
 
-    with pytest.raises(verifier.VerificationError, match="parentless"):
+    with pytest.raises(verifier.VerificationError, match="private project ancestry"):
+        verifier._verify_history_boundary(manifest)
+
+
+def test_public_history_rejects_second_reachable_root(
+    monkeypatch, tmp_path: Path
+) -> None:
+    _init_history_repo(tmp_path)
+    public_root = _commit(tmp_path, "public root")
+    _commit(tmp_path, "ordinary public update")
+    unrelated = _git(
+        tmp_path,
+        "commit-tree",
+        _git(tmp_path, "rev-parse", f"{public_root}^{{tree}}"),
+        "-m",
+        "unrelated root",
+    )
+    _git(tmp_path, "update-ref", "refs/heads/unrelated", unrelated)
+    monkeypatch.setattr(verifier, "ROOT", tmp_path)
+    monkeypatch.setattr(verifier, "EXPECTED_PUBLIC_ROOT", public_root)
+    manifest = _history_manifest(
+        visibility="public",
+        base="1" * 40,
+        audited="2" * 40,
+        public_root=public_root,
+    )
+
+    with pytest.raises(verifier.VerificationError, match="exactly the pinned"):
         verifier._verify_history_boundary(manifest)
 
 

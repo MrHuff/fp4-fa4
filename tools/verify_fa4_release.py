@@ -40,6 +40,8 @@ EXPECTED_PUBLICATION_AUTHORIZATION = {
     "outbound_license": "Apache-2.0",
     "copyright_notice": "Copyright (c) 2026 Graphcore Ltd.",
 }
+EXPECTED_PUBLIC_ROOT = "edde9bcbc5567fe4e69b4faa2c36e667764410e4"
+EXPECTED_PUBLIC_HISTORY_POLICY = "parentless_root_with_ordinary_descendants"
 EXPECTED_DEPENDENCIES = {
     "ThunderKittens": "9ee85b4afcdea1478b4dda8bb01f8907ab7edb0b",
     "SageAttention": "681004015c42b8ac543302235652e618ac66f966",
@@ -55,7 +57,7 @@ EXPECTED_MATERIALIZED_TREES = {
     "baseline_kernels": "5242c6d77a09cbd415b6d11e100657e0810aa4dd",
     "fused_ops": "efb0668033a9eeee8a95b21759664d6d49f5decc",
     "qutlass_binding": "32332ed7b0d26971bb0873647d154eb8fdc6aa65",
-    "results": "5d625f44bec7b206fffb32dabb1ab14f52f6324f",
+    "results": "808819294d95e57ce54a70799b9510fa7d0d04bb",
     "reproduction/snapshots/forward_cfc06dad/TK_quantisation": (
         "9a0a63b1aa98ca4e377d0fd867b0b764e19d8b4d"
     ),
@@ -164,7 +166,7 @@ REQUIRED_BLOCKERS = {
     "missing_natural_captures",
     "evidence_raw_archives_missing",
     "training_data_identity_incomplete",
-    "long_horizon_incomplete",
+    "single_trajectory_and_raw_history_limit",
     "historical_input_pipeline_parity_pending",
     "portable_profile_coverage_incomplete",
     "runtime_dependency_lock_incomplete",
@@ -266,7 +268,7 @@ EXPECTED_FILE_HASHES = {
     "patches/flash_attention_fp4_runtime_overlay_9743edaf_20260831.patch": "bc8caf8cd3c860d2bf958a96113a4b97a7987b2350bfed7f54337f0b9ac0cb8a",
     "reproduction/snapshots/v510_aa021504/aa021504.patch": "704fe124c17891ba3eb1f072532aad8a6958fde859c86bf91e74fc22c3179a37",
     "reproduction/snapshots/v510_aa021504/SHA256SUMS": "ee51c433b371c5c5c7cbad9d052599cb3714df84203b0d891623195d7450713b",
-    "results/fp4_fa4_technical_report_v2_20260819/main.pdf": "01c36ce2a1a81691330c77e546989c33eaff9699e2a5ebcd4bfa6605bf569637",
+    "results/fp4_fa4_technical_report_v2_20260819/main.pdf": "9bdd0ed16bd14a65d13cc5703c23882391539c6bae9abbd33028025b7899104c",
 }
 
 EXPECTED_DEVELOPMENT_ROUTES = {
@@ -351,6 +353,13 @@ def _require(condition: bool, message: str) -> None:
         raise VerificationError(message)
 
 
+def _expected_public_history() -> dict[str, str]:
+    return {
+        "root_commit": EXPECTED_PUBLIC_ROOT,
+        "policy": EXPECTED_PUBLIC_HISTORY_POLICY,
+    }
+
+
 def _sha256(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as stream:
@@ -385,10 +394,14 @@ def _verify_manifest(manifest: dict[str, Any]) -> None:
         "release visibility must be private or public",
     )
     _require(
-        project.get("publication_authorization")
-        == EXPECTED_PUBLICATION_AUTHORIZATION,
+        project.get("publication_authorization") == EXPECTED_PUBLICATION_AUTHORIZATION,
         "publication authorization or outbound license changed",
     )
+    if project.get("visibility") == "public":
+        _require(
+            project.get("public_history") == _expected_public_history(),
+            "public history root or update policy changed",
+        )
     _require(
         project.get("offline_clone_audit") == EXPECTED_CLONE_AUDIT,
         "offline clone audit declaration changed",
@@ -698,12 +711,13 @@ def _is_ancestor(commit: str) -> bool:
 
 
 def _verify_history_boundary(manifest: dict[str, Any]) -> str:
-    """Authenticate either private ancestry or a single-commit public export.
+    """Authenticate private ancestry or the pinned public-root lineage.
 
-    A public snapshot deliberately cannot prove historical objects through Git
-    ancestry: those objects must not be present in its repository.  Historical
-    source identities remain authenticated by the materialized tree, hashes,
-    and provenance records checked elsewhere in this verifier.
+    The public root deliberately cannot prove private historical objects
+    through Git ancestry: those objects must not be present in its repository.
+    Once published, ordinary commits may descend from that parentless root.
+    Historical source identities remain authenticated by the materialized
+    tree, hashes, and provenance records checked elsewhere in this verifier.
     """
 
     project = manifest["project"]
@@ -719,14 +733,25 @@ def _verify_history_boundary(manifest: dict[str, Any]) -> str:
         )
         return "private_history"
 
-    head_record = _run_git("rev-list", "--parents", "-n", "1", "HEAD").split()
+    public_history = project.get("public_history")
     _require(
-        len(head_record) == 1,
-        "public export HEAD must be a parentless commit",
+        public_history == _expected_public_history(),
+        "public history root or update policy changed",
     )
+    public_root = EXPECTED_PUBLIC_ROOT
     _require(
-        _run_git("rev-list", "--all", "--count") == "1",
-        "public export must have exactly one reachable root-repository commit",
+        _is_ancestor(public_root),
+        "pinned parentless public root is not an ancestor of HEAD",
+    )
+    root_record = _run_git("rev-list", "--parents", "-n", "1", public_root).split()
+    _require(
+        root_record == [public_root],
+        "pinned public root must remain parentless",
+    )
+    reachable_roots = set(_run_git("rev-list", "--max-parents=0", "--all").splitlines())
+    _require(
+        reachable_roots == {public_root},
+        "public history must have exactly the pinned parentless root",
     )
     _require(
         not _is_ancestor(base) and not _is_ancestor(audited_commit),

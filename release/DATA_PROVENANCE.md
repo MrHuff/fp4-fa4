@@ -55,7 +55,7 @@ files selected for the historical asset archive.
 
 ### What is exact
 
-The interim matched B4 comparison is bound to these source identities:
+The completed matched B4 comparison is bound to these source identities:
 
 - training integration commit
   `e7db209b0c7017c415fdd66e04e85f96ae24f276`;
@@ -97,14 +97,28 @@ checkpoints are written every 239 updates, retain the latest three, and export
 FP32. The model seed is 42. The full field-level recipe and source-file hashes
 are in `data_manifest.json`.
 
-The two authoritative plot receipts are:
+The authoritative completed-comparison receipt is:
+
+- `receipts/llama8b_b4_completed_20260903.json`, SHA256
+  `36272a35bd95c3138425e7330403f94d87e40ddd2109cdcb2bcf5e2b21c1c55e`.
+
+It records one checkpoint-selected logical trajectory per healthy arm. Each
+trajectory reached the 100,000,595,968-token target and contains 954 training
+rows and 81 validation rows. The throughput comparison includes all 874 common
+post-warmup reports: medians are 21,852.6656 tokens/s/GPU for BF16 and
+24,302.9730 tokens/s/GPU for NVFP4-projection/FP8-P/V, a 1.1121285x ratio of
+medians. Final same-update validation losses are 2.3048148155 and 2.3948404789.
+These are single trajectories, not repeated trials.
+
+Two additional receipts retain launch and negative-control evidence:
 
 - `receipts/llama8b_b4_w64_launch_check_20260902.json`, SHA256
   `f652ea07c34048e9180629737dc000933e481e88856e7c64ee87f148eea21063`;
 - `receipts/llama8b_b4_matched_snapshot_20260902T1358Z.json`, SHA256
-  `295fc28099e686ed101cdd86c28313da10cf330fc47f8c1b7c5255b55e230f80`.
+  `0ed4b988db3a0805d520b0d41e241d224e0ad43e2258bf993625d85c1af2f0da`,
+  used only for the separate MXFP4-P/V divergence diagnostic.
 
-Both paths are below
+All three paths are below
 `results/fp4_fa4_technical_report_v2_20260819/`.
 They are the public normalized forms described in
 [`PUBLIC_SANITIZATION.md`](PUBLIC_SANITIZATION.md); scientific fields and raw
@@ -141,7 +155,8 @@ index and shard identities.
 
 Consequently:
 
-- the committed receipt can regenerate the paper curves;
+- the committed receipts can regenerate the completed healthy curves and the
+  separate MXFP4-P/V diagnostic;
 - a public SlimPajama run can produce new, well-pinned evidence;
 - that run must not be described as the exact historical trajectory; and
 - the historical claim becomes exactly replayable only if the missing MDS
@@ -282,8 +297,11 @@ one of these conditions:
 3. the manuscript labels the evidence as a historical receipt and does not
    claim an exact fresh reproduction.
 
-For the main 8B training curves, condition 3 is the current state. A fully
-reproducible replacement needs a pinned public data snapshot, deterministic
-packing and rank partitioning, enabled batch fingerprints, and a fresh matched
-BF16/FP8-PV run. The MXFP4-PV trajectory is a documented failure diagnostic,
-not the retained training recipe.
+For the main 8B training curves, condition 3 is the current state. The matched
+BF16 and FP8-P/V trajectories completed their declared 100-billion-token
+schedule, but the public release contains one trajectory per arm and the
+normalized receipt rather than the raw hosted histories. A byte-identical
+public rerun still needs a pinned data snapshot, deterministic packing and rank
+partitioning, and enabled batch fingerprints; independent seeds are needed for
+uncertainty claims. The MXFP4-P/V trajectory is a documented failure
+diagnostic, not the retained training recipe.

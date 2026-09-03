@@ -85,8 +85,9 @@ final 8B training route:
 3. isolated causal backward timing and correctness;
 4. projection-inclusive attention forward/backward timing;
 5. 8B B1/B2/B4 complete-update timing; and
-6. matched distributed BF16 and the complete E4M3/NVFP4 learned-projection by
-   FP8/MXFP4-P/V training matrix.
+6. matched 100-billion-token distributed BF16 and
+   NVFP4-projection/FP8-P/V trajectories, plus the separate E4M3/NVFP4
+   projection by FP8/MXFP4-P/V diagnostic matrix.
 
 `release/EXPERIMENT_MATRIX.md` maps each family to source, command, evidence,
 and remaining external requirements. Some historical paper artifacts can be
@@ -108,11 +109,15 @@ SM100. The paper's principal end-to-end result uses batch 4.
 | E4M3-projection FP8-P/V control | E4M3 Q/K/V/O | NVFP4 Q/K, E4M3 FP8 P/V | Same backward binary | Diagnostic only |
 | E4M3-projection MXFP4-P/V diagnostic | E4M3 Q/K/V/O | NVFP4 Q/K, MXFP4 P/V with E8M0 block scales | Same backward binary | Diagnostic only |
 
-The FP8-P/V trajectory is stable and descending through the recorded
-horizon, with a measurable loss gap from BF16. It is not a completed
-long-horizon convergence study. Both historical MXFP4-P/V projection arms and
-the later B4 arm diverged; that route remains reproducible for diagnosis but is
-not a recommended training recipe.
+The matched BF16 and FP8-P/V trajectories both completed the declared
+100,000,595,968-token schedule. At the final same-update validation point,
+their losses were 2.3048148155 and 2.3948404789, respectively. Across all 874
+common post-warmup reports, median throughput was 21,852.6656 and 24,302.9730
+tokens/s/GPU, a 1.1121285x ratio of medians. This is one trajectory per arm,
+not an estimate of run-to-run uncertainty or evidence of quality equivalence.
+Both historical MXFP4-P/V projection arms and the later B4 arm diverged; that
+route remains reproducible for diagnosis but is not a recommended training
+recipe.
 
 The separate D64 profile fixes a 1.235B model at B16/S4096/Hq32/Hkv8/D64. It
 admits a BF16 control and two E4M3-projection routes: NVFP4 Q/K with either FP8
@@ -172,8 +177,9 @@ It does not prevent publication of the clearly labelled source snapshot:
    missing Wan inputs, pre-rendered MAE panel, or hosted training histories.
 8. Publish the exact SlimPajama preprocessing, ordering, tokenizer revision,
    and shard checksums needed to reproduce the historical trajectory.
-9. Finish both matched 100-billion-token BF16 and FP8-P/V trajectories before
-   making a final long-horizon convergence claim.
+9. Publish the raw, credential-free metric histories and an immutable
+   SlimPajama order for the completed matched trajectories. Independent seeds
+   are still required for uncertainty or quality-equivalence claims.
 10. Decide and document the promotion, retirement, or compatibility policy for
     each preserved historical scratch runtime. Preservation alone does not make
     an old harness a supported public entry point.

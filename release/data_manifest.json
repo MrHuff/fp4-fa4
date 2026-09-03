@@ -112,7 +112,7 @@
   },
   "experiments": {
     "llama8b_slimpajama_matched_b4": {
-      "evidence_role": "main-paper interim distributed training and MXFP4-PV failure diagnostic",
+      "evidence_role": "main-paper completed matched distributed training and separate MXFP4-PV failure diagnostic",
       "status": "identity_incomplete",
       "receipts": [
         {
@@ -120,10 +120,36 @@
           "sha256": "f652ea07c34048e9180629737dc000933e481e88856e7c64ee87f148eea21063"
         },
         {
+          "path": "results/fp4_fa4_technical_report_v2_20260819/receipts/llama8b_b4_completed_20260903.json",
+          "sha256": "36272a35bd95c3138425e7330403f94d87e40ddd2109cdcb2bcf5e2b21c1c55e"
+        },
+        {
           "path": "results/fp4_fa4_technical_report_v2_20260819/receipts/llama8b_b4_matched_snapshot_20260902T1358Z.json",
-          "sha256": "295fc28099e686ed101cdd86c28313da10cf330fc47f8c1b7c5255b55e230f80"
+          "sha256": "0ed4b988db3a0805d520b0d41e241d224e0ad43e2258bf993625d85c1af2f0da"
         }
       ],
+      "completed_matched_result": {
+        "target_tokens": 100000595968,
+        "target_update": 23842,
+        "arms": [
+          "bf16_b4_control",
+          "nvfp4_projection_fp8_pv_b4"
+        ],
+        "training_rows_per_arm": 954,
+        "validation_rows_per_arm": 81,
+        "common_postwarmup_throughput_rows": 874,
+        "final_validation_update": 23840,
+        "final_validation_loss": {
+          "bf16_b4_control": 2.3048148155212402,
+          "nvfp4_projection_fp8_pv_b4": 2.3948404788970947
+        },
+        "median_tokens_per_second_per_gpu": {
+          "bf16_b4_control": 21852.6655909706,
+          "nvfp4_projection_fp8_pv_b4": 24302.972961638225
+        },
+        "ratio_of_median_throughputs": 1.1121285346388168,
+        "claim_boundary": "One completed trajectory per arm; no estimate of run-to-run uncertainty or statistical equivalence. The MXFP4-PV trajectory is a separate divergent diagnostic."
+      },
       "source_identity": {
         "gc_training_commit": "e7db209b0c7017c415fdd66e04e85f96ae24f276",
         "torchtitan_commit": "20b3de7585696c327bd5aa9f9627f0300abdbf9d",
@@ -370,7 +396,7 @@
           "bytes": 306920
         }
       ],
-      "release_replay_contract": "The committed receipts reproduce the paper plots. An exact fresh historical trajectory remains blocked until the MDS index/shard/order identity is recovered or the result is replaced by a newly receipted, fully pinned run."
+      "release_replay_contract": "The committed receipts reproduce the completed matched BF16/FP8-PV paper curves and the separate MXFP4-PV diagnostic. The public release contains one trajectory per healthy arm and no raw hosted histories. An exact fresh historical trajectory remains blocked until the MDS index/shard/order identity is recovered; uncertainty claims require independent seeds."
     },
     "llama_d64_dolma3_prefix256": {
       "evidence_role": "historical 1.2B/D64 and 8B/D128 short real-data gate",

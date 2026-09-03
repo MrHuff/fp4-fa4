@@ -195,12 +195,17 @@ TASKS: dict[str, Task] = {
             ),
             _input(
                 "results/fp4_fa4_technical_report_v2_20260819/receipts/"
+                "llama8b_b4_completed_20260903.json"
+            ),
+            _input(
+                "results/fp4_fa4_technical_report_v2_20260819/receipts/"
                 "llama8b_b4_matched_snapshot_20260902T1358Z.json"
             ),
         ),
         note=(
-            "Plots are reproducible from credential-free receipts. Fresh timings and "
-            "training trajectories require GPUs and external dataset/checkpoint assets."
+            "The completed matched curves and separate MXFP4 diagnostic are "
+            "reproducible from credential-free receipts. Fresh timings and training "
+            "trajectories require GPUs and external dataset/checkpoint assets."
         ),
     ),
     # Deterministic, CPU-side artifact graph.

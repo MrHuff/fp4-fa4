@@ -29,7 +29,7 @@ import zipfile
 PAPER_DIR = Path(__file__).resolve().parent
 RESULTS_DIR = PAPER_DIR.parent
 OUTPUT_DIR = PAPER_DIR / "submission"
-SOURCE_DATE_EPOCH = 1_788_357_489
+SOURCE_DATE_EPOCH = 1_788_436_743
 EXPECTED_PAGES = 56
 ARXIV_MAX_ARCHIVE_BYTES = 50_000_000
 ARXIV_NAME = "hardware-aware-fp4-fa4-arxiv.tar.gz"

@@ -342,41 +342,45 @@ The matched study uses 64 GPUs, local batch four, four gradient
 accumulation steps, and effective global batch 1024.  Its BF16 and
 NVFP4-projection/FP8-PV arms share the model, optimizer, tokenizer, sample
 order, and token schedule.  Both trajectories support exact checkpoint
-resume.  We compare them at their latest common coordinate rather than compare
-unequal endpoints.  The reporting cutoff for this paper is common update
-16,425, corresponding to 68.89 billion tokens in each trajectory.
-
-At that coordinate, BF16 and the FP8 route report losses of 2.3966 and 2.4708
-and pre-clipping gradient norms
-of 0.0640 and 0.0649, respectively.  At the preceding common held-out
-validation, update 16,390, the losses are 2.3507 and 2.4241, a gap of 0.0734.
-The FP8 trajectory is therefore stable and descending, but it is not
-numerically identical to BF16.  Because the complete route changes both
-the learned projections and attention, this comparison does not attribute the
-gap to attention alone.  Across all 578 common logged coordinates from the end
-of warmup through update 16,425, median throughput is 21,842
-tokens/s/GPU for BF16 and 24,287 tokens/s/GPU for the FP8 route; the ratio
-of medians is 1.112$\times$.  The paired throughput ratio has a 10th--90th
-percentile range of 1.099--1.115$\times$.  This aggregation excludes no
-observations, including input stalls and checkpoint windows.  This is one
-trajectory per route and therefore does not estimate run-to-run variability.
+resume and complete the 100,000,595,968-token schedule.  The terminal update
+saves the final checkpoint but is not a scheduled metric report.  We therefore
+compare training at update 23,825 (99.93 billion tokens) and held-out
+validation at update 23,840 (99.99 billion tokens), the last common scheduled
+coordinates before the terminal update.
 
 \begin{figure}[tbp]
 \centering
 \includegraphics[width=0.82\textwidth]{figures/llama8b_b4_matched_training_curves.pdf}
 \caption{Token-aligned training and held-out validation for the matched B4
-experiment through the reporting cutoff.  The panel compares the BF16 control
-with the retained FP8-P/V route; the lower panel magnifies same-update
-validation from 40 billion tokens onward with an expanded vertical axis.
-Each curve is one trajectory, so the plot provides no uncertainty estimate.}
+experiment over the completed 100-billion-token schedule.  The panel compares
+the BF16 control with the retained FP8-P/V route; the lower panel magnifies
+same-update validation from 60 billion tokens onward with an expanded vertical
+axis.  Each curve is one trajectory, so the plot provides no uncertainty
+estimate.}
 \label{fig:llama8b-b4-matched-training}
 \end{figure}
+\FloatBarrier
 
-\begin{figure}[tbp]
+At the last scheduled training report, BF16 and the FP8 route report losses of
+2.3095 and 2.3613 and pre-clipping gradient norms of 0.0549 and 0.0532,
+respectively.  At the final same-update held-out validation report, the losses
+are 2.3048 and 2.3948, a gap of 0.0900.
+The FP8 trajectory is therefore stable and descending, but it is not
+numerically identical to BF16.  Because the complete route changes both
+the learned projections and attention, this comparison does not attribute the
+gap to attention alone.  Across all 874 common logged coordinates from the end
+of warmup through update 23,825, median throughput is 21,853
+tokens/s/GPU for BF16 and 24,303 tokens/s/GPU for the FP8 route; the ratio
+of medians is 1.112$\times$.  The paired throughput ratio has a 10th--90th
+percentile range of 1.080--1.114$\times$.  This aggregation excludes no
+observations, including input stalls and checkpoint windows.  This is one
+trajectory per route and therefore does not estimate run-to-run variability.
+
+\begin{figure}[H]
 \centering
 \reportplot[0.19\textheight]{figures/llama8b_b4_matched_throughput.pdf}
 \caption{Distributed throughput for the matched B4 experiment over
-all 578 common post-warmup observations.  Input stalls and checkpoint windows
+all 874 common post-warmup observations.  Input stalls and checkpoint windows
 remain in the distribution.}
 \label{fig:llama8b-b4-matched-throughput}
 \end{figure}
@@ -386,5 +390,5 @@ The three local boundaries establish isolated-backward,
 projection-inclusive, and full-update speed at D128.  The distributed
 evidence establishes the FP8-versus-MXFP4 format choice and includes a
 same-recipe BF16 control with same-update validation.  It supports comparisons
-through the stated reporting cutoff, but not statistical-equivalence claims
-or conclusions about later training coordinates.
+over the completed 100-billion-token schedule, but not
+statistical-equivalence claims or run-to-run uncertainty estimates.

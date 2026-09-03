@@ -6,8 +6,9 @@ reconstructed from terminal scrollback.  The receipts below authenticate the
 native attention kernels, historical transformer-step recipes, final v509
 runtime, the final local timing brackets, and the four distributed
 dense-cross-entropy arms.  The September 1 curves remain historical
-diagnostics; the September 2 matched B4 snapshot defines the reporting cutoff
-for the paired comparison:
+diagnostics.  The completed September 3 receipt defines the healthy matched
+B4 comparison, while the September 2 snapshot retains the separate MXFP4-P/V
+failure diagnostic:
 
 \begin{itemize}
   \item \path{results/native_tk_d64_ptx_adaptation_20260829/README.md}
@@ -33,7 +34,7 @@ for the paired comparison:
   contains every sample and summary used for the isolated-backward and
   projection-inclusive figures.  Its SHA256 is
   \code{1dbdc27194282680\allowbreak{}7a9cb8e1b93489d3\allowbreak{}24689a77e74ad71b\allowbreak{}3deb7a85d0e47f7e};
-  the recorded raw-receipt SHA256 is
+  the authenticated raw receipt SHA256 is
   \code{0c94e8eec8bcec67\allowbreak{}68fb1e47032c5cfe\allowbreak{}e531cf73dec27c31\allowbreak{}56864ad3db8ba906}.
   The benchmark source is
   \path{tk_fa4/lowp_fa4_bwd/benchmark_v509_report_boundaries.py}.
@@ -57,8 +58,8 @@ for the paired comparison:
   Every unique token coordinate recovered from each four-arm trajectory contributes
   to its causal token-domain exponential moving average; only one row per 100
   updates is retained for display.  Duplicate coordinates created by resume
-  are resolved by the final observation returned by the W\&B history scan. The historical
-  reference instead retains its sampled history and committed moving average
+  are resolved by the final observation returned by the W\&B history scan.
+  The historical reference instead retains its sampled history and committed moving average
   inside the frozen receipt; it is not treated as a matched control for the
   B4 experiment.
   \item \path{receipts/llama8b_b4_w64_launch_check_20260902.json} records the
@@ -68,15 +69,21 @@ for the paired comparison:
   used for route validation; aggregate throughput comes from the matched
   receipt below.  Its SHA256 is
   \code{f652ea07c34048e9\allowbreak{}180629737dc00093\allowbreak{}3e481e88856e7c64\allowbreak{}ee87f148eea21063}.
+  \item The completed matched B4 histories are frozen in
+  \path{receipts/llama8b_b4_completed_20260903.json}.  The receipt selects one
+  checkpoint lineage per arm and contains 954 aligned training reports, 81 aligned validation
+  reports, and all 874 common post-warmup throughput observations.  Terminal
+  evidence records the update-23,842 checkpoint, completed remote sync, and
+  successful node exit for both arms.  This receipt supports
+  Figures~\ref{fig:llama8b-b4-matched-training}
+  and~\ref{fig:llama8b-b4-matched-throughput}.  Its SHA256 is
+  \code{36272a35bd95c313\allowbreak{}8425e7330403f94d\allowbreak{}87e40ddd2109cdcb\allowbreak{}2bcf5e2b21c1c55e}.
   \item \path{receipts/llama8b_b4_matched_snapshot_20260902T1358Z.json}
-  freezes the matched B4 bfloat16 and NVFP4-projection/FP8-PV
-  histories through their common update 16,425, together with the separate
-  E4M3-projection/MXFP4-PV failure history.  It contains all 578 common
-  post-warmup throughput observations, aligned held-out validation, job and
-  route identities, source hashes, and the worker-log cross-checks used by
-  Figures~\ref{fig:llama8b-b4-matched-training}--\ref{fig:llama8b-b4-matched-throughput}
-  and Figure~\ref{fig:llama8b-b4-mxfp4-failure}.  Its SHA256 is
-  \code{295fc28099e686ed\allowbreak{}101cdd86c28313da\allowbreak{}10cf330fc47f8c1b\allowbreak{}7c5255b55e230f80}.
+  retains the earlier matched B4 prefix together with the separate
+  E4M3-projection/MXFP4-PV failure history.  The completed receipt supersedes
+  its healthy-route prefix; this snapshot remains the source for
+  Figure~\ref{fig:llama8b-b4-mxfp4-failure}.  Its SHA256 is
+  \code{0ed4b988db3a0805\allowbreak{}d520b0d41e241d22\allowbreak{}4e0ad43e2258bf99\allowbreak{}3625d85c1af2f0da}.
 \end{itemize}
 
 The three local timing figures, two historical training figures, and three
@@ -84,17 +91,19 @@ B4 figures are regenerated from those receipts by
 \path{plot_causal_training.py}.  The timing receipts also bind the
 benchmark-source and compiled-runtime hashes, so the timing claims do not
 depend on an unversioned extension name or terminal output.
-\path{fetch_llama8b_training_curves.py} performs a read-only metric-history
-capture. It requires an API key in its process environment, an uncommitted
-source map, and an explicit new output path, and refuses to overwrite an
-existing receipt. It never writes the key, service-side run locators, run
-configuration, or environment into the receipt. Source/runtime identities are
-inherited from the authenticated initial cutoff receipt rather than
-revalidated from the metric service.
-For the matched B4 receipt, \path{export_llama8b_b4_snapshot.py} validates
-the already credential-scrubbed W\&B histories, exact token cadence, and
-four-local-rank copies in independently downloaded worker logs.  The raw
-captures and authentication material are not committed.
+\path{fetch_llama8b_training_curves.py} performs a read-only W\&B capture; it
+requires an API key in its process environment, requires an explicit new
+output path, and refuses to overwrite an existing receipt.  It never writes
+the key, run configuration, or environment into the receipt.  The fetcher
+validates W\&B run IDs and names; source/runtime identities are inherited from
+the authenticated initial cutoff receipt rather than revalidated from W\&B.
+For the completed matched B4 receipt,
+\path{fetch_llama8b_b4_complete.py} reads a private source map, stitches the
+selected checkpoint lineage, validates the exact token cadence, and
+cross-checks four-local-rank copies in independently downloaded worker logs.
+It omits service-side identifiers from its output.  The earlier MXFP4
+diagnostic was frozen by \path{export_llama8b_b4_snapshot.py}.  Raw captures,
+the private source map, and authentication material are not committed.
 
 The historical distributed rows are snapshots from an earlier FP8-PV and
 shared-MXFP4-PV pair.  They are used only as route-selection diagnostics, not

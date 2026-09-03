@@ -176,7 +176,7 @@ preserved, and a portable command-line boundary for the retained v508
 diagnostic. Unused proprietary fonts and two unused HAO assets are absent; the
 exact transformation is recorded in `PUBLIC_SANITIZATION.md`. Its reviewed
 materialized tree identity is
-`5d625f44bec7b206fffb32dabb1ab14f52f6324f`. It contains the committed raw
+`808819294d95e57ce54a70799b9510fa7d0d04bb`. It contains the committed raw
 records that were available, normalized receipts, deterministic renderers, and
 the manuscript source. A committed receipt proves only what it records. It
 does not turn an absent raw capture into a repeat measurement.

@@ -176,6 +176,11 @@ already reproduced here.
 - Ordinary synchronous checkpoint save and load are both routed through the
   opt-in world-size Gloo metadata group, avoiding a second NCCL communicator at
   the memory-saturated B4 shape.
+- One matched BF16 trajectory and one NVFP4-projection/FP8-P/V trajectory each
+  completed the 100,000,595,968-token 8B schedule. Their final held-out losses
+  were 2.3048148155 and 2.3948404789, and their median post-warmup throughputs
+  were 21,852.6656 and 24,302.9730 tokens/s/GPU. The normalized receipt keeps
+  all 954 training, 81 validation, and 874 common throughput rows.
 - Available paper tables and plots can be regenerated from their committed
   inputs by the offline artifact graph.
 
@@ -187,6 +192,9 @@ already reproduced here.
 - The exact historical SlimPajama MDS shard identities and sample order are
   missing. Portable new runs use an explicitly pinned public dataset source;
   they are replacements, not byte-identical reruns of the historical jobs.
+- The completed matched 8B result has one trajectory per arm, and its raw
+  hosted metric histories are not public. It therefore supports the recorded
+  comparison but not run-to-run uncertainty or statistical-equivalence claims.
 - Several raw B300, Wan, ViT-MAE, natural-capture, NUMA-launch, and hosted-run
   artifacts are missing or require redistribution review.
 - The D64 source lineages, schema-v3 B16 builder, and authenticated TorchTitan

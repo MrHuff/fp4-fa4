@@ -214,6 +214,25 @@ with CPU and memory NUMA node 0, but the exact binding launcher was not
 preserved. Printing an unbound command as the published timing protocol would
 silently change the experiment.
 
+## Frozen completed 8B comparison
+
+The offline artifact graph uses
+`results/fp4_fa4_technical_report_v2_20260819/receipts/llama8b_b4_completed_20260903.json`
+(SHA256
+`36272a35bd95c3138425e7330403f94d87e40ddd2109cdcb2bcf5e2b21c1c55e`)
+for the healthy matched training curves. The BF16 and
+NVFP4-projection/FP8-P/V trajectories each completed 100,000,595,968 tokens.
+The receipt retains 954 training rows and 81 validation rows per arm plus all
+874 common post-warmup throughput reports. Final same-update validation losses
+are 2.3048148155 and 2.3948404789; median throughputs are 21,852.6656 and
+24,302.9730 tokens/s/GPU, a 1.1121285x ratio of medians.
+
+This is frozen receipt evidence from one trajectory per arm. The raw hosted
+histories and exact historical MDS shard/order identity are not public, so the
+offline command regenerates the figures but cannot reacquire the original
+service data. The earlier matched snapshot is retained only for the separate
+MXFP4-P/V divergence diagnostic.
+
 ## Known irreducible gaps
 
 The planner reports, rather than guesses around, the following gaps:
@@ -224,7 +243,7 @@ The planner reports, rather than guesses around, the following gaps:
 - part of the historical Wan acquisition and calibration record;
 - the original ephemeral B1/B2/B4 raw timing files (new measurements can
   replace them), plus an authenticated reconstruction of their NUMA binding;
-- the hosted distributed-service histories behind older curves.
+- the raw hosted distributed-service histories behind the normalized curves.
 
 Use `tools/reproduce_fa4_paper.py` to rebuild tables, figures, and the PDF from
 the committed credential-free receipts. That offline graph is separate from
