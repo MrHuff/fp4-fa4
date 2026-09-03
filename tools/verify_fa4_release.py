@@ -51,13 +51,59 @@ EXPECTED_DEPENDENCIES = {
     "qutlass/third_party/cutlass": "b2ca083d2bb96c41d9b3c5a930637c641f6669bf",
     "cutlass": "acb45938e9cb3e4db8c1d75155b63d31791e0e5d",
 }
+EXPECTED_CUTE_OVERLAY = {
+    "schema": "fa4_flash_attention_runtime_overlay_patch_v1",
+    "base_commit": "9743edaf3227a25f6afc4fa7be8b5e8498610553",
+    "patch": {
+        "path": "patches/flash_attention_fp4_runtime_overlay_9743edaf_20260831.patch",
+        "bytes": 112207,
+        "sha256": "bc8caf8cd3c860d2bf958a96113a4b97a7987b2350bfed7f54337f0b9ac0cb8a",
+    },
+    "files": [
+        {
+            "path": "flash_attn/cute/fp4_flash_bwd_sm100.py",
+            "bytes": 289268,
+            "sha256": "0e3c152ebcd0c2bf1ef0edc76fa108c0bb04c497d76c056749dbb57b1ed293f2",
+            "insertions": 1234,
+            "deletions": 209,
+        },
+        {
+            "path": "flash_attn/cute/interface.py",
+            "bytes": 159112,
+            "sha256": "13a1edbd711ae29141fceb69c54a8a93bc18384511792cebf3ee433ff220cd75",
+            "insertions": 189,
+            "deletions": 20,
+        },
+        {
+            "path": "flash_attn/cute/mma_sm100_desc.py",
+            "bytes": 16101,
+            "sha256": "86efe9315696b7bdb7bfa915c7946e301d3e88d089964cb4f27a74c43d604d09",
+            "insertions": 43,
+            "deletions": 21,
+        },
+    ],
+    "constraints": {
+        "d128_public_dispatch": "fail_closed_to_verified_bf16_bridge",
+        "native_d128_two_cta_schedule": "may_hang",
+        "provenance_marker_excluded": ".lbt_flash_attn_commit",
+    },
+}
+EXPECTED_HAO_NON_CODE_OMISSIONS = [
+    ".humanize/bitlesson.md",
+    ".humanize/rlcr/2026-05-22_02-40-44/goal-tracker.md",
+    ".humanize/rlcr/2026-05-22_02-40-44/round-0-contract.md",
+    ".humanize/rlcr/2026-05-22_02-40-44/round-0-summary.md",
+    "assets/fa4_paper.pdf",
+    "assets/flashattn_banner.jpg",
+    "assets/flashattn_banner.pdf",
+]
 EXPECTED_MATERIALIZED_TREES = {
     "tk_fa4": "edf60a5703e298fd7e7f8c49e8b1541bf68e7a89",
     "TK_quantisation": "e26f1b83d85f9805dcbe726afe2b464450cac84c",
     "baseline_kernels": "5242c6d77a09cbd415b6d11e100657e0810aa4dd",
     "fused_ops": "efb0668033a9eeee8a95b21759664d6d49f5decc",
     "qutlass_binding": "32332ed7b0d26971bb0873647d154eb8fdc6aa65",
-    "results": "808819294d95e57ce54a70799b9510fa7d0d04bb",
+    "results": "38f0afdb92b8726db42902eefa7927281f415acc",
     "reproduction/snapshots/forward_cfc06dad/TK_quantisation": (
         "9a0a63b1aa98ca4e377d0fd867b0b764e19d8b4d"
     ),
@@ -174,6 +220,7 @@ REQUIRED_BLOCKERS = {
     "batch_hbm_diagnostics_pending",
 }
 REQUIRED_PATHS = (
+    "CMakeLists.txt",
     "CONTINUATION.md",
     "CONTRIBUTING.md",
     "LICENSE",
@@ -199,6 +246,10 @@ REQUIRED_PATHS = (
     "release/PUBLIC_SANITIZATION.md",
     "release/routes.json",
     "release/routes.schema.json",
+    "benchmarks/bench_nvfp4_gemm.cu",
+    "benchmarks/bench_grouped_nvfp4_gemm.cu",
+    "patches/flash_attention_fp4_runtime_overlay_9743edaf_20260831.manifest.json",
+    "patches/flash_attention_fp4_runtime_overlay_9743edaf_20260831.patch",
     "tk_fa4/fp4_fa4_fwd/hao_direct_fp4pv_candidate.cu",
     "tk_fa4/lowp_fa4_bwd/lowp_fa4_bwd.cu",
     "tk_fa4/native_gqa_tk_bwd/Makefile.v509_b4",
@@ -265,10 +316,11 @@ EXPECTED_FILE_HASHES = {
     "third_party/hao_flash_attention_fp4/flash_attn/cute/benchmarks/bench_fp4.py": "5ca604ed90ebc4e1ffe7f606fc97f3c774d2ac3869bea9092237d450cd2f85a4",
     "patches/historical_hao_suite_cfc06dad.patch": "8301b554e3912e6fd24735a5607ea5b35e5f55986397ad3b2c42b0adadc72a1b",
     "patches/hao_flash_attention_fp4_9b0abef_compat.patch": "448aac4ea9eea45517259de3c315de3f9062189243febb62439de42c4e799ea5",
+    "patches/flash_attention_fp4_runtime_overlay_9743edaf_20260831.manifest.json": "3559f8402156ed08f4c873592e3189f5919e3136107ca41898a3db9ed4ada315",
     "patches/flash_attention_fp4_runtime_overlay_9743edaf_20260831.patch": "bc8caf8cd3c860d2bf958a96113a4b97a7987b2350bfed7f54337f0b9ac0cb8a",
     "reproduction/snapshots/v510_aa021504/aa021504.patch": "704fe124c17891ba3eb1f072532aad8a6958fde859c86bf91e74fc22c3179a37",
     "reproduction/snapshots/v510_aa021504/SHA256SUMS": "ee51c433b371c5c5c7cbad9d052599cb3714df84203b0d891623195d7450713b",
-    "results/fp4_fa4_technical_report_v2_20260819/main.pdf": "9bdd0ed16bd14a65d13cc5703c23882391539c6bae9abbd33028025b7899104c",
+    "results/fp4_fa4_technical_report_v2_20260819/main.pdf": "4dc4a8db31b184150c3e5613da1de4c9e87c776c4772334b9f0a9996c55d53e0",
 }
 
 EXPECTED_DEVELOPMENT_ROUTES = {
@@ -570,6 +622,10 @@ def _verify_manifest(manifest: dict[str, Any]) -> None:
             "bench_fp4.py"
         ],
         "HAO benchmark declaration changed",
+    )
+    _require(
+        hao.get("excluded_non_code_paths") == EXPECTED_HAO_NON_CODE_OMISSIONS,
+        "HAO non-code omission declaration changed",
     )
     report = pins["technical_report"]
     _require(
@@ -967,6 +1023,80 @@ def _verify_sources() -> None:
         )
 
 
+def _verify_cute_overlay() -> None:
+    """Authenticate the recovered CuTe-DSL overlay in its pinned submodule.
+
+    The patch file alone is not enough: this also proves that the checked-out
+    FlashAttention child contains the exact three recovered files and no
+    different diff shape relative to the recovered base commit.
+    """
+
+    manifest_path = (
+        ROOT
+        / "patches/flash_attention_fp4_runtime_overlay_9743edaf_20260831.manifest.json"
+    )
+    overlay = _load_json_object(manifest_path, "CuTe overlay manifest")
+    _require(overlay == EXPECTED_CUTE_OVERLAY, "CuTe overlay manifest changed")
+
+    patch = EXPECTED_CUTE_OVERLAY["patch"]
+    patch_path = ROOT / patch["path"]
+    _require(
+        patch_path.stat().st_size == patch["bytes"], "CuTe overlay patch size changed"
+    )
+    _require(
+        _sha256(patch_path) == patch["sha256"], "CuTe overlay patch digest changed"
+    )
+
+    checkout = ROOT / "flash-attention"
+    base_commit = EXPECTED_CUTE_OVERLAY["base_commit"]
+    head_commit = EXPECTED_DEPENDENCIES["flash-attention"]
+    _require(
+        _run_git("rev-parse", "HEAD", cwd=checkout) == head_commit,
+        "CuTe overlay checkout is not the pinned child commit",
+    )
+    _run_git("cat-file", "-e", f"{base_commit}^{{commit}}", cwd=checkout)
+    _run_git("merge-base", "--is-ancestor", base_commit, head_commit, cwd=checkout)
+
+    expected_numstat: dict[str, tuple[int, int]] = {}
+    for record in EXPECTED_CUTE_OVERLAY["files"]:
+        relative_name = record["path"]
+        path = checkout / relative_name
+        _require(path.is_file(), f"missing recovered CuTe source: {relative_name}")
+        _require(
+            path.stat().st_size == record["bytes"],
+            f"recovered CuTe source size changed: {relative_name}",
+        )
+        _require(
+            _sha256(path) == record["sha256"],
+            f"recovered CuTe source digest changed: {relative_name}",
+        )
+        expected_numstat[relative_name] = (
+            record["insertions"],
+            record["deletions"],
+        )
+
+    names = list(expected_numstat)
+    output = _run_git(
+        "diff",
+        "--numstat",
+        f"{base_commit}..{head_commit}",
+        "--",
+        *names,
+        cwd=checkout,
+    )
+    actual_numstat: dict[str, tuple[int, int]] = {}
+    for line in output.splitlines():
+        fields = line.split("\t", 2)
+        _require(len(fields) == 3, f"malformed CuTe overlay numstat: {line}")
+        insertions, deletions, relative_name = fields
+        _require(
+            insertions.isdigit() and deletions.isdigit(),
+            f"CuTe overlay unexpectedly contains a binary diff: {relative_name}",
+        )
+        actual_numstat[relative_name] = (int(insertions), int(deletions))
+    _require(actual_numstat == expected_numstat, "CuTe overlay diff shape changed")
+
+
 def _verify_hosting_surface(manifest: dict[str, Any]) -> None:
     if manifest["project"]["visibility"] != "public":
         return
@@ -1248,6 +1378,7 @@ def main() -> int:
         _verify_manifest(manifest)
         _verify_git_state(manifest)
         _verify_sources()
+        _verify_cute_overlay()
         _verify_hosting_surface(manifest)
         _verify_legacy_backward_inventory()
         _verify_route_catalog()

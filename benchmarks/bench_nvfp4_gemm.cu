@@ -11,7 +11,8 @@
  *     (SM100 block-scaled ops require cluster M dim even, ≥2)
  *
  * Build:
- *   cd /workspace/fp4_matmul && mkdir -p build && cd build && cmake .. && make bench_nvfp4_gemm
+ *   git submodule update --init cutlass
+ *   cmake -S . -B build && cmake --build build --target bench_nvfp4_gemm
  *
  * Run:
  *   ./build/bench_nvfp4_gemm [--sizes=4096,8192,16384] [--iterations=100] [--warmup=20]
@@ -416,4 +417,3 @@ int main(int argc, char const **args) {
   return 0;
 #endif
 }
-

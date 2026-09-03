@@ -200,9 +200,9 @@ backward and close the line as a documented negative result.
 
 ## P6: extend shape coverage only after D128 is closed
 
-The repository preserves D64 and other historical source lineages, but the
-authenticated clean builder and TorchTitan artifact chain currently support
-D128. Different head dimensions change tile geometry, CTA topology, and
+The D64 source lineages, schema-v3 B16 builder, and TorchTitan artifact contract
+are wired in this repository, but have not passed the fresh-clone GB200 or
+DDP16 gates. Different head dimensions change tile geometry, CTA topology, and
 tensor-memory reuse, so a D128 schedule should not be generalized by changing
 one constant.
 

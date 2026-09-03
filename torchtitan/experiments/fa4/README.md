@@ -74,8 +74,8 @@ New configs use the format-neutral converter name `fa4_exact_lowp_attention`;
 the older `fa4_exact_nvfp4_qk_fp8_pv` name remains registered only so archived
 configs continue to load.
 
-The 1.235B/D64 geometry is registered so archived D64 contracts and parameter
-counts remain testable. The portable artifact schema and build wrapper in this
-release authenticate D128 only, so they do **not** yet make D64 training
-runnable. A D64 release still needs its B16 forward, native backward, and
-generated control-source identities added to the build/manifest chain.
+The 1.235B/D64 geometry, schema-v3 B16 artifact profiles, source builders, and
+TorchTitan dispatch are present. They make a new source-built D64 run
+configurable; they do not reproduce the unavailable historical `cd57` CuTe
+control or establish a validated release route until clean-clone GB200
+numerical/build, DDP16 save/fresh-resume, and long-horizon data gates pass.

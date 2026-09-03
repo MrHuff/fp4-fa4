@@ -325,3 +325,7 @@ def test_development_route_catalog_is_complete_and_resolves_paths() -> None:
 
 def test_v510_snapshot_inventory_authenticates_materialized_overlay() -> None:
     verifier._verify_v510_snapshot()
+
+
+def test_cute_overlay_authenticates_pinned_submodule() -> None:
+    verifier._verify_cute_overlay()

@@ -124,15 +124,14 @@ Of those paths, 125 are byte-exact and one is the documented portability edit
 to `fp4_fa4_fwd/hao_comprehensive_suite.py`.
 
 The upstream epoch has 150 `tk_fa4` paths in total. The other 24 are generated
-or result artifacts, all present byte-identically under the root causal
-`tk_fa4/results/` tree; they are not duplicated in the snapshot. The union of
-the root and snapshot therefore retains every historical path and byte while
-keeping only one copy of the large cubin, PTX, SASS, JSON, and Markdown result
-artifacts. The historical 12-file `fp4_fa4_bwd/` subtree is preserved exactly
-as Git tree `dd35ecca9db03cdbb063af7e4b3762438b9d5cca`. Its local transitive source
-closure, including the shared B300 headers, is present. Matching SageAttention
-and ThunderKittens links resolve to the same pinned revisions as the root
-epoch.
+or result artifacts and are not duplicated in the snapshot. Twenty remain
+byte-identical under the root causal `tk_fa4/results/` tree. Four generated
+SM100a cubins were deliberately removed while their hashes were retained in
+`PUBLIC_SANITIZATION.md`; their source, PTX, and available SASS remain. The
+historical 12-file `fp4_fa4_bwd/` subtree is preserved exactly as Git tree
+`dd35ecca9db03cdbb063af7e4b3762438b9d5cca`. Its local transitive source closure,
+including the shared B300 headers, is present. Matching SageAttention and
+ThunderKittens links resolve to the same pinned revisions as the root epoch.
 
 The historical portability fix
 `patches/historical_hao_suite_cfc06dad.patch` is applied in that materialized
@@ -147,11 +146,12 @@ The historical tree's prebuilt AArch64 Python extension is excluded. It was a
 machine-specific build product, not source, and the release build tool creates
 and authenticates a fresh extension instead.
 
-The HAO comparator is a snapshot of
+The HAO comparator preserves the executable source from
 `hao-ai-lab/flash-attention-fp4` commit
 `9b0abefdbbbe4d0da1d4e0c7aa128e3338c4b247` under
 `third_party/hao_flash_attention_fp4`. The recorded compatibility patch is
-applied there:
+applied there. Seven non-code publication/development files are omitted and
+enumerated in `PUBLIC_SANITIZATION.md`:
 
 - `patches/hao_flash_attention_fp4_9b0abef_compat.patch`
   (`448aac4ea9eea45517259de3c315de3f9062189243febb62439de42c4e799ea5`).
@@ -173,10 +173,10 @@ TorchTitan launcher.
 The release copy includes subsequent manuscript edits, regenerated paper
 artifacts, normalized current-paper receipts with their scientific values
 preserved, and a portable command-line boundary for the retained v508
-diagnostic. Unused proprietary fonts and two unused HAO assets are absent; the
+diagnostic. Unused proprietary fonts and seven non-code HAO files are absent; the
 exact transformation is recorded in `PUBLIC_SANITIZATION.md`. Its reviewed
 materialized tree identity is
-`808819294d95e57ce54a70799b9510fa7d0d04bb`. It contains the committed raw
+`38f0afdb92b8726db42902eefa7927281f415acc`. It contains the committed raw
 records that were available, normalized receipts, deterministic renderers, and
 the manuscript source. A committed receipt proves only what it records. It
 does not turn an absent raw capture into a repeat measurement.

@@ -40,8 +40,9 @@ The main source boundaries are:
 - `reproduction/snapshots/d64_training_cd59dda/` and
   `reproduction/snapshots/d64_v416_713819d/`: Git-object-authenticated D64
   real-token and native-v416 source epochs;
-- `third_party/hao_flash_attention_fp4/`: the exact HAO comparator snapshot,
-  with the recorded compatibility patch applied;
+- `third_party/hao_flash_attention_fp4/`: the exact retained HAO comparator
+  source, with documented non-code omissions and the recorded compatibility
+  patch applied;
 - `results/`: committed receipts, deterministic table/plot generators, and the
   manuscript snapshot; and
 - `torchtitan/experiments/fa4/`: the portable model/training integration.

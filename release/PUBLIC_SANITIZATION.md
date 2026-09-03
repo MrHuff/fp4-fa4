@@ -122,16 +122,37 @@ The two legacy class files now select Latin Modern fonts from the TeX
 distribution. The current paper already used open TeX fonts and did not load
 either removed directory.
 
-Two unused assets from the vendored HAO comparator were removed:
+Three unused publication assets from the vendored HAO comparator were removed:
 
 - `third_party/hao_flash_attention_fp4/assets/fa4_paper.pdf`, 8,896,004 bytes,
   SHA256 `9b269854c3fe3f66db6fd607b122578fd3f453d13d4142c67b48892c2d2ad78c`;
 - `third_party/hao_flash_attention_fp4/assets/flashattn_banner.jpg`, 322,273
   bytes, SHA256
-  `dbf9e1e910446414035e90c05bd7cb5932e390c438fd0622c04d2172d39ac63b`.
+  `dbf9e1e910446414035e90c05bd7cb5932e390c438fd0622c04d2172d39ac63b`;
+- `third_party/hao_flash_attention_fp4/assets/flashattn_banner.pdf`, 474,702
+  bytes, SHA256
+  `8f4df0222057bbffcd2894fbae18bbfa6304e5d0583d47e44e9ac7a97bfb75ce`.
 
-The banner reference was removed from the vendored README. Neither asset is
-loaded by the comparator code or by the paper.
+The banner reference was removed from the vendored README. None of these
+assets is loaded by the comparator code or by the paper.
+
+Four upstream development-note files under `.humanize/` were also excluded
+from the vendored HAO source export:
+
+- `.humanize/bitlesson.md`, 5,173 bytes, SHA256
+  `86c818f0111f79e18a6e3d7a63f975601277cce82b803fc185f4b1bda685c14d`;
+- `.humanize/rlcr/2026-05-22_02-40-44/goal-tracker.md`, 5,523 bytes, SHA256
+  `2d4ad337a817bcf42ba42aa65cb798e069c019d33f77a3ab634fc77d672c2af8`;
+- `.humanize/rlcr/2026-05-22_02-40-44/round-0-contract.md`, 864 bytes, SHA256
+  `7f52221076fdc6cfd9494f46f76969a99b4cd48fac44c15aefe6c40b15cc7b21`;
+- `.humanize/rlcr/2026-05-22_02-40-44/round-0-summary.md`, 3,903 bytes, SHA256
+  `f5147f520af4af1c5b1ff0cea8b193c55b51d699022916f1f0ed8dee9385d9e8`.
+
+These notes are unrelated to the comparator's source, build, runtime, or
+scientific results. Apart from these seven documented non-code omissions, the
+README banner-reference removal, and the recorded compatibility patch, the
+vendored HAO files match commit
+`9b0abefdbbbe4d0da1d4e0c7aa128e3338c4b247`.
 
 ## Removed binaries
 

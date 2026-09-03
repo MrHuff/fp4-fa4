@@ -100,8 +100,9 @@ clone must not assume `git show <historical-commit>` will work.
 - `reproduction/snapshots/forward_cfc06dad/` preserves the earlier source epoch
   separately from the final causal tree. It contains all 126 source/development
   paths from that epoch, including its non-causal forward work and 12-file
-  backward prototype family. The 24 omitted generated/result paths are present
-  byte-identically in the root causal tree.
+  backward prototype family. Twenty of its 24 non-source result paths remain
+  byte-identical in the root causal tree; four generated cubins are deliberately
+  omitted, with their identities recorded in `release/PUBLIC_SANITIZATION.md`.
 - `reproduction/snapshots/v510_aa021504/` preserves the complete 14-file v510
   branch overlay and patch. It must be ported into a disposable branch, not
   copied over the retained v509 route.
@@ -202,9 +203,9 @@ already reproduced here.
   long-horizon public-data gates remain unrun.
 - The custom NVIDIA PyTorch/CUTLASS DSL environment needs a publicly obtainable
   locked container or reconstruction path.
-- Project-source outbound licensing, publication-asset rights, and a new
-  squashed public history remain required. The current private history must not
-  simply be made public.
+- Publication authorization, Apache-2.0 licensing, and the sanitized parentless
+  public root are complete. Future releases must remain ordinary descendants
+  of that root; the private recovery history must never be grafted into it.
 
 Those are release blockers, not invitations to guess. A replacement
 measurement must carry a new receipt and be described as new evidence.

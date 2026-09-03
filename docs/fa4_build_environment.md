@@ -120,3 +120,20 @@ historical evidence boundary.
 For an operator-only compiler check that intentionally omits FlashAttention
 and CUTLASS DSL runtime identities, add `--operator-only`. Such a manifest is
 rejected by the training launcher.
+
+## Standalone CUTLASS projection controls
+
+Two auxiliary NVFP4 GEMM controls used while investigating projection fusion
+are kept outside the FA4 runtime build graph. Their original sources and a
+portable compatibility recipe are present:
+
+```bash
+git submodule update --init cutlass
+make gemm CUDA_HOME=/absolute/path/to/cuda-13.0 BUILD_DIR=build-gemm
+./build-gemm/bench_nvfp4_gemm
+./build-gemm/bench_grouped_nvfp4_gemm
+```
+
+These binaries target `sm_100a` and require CMake 3.31, CUDA 13.0, and the
+pinned CUTLASS checkout. They are development controls, not dependencies of
+the paper's selected attention route.

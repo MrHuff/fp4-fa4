@@ -1,6 +1,12 @@
 PYTHON ?= python3
+CMAKE ?= cmake
+CUDA_HOME ?= /usr/local/cuda
+CUDACXX ?= $(CUDA_HOME)/bin/nvcc
+BUILD_DIR ?= build
+JOBS ?= 4
 
-.PHONY: help inventory inventory-check verify-source test paper list-measurements build-plan build-sm100
+.PHONY: help inventory inventory-check verify-source test paper list-measurements \
+	configure-gemm gemm benchmark-gemm build-plan build-sm100
 
 help:
 	@echo "FA4 continuation workspace targets:"
@@ -10,6 +16,8 @@ help:
 	@echo "  make test               Run the CPU/unit contract suite"
 	@echo "  make paper              Regenerate all offline paper artifacts"
 	@echo "  make list-measurements  List fresh measurement families"
+	@echo "  make gemm               Build the two standalone SM100 CUTLASS controls"
+	@echo "  make benchmark-gemm     Build and run the standalone SM100 controls"
 	@echo "  make build-plan         Print the SM100 clean-build plan"
 	@echo "  make build-sm100        Build and manifest the SM100 route matrix"
 	@echo ""
@@ -32,6 +40,17 @@ paper:
 
 list-measurements:
 	$(PYTHON) tools/plan_fa4_measurements.py list
+
+configure-gemm:
+	CUDACXX="$(CUDACXX)" $(CMAKE) -S . -B "$(BUILD_DIR)" -DCMAKE_BUILD_TYPE=Release
+
+gemm: configure-gemm
+	$(CMAKE) --build "$(BUILD_DIR)" --parallel "$(JOBS)" --target \
+		bench_nvfp4_gemm bench_grouped_nvfp4_gemm
+
+benchmark-gemm: gemm
+	"$(BUILD_DIR)/bench_nvfp4_gemm"
+	"$(BUILD_DIR)/bench_grouped_nvfp4_gemm"
 
 build-plan:
 	@test -n "$(FA4_BUILD_ROOT)" || (echo "FA4_BUILD_ROOT is required" >&2; exit 2)
