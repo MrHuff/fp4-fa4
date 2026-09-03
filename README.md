@@ -16,6 +16,22 @@ Project-specific source is released under the
 [NOTICE](NOTICE); inherited and third-party terms remain separately
 attributed.
 
+## Start here
+
+| Goal | Entry point |
+| --- | --- |
+| Understand which FA4 path is current | [`PROJECT_MAP.md`](PROJECT_MAP.md) |
+| Read the paper | [`main.pdf`](results/fp4_fa4_technical_report_v2_20260819/main.pdf) |
+| Resume kernel or training work | [`CONTINUATION.md`](CONTINUATION.md) |
+| Locate an exact implementation | [`release/KERNEL_MAP.md`](release/KERNEL_MAP.md) |
+| Check supported, diagnostic, and disabled routes | [`release/routes.json`](release/routes.json) |
+| Rebuild a paper experiment | [`release/EXPERIMENT_MATRIX.md`](release/EXPERIMENT_MATRIX.md) |
+| Inspect what is and is not verified | [`RELEASE_STATUS.md`](RELEASE_STATUS.md) |
+
+Do not start by choosing the newest-looking `v###` file or by browsing all of
+`results/`. The versioned kernels and dated result directories preserve
+research history. `PROJECT_MAP.md` identifies the small current working set.
+
 The repository carries the exact project kernel snapshots, pinned third-party
 implementations, the portable TorchTitan integration, committed experiment
 receipts, and paper data generators. CPU contract tests cover the integration,
@@ -27,80 +43,64 @@ steps. Accordingly, this is a source-complete research release, not a claim
 that prebuilt binaries or every historical measurement reproduce on arbitrary
 hardware.
 
-The main source boundaries are:
+## Current routes at a glance
 
-- `tk_fa4/`: the causal forward/backward kernel tree used by the final 8B
-  experiments;
-- `TK_quantisation/`: the quantization and projection kernels consumed by FA4;
-- `fused_ops/` and `qutlass_binding/`: auxiliary quantization, projection, and
-  GEMM development source retained from the research workspace;
-- `reproduction/snapshots/forward_cfc06dad/`: the historical `cfc06dad` source
-  epoch, including the non-causal paper path and the backward prototypes that
-  existed beside it, with its recorded portability patch applied;
-- `reproduction/snapshots/d64_training_cd59dda/` and
-  `reproduction/snapshots/d64_v416_713819d/`: Git-object-authenticated D64
-  real-token and native-v416 source epochs;
-- `third_party/hao_flash_attention_fp4/`: the exact retained HAO comparator
-  source, with documented non-code omissions and the recorded compatibility
-  patch applied;
-- `results/`: committed receipts, deterministic table/plot generators, and the
-  manuscript snapshot; and
-- `torchtitan/experiments/fa4/`: the portable model/training integration.
+| Scope | Canonical location | Status |
+| --- | --- | --- |
+| 8B/D128 BF16 control | `flash-attention/flash_attn/cute/` | Reference |
+| 8B/D128 NVFP4-QK + FP8-P/V | `tk_fa4/lowp_fa4_bwd/`, D128 `v509`, and `torchtitan/experiments/fa4/` | Primary training candidate |
+| 8B/D128 NVFP4-QK + MXFP4-P/V | Same integration and backward; safe MX forward builder | Divergence diagnostic |
+| 1.2B/D64 causal path | D64 `v416` and the D64 build profile | Source-wired candidate; hardware gates remain |
+| Non-causal Direct-P | `reproduction/snapshots/forward_cfc06dad/` | Historical paper source |
+| Direct CuTe FP4-QK backward | Pinned `flash-attention` overlay | Preserved but disabled |
 
-Release preparation documents:
+The exact files behind each row are indexed in `PROJECT_MAP.md` and
+`release/KERNEL_MAP.md`. Historical and rejected routes remain in place so
+the negative results can be audited; they are not alternative entry points.
 
-- [`CONTINUATION.md`](CONTINUATION.md) is the first document to read when
-  resuming the project on a new machine or at a new organization.
-- [`RELEASE_STATUS.md`](RELEASE_STATUS.md) states what is reproducible now and
-  what still requires external assets or GPU validation.
-- [`release/SCIENTIFIC_STATE.md`](release/SCIENTIFIC_STATE.md) separates
-  verified results, interpretations, negative paths, and unresolved work.
-- [`release/routes.json`](release/routes.json) is the structured catalog of the
-  decision-relevant supported, diagnostic, and disabled route families.
-- [`release/LEGACY_LINEAGE.md`](release/LEGACY_LINEAGE.md) accounts for the
-  retained intermediate native-backward revisions that are source history,
-  not separately evidenced methods.
-- [`release/manifest.json`](release/manifest.json) is the machine-readable source
-  and route manifest.
-- [`release/SOURCE_PROVENANCE.md`](release/SOURCE_PROVENANCE.md) records the
-  byte-exact source snapshots and third-party pins.
-- [`release/EXPERIMENT_MATRIX.md`](release/EXPERIMENT_MATRIX.md) maps every
-  paper experiment family to its command, inputs, and current reproduction
-  boundary.
-- [`release/D64_REPRODUCTION.md`](release/D64_REPRODUCTION.md) defines the
-  portable 1.2B/D64 profile and separates new-run recipes from unavailable
-  historical inputs.
-- [`release/KERNEL_MAP.md`](release/KERNEL_MAP.md) maps each reader-facing
-  method to the exact forward, backward, projection, and validation sources.
-- [`release/audits/public_source_closure_5926d201_20260903.json`](release/audits/public_source_closure_5926d201_20260903.json)
-  records the unauthenticated public clean-clone, source-closure, test, and
-  offline-paper audit.
-- [`docs/fa4_measurement_reproduction.md`](docs/fa4_measurement_reproduction.md)
-  documents the fail-closed command planner for fresh measurements.
-- [`docs/fa4_build_environment.md`](docs/fa4_build_environment.md) records the
-  measured GB200 toolchain and clean kernel build.
-- [`docs/development.md`](docs/development.md) explains how to extend a kernel,
-  add a route, preserve evidence, and run TorchTitan without private training
-  code.
-- [`torchtitan/experiments/fa4/README.md`](torchtitan/experiments/fa4/README.md)
-  defines the TorchTitan extension boundary.
-- [`configs/fa4/README.md`](configs/fa4/README.md) defines the portable
-  configuration contract.
-- `python tools/plan_fa4_measurements.py list` enumerates every paper
-  measurement family; `check` and `print` require and authenticate its inputs.
-- `python tools/reproduce_fa4_paper.py --run --offline all` regenerates every paper
-  artifact supported by committed inputs.
-- `python tools/verify_fa4_release.py` validates source identities, initialized
-  submodule revisions, a complete tracked-file inventory, route boundaries,
-  and credential hygiene with the Python standard library. It requires a clean
-  checkout.
+## Quick verification
+
+```bash
+git submodule update --init \
+  ThunderKittens SageAttention flash-attention qutlass cutlass
+git -C flash-attention submodule update --init csrc/cutlass
+git -C qutlass submodule update --init third_party/cutlass
+
+make verify-source
+make test
+make paper
+make list-measurements
+```
+
+The source verifier requires a clean checkout. GPU compilation, numerical
+gates, performance measurements, and distributed training remain separate
+checks; see `RELEASE_STATUS.md` and `docs/fa4_build_environment.md`.
+
+## Documentation
+
+- `PROJECT_MAP.md`: human-scale map of the current code, historical snapshots,
+  and result archive.
+- `CONTINUATION.md`: detailed handoff for continuing research.
+- `release/SCIENTIFIC_STATE.md`: verified findings, negative results, and open
+  work.
+- `release/EXPERIMENT_MATRIX.md`: paper experiment commands and input
+  boundaries.
+- `docs/development.md`: how to modify a route without losing provenance.
+- `configs/fa4/README.md`: portable training configuration contract.
+- `results/README.md` and `tk_fa4/README.md`: local indexes for the two busiest
+  trees.
 
 The parentless-history and public-surface checks used to construct this export
 are documented in
 [`release/PUBLIC_EXPORT_POLICY.md`](release/PUBLIC_EXPORT_POLICY.md).
 
-The upstream TorchTitan README follows as base-project documentation. Its
-license badge points to the exact retained TorchTitan license; the project
+The upstream TorchTitan README is retained below as base-project reference
+documentation. It is collapsed so the FA4 entry points remain visible.
+
+<details>
+<summary>Upstream TorchTitan README</summary>
+
+Its license badge points to the exact retained TorchTitan license; the project
 license for this combined release is stated above and at the end of this file.
 
 ---
@@ -289,3 +289,5 @@ third-party components retain their original terms; see
 [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md) and
 [LICENSES/](./LICENSES/). You may also have separate legal obligations for
 third-party data, models, and other linked content.
+
+</details>

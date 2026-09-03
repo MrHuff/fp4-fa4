@@ -98,12 +98,12 @@ EXPECTED_HAO_NON_CODE_OMISSIONS = [
     "assets/flashattn_banner.pdf",
 ]
 EXPECTED_MATERIALIZED_TREES = {
-    "tk_fa4": "edf60a5703e298fd7e7f8c49e8b1541bf68e7a89",
+    "tk_fa4": "05fc58c6499509450489467f8ceffe84faae65a8",
     "TK_quantisation": "e26f1b83d85f9805dcbe726afe2b464450cac84c",
     "baseline_kernels": "5242c6d77a09cbd415b6d11e100657e0810aa4dd",
     "fused_ops": "efb0668033a9eeee8a95b21759664d6d49f5decc",
     "qutlass_binding": "32332ed7b0d26971bb0873647d154eb8fdc6aa65",
-    "results": "cf70d0712dd072acd7939245b363e5fef5d98085",
+    "results": "a35b64ccef446d2afcff2185cdcfba44f90a1989",
     "reproduction/snapshots/forward_cfc06dad/TK_quantisation": (
         "9a0a63b1aa98ca4e377d0fd867b0b764e19d8b4d"
     ),
@@ -222,6 +222,7 @@ REQUIRED_BLOCKERS = {
 REQUIRED_PATHS = (
     "CMakeLists.txt",
     "CONTINUATION.md",
+    "PROJECT_MAP.md",
     "CONTRIBUTING.md",
     "LICENSE",
     "NOTICE",
@@ -251,6 +252,8 @@ REQUIRED_PATHS = (
     "benchmarks/bench_grouped_nvfp4_gemm.cu",
     "patches/flash_attention_fp4_runtime_overlay_9743edaf_20260831.manifest.json",
     "patches/flash_attention_fp4_runtime_overlay_9743edaf_20260831.patch",
+    "results/README.md",
+    "tk_fa4/README.md",
     "tk_fa4/fp4_fa4_fwd/hao_direct_fp4pv_candidate.cu",
     "tk_fa4/lowp_fa4_bwd/lowp_fa4_bwd.cu",
     "tk_fa4/native_gqa_tk_bwd/Makefile.v509_b4",

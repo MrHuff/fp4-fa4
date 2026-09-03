@@ -1,5 +1,8 @@
 # Continuing the FP4 FlashAttention research
 
+For a quick orientation, read `PROJECT_MAP.md` first. This document is the
+detailed handoff once the current route and task are clear.
+
 This repository is intended to be a research continuation package, not only a
 paper artifact. A researcher with a fresh clone and the public experiment
 inputs should be able to inspect every retained forward and backward lineage,

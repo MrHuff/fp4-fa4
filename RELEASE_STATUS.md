@@ -53,7 +53,9 @@ captures remain unavailable. `CONTINUATION.md` and
 The audited public source commit passed 1,669 CPU tests with four optional or
 hardware-dependent skips. Its release verifier passed and its checked source
 inventory contains 4,138 records. The audit-record child adds one receipt, so
-its inventory contains 4,139 records. A no-local clean clone rebuilds the
+its inventory contains 4,139 records. The current navigation-only descendant
+adds three reader-facing indexes, bringing the checked inventory to 4,142
+records without changing kernel source. A no-local clean clone rebuilds the
 56-page paper and both the arXiv and Overleaf source packages. The LaTeX log
 has no undefined references, undefined citations, or overfull boxes; all
 embedded fonts are non-Type-3. These CPU and document checks do not replace

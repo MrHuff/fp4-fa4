@@ -35,7 +35,9 @@ explicit corpus/tokenizer roots, and temporary build/capture locations. HAO
 defaults resolve to the vendored comparator, downstream fixed-input evaluations require
 explicit authenticated model/data/build roots, and Wan separates its logical
 model identifier from its authenticated local model path. These changes do not
-alter any CUDA/C++ kernel bytes, operands, or measurement calculations.
+alter any CUDA/C++ kernel bytes, operands, or measurement calculations. The
+reader-facing `tk_fa4/README.md` is an additional release index, not upstream
+kernel source.
 
 This source contains all retained causal forward and backward kernels, their
 Python bindings, build files, correctness gates, profiling tools, and the
@@ -176,10 +178,11 @@ preserved, and a portable command-line boundary for the retained v508
 diagnostic. Unused proprietary fonts and seven non-code HAO files are absent; the
 exact transformation is recorded in `PUBLIC_SANITIZATION.md`. Its reviewed
 materialized tree identity is
-`cf70d0712dd072acd7939245b363e5fef5d98085`. It contains the committed raw
-records that were available, normalized receipts, deterministic renderers, and
-the manuscript source. A committed receipt proves only what it records. It
-does not turn an absent raw capture into a repeat measurement.
+`a35b64ccef446d2afcff2185cdcfba44f90a1989`. It contains the committed raw
+records that were available, normalized receipts, deterministic renderers,
+the manuscript source, and a reader-facing archive index. A committed receipt
+proves only what it records. It does not turn an absent raw capture into a
+repeat measurement.
 
 ## Pinned dependencies
 
